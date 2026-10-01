@@ -20,6 +20,7 @@ const SplitText = ({
   rootMargin = '-100px',
   textAlign = 'center',
   tag = 'p',
+  useScrollTrigger = true,
   onLetterAnimationComplete
 }) => {
   const ref = useRef(null);
@@ -82,29 +83,33 @@ const SplitText = ({
         onSplit: self => {
           assignTargets(self);
           gsap.set(el, { opacity: 1 }); // Reveal parent now that children are split and ready
-          gsap.fromTo(
-            targets,
-            { ...from },
-            {
-              ...to,
-              duration,
-              ease,
-              stagger: delay / 1000,
-              scrollTrigger: {
-                trigger: el,
-                start,
-                once: true,
-                fastScrollEnd: true,
-                anticipatePin: 0.4
-              },
-              onComplete: () => {
-                animationCompletedRef.current = true;
-                onCompleteRef.current?.();
-              },
-              willChange: 'transform, opacity',
-              force3D: true
+          
+          const animConfig = {
+            ...to,
+            duration,
+            ease,
+            stagger: delay / 1000,
+            force3D: false,
+            onComplete: () => {
+              animationCompletedRef.current = true;
+              // Clear inline transforms & will-change so letters move cleanly with parent without GPU layer shimmering
+              gsap.set(targets, { clearProps: 'willChange,transform' });
+              gsap.set(el, { clearProps: 'willChange' });
+              onCompleteRef.current?.();
             }
-          );
+          };
+
+          if (useScrollTrigger) {
+            animConfig.scrollTrigger = {
+              trigger: el,
+              start,
+              once: true,
+              fastScrollEnd: true,
+              anticipatePin: 0.4
+            };
+          }
+
+          gsap.fromTo(targets, { ...from }, animConfig);
         }
       });
       el._rbsplitInstance = splitInstance;
@@ -122,7 +127,7 @@ const SplitText = ({
   }, [
     text, delay, duration, ease, splitType, 
     JSON.stringify(from), JSON.stringify(to), 
-    threshold, rootMargin, fontsLoaded
+    threshold, rootMargin, fontsLoaded, useScrollTrigger
   ]);
 
   const renderTag = () => {

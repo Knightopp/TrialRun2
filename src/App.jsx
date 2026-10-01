@@ -156,7 +156,7 @@ export default function App() {
       // Force scroll to top again just in case browser tried to snap to a hash
       window.scrollTo(0, 0);
       
-      // Refresh ScrollTrigger after the slide-up animation finishes (0.8s)
+      // Refresh ScrollTrigger after the slide-up animation finishes (0.9s)
       setTimeout(() => {
         import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
           ScrollTrigger.refresh();
@@ -164,8 +164,8 @@ export default function App() {
           // Force scroll to top immediately after to override it.
           window.scrollTo(0, 0);
         });
-      }, 850);
-    }, 800);
+      }, 950);
+    }, 2100);
 
     return () => {
       clearTimeout(loaderTimer);
@@ -730,8 +730,11 @@ export default function App() {
           alignItems: 'center',
           justifyContent: 'center',
           pointerEvents: isAppLoading ? 'auto' : 'none',
-          transition: 'transform 0.8s cubic-bezier(0.77, 0, 0.175, 1)',
+          transition: 'transform 0.9s cubic-bezier(0.77, 0, 0.175, 1)',
           transform: isAppLoading ? 'translateY(0)' : 'translateY(-100%)',
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
         }}
       >
         <div className="loader-logo-wrap" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
@@ -750,12 +753,13 @@ export default function App() {
         <SplitText
           text="SRISHTI"
           className="srishti-loader-title"
-          delay={100}
-          duration={0.8}
-          ease="power4.out"
+          delay={70}
+          duration={0.65}
+          ease="power3.out"
           splitType="chars"
-          from={{ opacity: 0, y: 30, scale: 0.9 }}
-          to={{ opacity: 1, y: 0, scale: 1 }}
+          from={{ opacity: 0, y: 25 }}
+          to={{ opacity: 1, y: 0 }}
+          useScrollTrigger={false}
         />
         <div style={{ marginTop: '3rem' }}>
           <LatticeLoader
