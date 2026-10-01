@@ -29,6 +29,11 @@ export const StaggeredMenu = ({
 }) => {
   const [open, setOpen] = useState(false);
   const openRef = useRef(false);
+
+  // Cache items/socialItems so they persist visually during close animation
+  const [cachedItems, setCachedItems] = useState(items);
+  const [cachedSocialItems, setCachedSocialItems] = useState(socialItems);
+  const pendingCloseRef = useRef(null);  // stores onClose callback to call after animation
   const panelRef = useRef(null);
   const preLayersRef = useRef(null);
   const preLayerElsRef = useRef([]);
@@ -341,8 +346,35 @@ export const StaggeredMenu = ({
   // ── Close helper ──
   const closeMenu = useCallback(() => {
     if (!openRef.current) return;
-    // Controlled mode: just notify parent
-    if (isOpen !== undefined && onClose) { onClose(); return; }
+    if (isOpen !== undefined && onClose) {
+      // Controlled mode: play close animation first, then notify parent after it finishes
+      openRef.current = false;
+      setOpen(false);
+      animateIcon(false);
+      animateColor(false);
+      animateText(false);
+      // Play close, and call onClose when animation is done
+      openTlRef.current?.kill();
+      openTlRef.current = null;
+      itemEntranceTweenRef.current?.kill();
+      const panel = panelRef.current;
+      const layers = preLayerElsRef.current;
+      if (!panel) { onClose(); return; }
+      const all = [...layers, panel];
+      closeTweenRef.current?.kill();
+      const offscreen = position === 'left' ? -100 : 100;
+      closeTweenRef.current = gsap.to(all, {
+        xPercent: offscreen,
+        duration: 0.32,
+        ease: 'power3.in',
+        overwrite: 'auto',
+        onComplete: () => {
+          busyRef.current = false;
+          onClose();
+        }
+      });
+      return;
+    }
     // Uncontrolled mode
     openRef.current = false;
     setOpen(false);
@@ -351,7 +383,15 @@ export const StaggeredMenu = ({
     animateIcon(false);
     animateColor(false);
     animateText(false);
-  }, [playClose, animateIcon, animateColor, animateText, onMenuClose, isOpen, onClose]);
+  }, [playClose, animateIcon, animateColor, animateText, onMenuClose, isOpen, onClose, position]);
+
+  // Update cached items whenever new items arrive (but NOT when they go empty during close)
+  useEffect(() => {
+    if (items && items.length > 0) setCachedItems(items);
+  }, [items]);
+  useEffect(() => {
+    if (socialItems && socialItems.length > 0) setCachedSocialItems(socialItems);
+  }, [socialItems]);
 
   // ── Sync controlled isOpen → internal state ──
   useEffect(() => {
@@ -467,34 +507,26 @@ export const StaggeredMenu = ({
           )}
 
           <ul className="sm-panel-list" role="list" data-numbering={displayItemNumbering || undefined}>
-            {items && items.length ? (
-              items.map((it, idx) => (
-                <li className="sm-panel-itemWrap" key={idx} style={it.isNonInteractive ? { overflow: 'visible' } : undefined}>
-                  {it.isNonInteractive ? (
-                    <div className="sm-panel-item non-interactive" aria-label={it.ariaLabel} data-index={idx + 1} style={{ cursor: 'default', overflow: 'visible' }}>
-                      <span className="sm-panel-itemLabel">{it.label}</span>
-                    </div>
-                  ) : (
-                    <a className="sm-panel-item" href={it.link || '#'} onClick={it.onClick} aria-label={it.ariaLabel} data-index={idx + 1}>
-                      <span className="sm-panel-itemLabel">{it.label}</span>
-                    </a>
-                  )}
-                </li>
-              ))
-            ) : (
-              <li className="sm-panel-itemWrap" aria-hidden="true">
-                <span className="sm-panel-item">
-                  <span className="sm-panel-itemLabel">No items</span>
-                </span>
+            {(cachedItems || []).map((it, idx) => (
+              <li className="sm-panel-itemWrap" key={idx} style={it.isNonInteractive ? { overflow: 'visible' } : undefined}>
+                {it.isNonInteractive ? (
+                  <div className="sm-panel-item non-interactive" aria-label={it.ariaLabel} data-index={idx + 1} style={{ cursor: 'default', overflow: 'visible' }}>
+                    <span className="sm-panel-itemLabel">{it.label}</span>
+                  </div>
+                ) : (
+                  <a className="sm-panel-item" href={it.link || '#'} onClick={it.onClick} aria-label={it.ariaLabel} data-index={idx + 1}>
+                    <span className="sm-panel-itemLabel">{it.label}</span>
+                  </a>
+                )}
               </li>
-            )}
+            ))}
           </ul>
 
-          {displaySocials && socialItems && socialItems.length > 0 && (
+          {displaySocials && cachedSocialItems && cachedSocialItems.length > 0 && (
             <div className="sm-socials" aria-label="Social links">
               <h3 className="sm-socials-title">Socials</h3>
               <ul className="sm-socials-list" role="list">
-                {socialItems.map((s, i) => (
+                {cachedSocialItems.map((s, i) => (
                   <li key={i} className="sm-socials-item">
                     <a href={s.link} target="_blank" rel="noopener noreferrer" className="sm-socials-link">
                       {s.label}
