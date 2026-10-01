@@ -3,6 +3,7 @@
   display: flex;
   max-width: 100%;
   align-items: center;
+  justify-content: center;
 }
 
 .dock-panel {
@@ -55,4 +56,54 @@
   font-size: 0.75rem;
   color: #120f17;
   transform: translateX(-50%);
+}
+
+/* Static Mobile Dock - zero animations, fixed clean touch bar */
+.dock-mobile-static {
+  height: auto !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.dock-panel-static {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  height: auto !important;
+  padding: 6px 10px !important;
+  gap: 0.65rem !important;
+  border-radius: 9999px !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e5e5 !important;
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.35) !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.dock-item-static {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e5e5 !important;
+  color: #120f17 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.dock-item-static:active {
+  background-color: #f4f4f5 !important;
+}
+
+@media (max-width: 768px) {
+  .dock-label {
+    display: none !important;
+  }
 }

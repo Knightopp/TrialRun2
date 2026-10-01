@@ -459,11 +459,18 @@ const PatternWaves = ({
   );
 
   useEffect(() => {
+    // Detect mobile device for performance optimization
+    const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches);
+    const chosenSpacing = pick(spacing, 'spacing');
+    // On mobile, use slightly wider spacing (less shader workload) and lower cursor ripple
+    const effectiveSpacing = isMobile ? Math.max(chosenSpacing, 14) : chosenSpacing;
+    const effectiveInteractive = isMobile ? false : interactive;
+
     settingsRef.current = {
       ...colors,
       pattern: pick(pattern, 'pattern'),
       wave: pick(wave, 'wave'),
-      spacing: pick(spacing, 'spacing'),
+      spacing: effectiveSpacing,
       markSize: pick(markSize, 'markSize'),
       depth: pick(depth, 'depth'),
       light: pick(light, 'light'),
@@ -476,7 +483,7 @@ const PatternWaves = ({
       fade,
       fadeSize,
       characters,
-      interactive,
+      interactive: effectiveInteractive,
       cursorSize,
       cursorStrength,
       intro,
@@ -668,7 +675,9 @@ const PatternWaves = ({
     const resize = () => {
       width = Math.max(1, container.clientWidth);
       height = Math.max(1, container.clientHeight);
-      renderer.dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(PIXEL_BUDGET / (width * height)));
+      const isMobile = window.innerWidth <= 768;
+      const maxDpr = isMobile ? 1.0 : 1.5;
+      renderer.dpr = Math.min(window.devicePixelRatio || 1, maxDpr, Math.sqrt(PIXEL_BUDGET / (width * height)));
       renderer.setSize(width, height);
       buildRipple();
       dirty = true;
@@ -805,6 +814,7 @@ const PatternWaves = ({
     };
 
     const onPointerMove = e => {
+      if (e.pointerType === 'touch') return;
       const spot = locate(e);
       pointer.x = spot.x;
       pointer.y = spot.y;
@@ -814,6 +824,7 @@ const PatternWaves = ({
     };
 
     const onPointerDown = e => {
+      if (e.pointerType === 'touch') return;
       const spot = locate(e);
       if (!spot.inside) return;
       pointer.x = spot.x;

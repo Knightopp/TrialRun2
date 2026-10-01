@@ -56,6 +56,7 @@ function DockLabel({ children, className = '', ...rest }) {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    if (!isHovered) return;
     const unsubscribe = isHovered.on('change', latest => {
       setIsVisible(latest === 1);
     });
@@ -95,6 +96,20 @@ export default function Dock({
   dockHeight = 256,
   baseItemSize = 50
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        typeof window !== 'undefined' &&
+        (window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches)
+      );
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const mouseX = useMotionValue(Infinity);
   const isHovered = useMotionValue(0);
 
@@ -105,6 +120,28 @@ export default function Dock({
   const heightRow = useTransform(isHovered, [0, 1], [panelHeight, maxHeight]);
   const height = useSpring(heightRow, spring);
 
+  // On Mobile: completely static dock, NO magnification, NO height changes, NO animation
+  if (isMobile) {
+    return (
+      <div className={`dock-outer dock-mobile-static ${className}`}>
+        <div className="dock-panel dock-panel-static" role="toolbar" aria-label="Application dock">
+          {items.map((item, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={item.onClick}
+              className={`dock-item dock-item-static ${item.className || ''}`}
+              aria-label={item.label}
+            >
+              <div className="dock-icon">{item.icon}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop with smooth interactive magnification
   return (
     <motion.div style={{ height, scrollbarWidth: 'none' }} className="dock-outer">
       <motion.div

@@ -133,6 +133,8 @@ const Masonry = ({
   useLayoutEffect(() => {
     if (!imagesReady) return;
 
+    const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches);
+
     grid.forEach((item, index) => {
       const selector = `[data-key="${item.id}"]`;
       const animationProps = {
@@ -142,7 +144,15 @@ const Masonry = ({
         height: item.h
       };
 
-      if (!hasMounted.current) {
+      if (isMobile) {
+        // Mobile: No scroll animation, immediate layout placement
+        gsap.set(selector, {
+          opacity: 1,
+          ...animationProps,
+          filter: 'none',
+          scale: 1
+        });
+      } else if (!hasMounted.current) {
         const initialPos = getInitialPosition(item, index);
         const initialState = {
           opacity: 0,
@@ -176,18 +186,21 @@ const Masonry = ({
       }
     });
     
-    // Crucial: Set container height so ScrollTrigger has an actual area to trigger within!
+    // Set container height so items fit properly
     if (containerRef.current && grid.length > 0) {
       const maxColHeight = Math.max(...grid.map(item => item.y + item.h));
       containerRef.current.style.height = `${maxColHeight}px`;
     }
 
     hasMounted.current = true;
-    ScrollTrigger.refresh();
+    if (!isMobile) {
+      ScrollTrigger.refresh();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grid, imagesReady, stagger, animateFrom, blurToFocus, duration, ease]);
 
   const handleMouseEnter = (e, item) => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) return;
     const element = e.currentTarget;
     const selector = `[data-key="${item.id}"]`;
 
@@ -211,6 +224,7 @@ const Masonry = ({
   };
 
   const handleMouseLeave = (e, item) => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) return;
     const element = e.currentTarget;
     const selector = `[data-key="${item.id}"]`;
 

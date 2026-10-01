@@ -13,6 +13,7 @@ import Masonry from './components/Masonry';
 import BorderGlow from './components/BorderGlow';
 import GradientText from './components/GradientText';
 import SplitText from './components/SplitText';
+import PatternWaves from './components/PatternWaves';
 import { FiHome, FiCalendar, FiActivity, FiUserPlus } from 'react-icons/fi';
 import './App.css';
 
@@ -72,13 +73,35 @@ export default function App() {
 
   // PixelSwap transition states between Single Page and Registration Page
   const [pixelActive, setPixelActive] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(
+        typeof window !== 'undefined' &&
+        (window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches)
+      );
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const navigateTo = (page, targetSection) => {
+    const isMob = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const scrollOpt = isMob ? { top: 0, behavior: 'auto' } : { top: 0, behavior: 'smooth' };
+    const scrollIntoOpt = isMob ? { behavior: 'auto' } : { behavior: 'smooth' };
+
+    const getTargetEl = (id) => {
+      if (!id) return null;
+      return document.getElementById(id) || (id === 'experience' ? document.getElementById('gallery') : null);
+    };
+
     if (page === 'register') {
       if (currentPage !== 'register') {
         setCurrentPage('register');
         setPixelActive(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo(scrollOpt);
       }
     } else {
       if (currentPage === 'register') {
@@ -86,21 +109,21 @@ export default function App() {
         setPixelActive(false);
         setTimeout(() => {
           if (targetSection) {
-            const el = document.getElementById(targetSection);
-            el?.scrollIntoView({ behavior: 'smooth' });
+            const el = getTargetEl(targetSection);
+            el?.scrollIntoView(scrollIntoOpt);
             setActiveSection(targetSection);
           } else {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo(scrollOpt);
             setActiveSection('home');
           }
         }, 100);
       } else {
         if (targetSection) {
-          const el = document.getElementById(targetSection);
-          el?.scrollIntoView({ behavior: 'smooth' });
+          const el = getTargetEl(targetSection);
+          el?.scrollIntoView(scrollIntoOpt);
           setActiveSection(targetSection);
         } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo(scrollOpt);
           setActiveSection('home');
         }
       }
@@ -340,48 +363,110 @@ export default function App() {
         />
       </section>
 
-      {/* Fun DodgeField Section */}
-      <section style={{ padding: '8rem 0 10rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>
-        <h3 style={{ color: '#555', marginBottom: '1.5rem', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: '"Inter", sans-serif' }}>
-          Bonus Challenge
-        </h3>
-        <BorderGlow
-          className="dodge-glow-wrapper"
-          edgeSensitivity={30}
-          glowColor="40 80 80"
-          backgroundColor="#120F17"
-          borderRadius={28}
-          glowRadius={40}
-          glowIntensity={1.0}
-          coneSpread={25}
-          animated={true}
-          colors={['#c084fc', '#f472b6', '#38bdf8']}
-        >
-          <div style={{ padding: '2em', width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <DodgeField
-              inkColor="#f5f5f5"
-              contrastColor="#18181b"
-              fieldHeight={240}
-              reach={120}
-              radius={200}
-              falloff={2}
-              fleeDuration={300}
-              returnDuration={620}
-              returnBounce={0.1}
-              axis="both"
-              wall="clamp"
-              patience={9999}
-              taunts={['Catch me']}
-              onCatch={() => alert('Caught it!')}
-            />
-          </div>
-        </BorderGlow>
-      </section>
+      {/* Fun DodgeField Section - Hidden on mobile per user request */}
+      {!isMobile && (
+        <section className="dodge-challenge-section" style={{ padding: '8rem 0 10rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0a0a0a' }}>
+          <h3 style={{ color: '#555', marginBottom: '1.5rem', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: '"Inter", sans-serif' }}>
+            Bonus Challenge
+          </h3>
+          <BorderGlow
+            className="dodge-glow-wrapper"
+            edgeSensitivity={30}
+            glowColor="40 80 80"
+            backgroundColor="#120F17"
+            borderRadius={28}
+            glowRadius={40}
+            glowIntensity={1.0}
+            coneSpread={25}
+            animated={true}
+            colors={['#c084fc', '#f472b6', '#38bdf8']}
+          >
+            <div style={{ padding: '2em', width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <DodgeField
+                inkColor="#f5f5f5"
+                contrastColor="#18181b"
+                fieldHeight={240}
+                reach={120}
+                radius={200}
+                falloff={2}
+                fleeDuration={300}
+                returnDuration={620}
+                returnBounce={0.1}
+                axis="both"
+                wall="clamp"
+                patience={9999}
+                taunts={['Catch me']}
+                onCatch={() => alert('Caught it!')}
+              />
+            </div>
+          </BorderGlow>
+        </section>
+      )}
 
-      {/* 3. GALLERY SECTION — Masonry */}
-      <section id="gallery" style={{ padding: '6rem 0', background: '#0a0a0a', width: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <h2 className="section-heading" style={{ marginBottom: '4rem', color: '#fff' }}>Moments of Srishti</h2>
-        <div style={{ width: '90%', maxWidth: '1400px', height: '800px', position: 'relative' }}>
+      {/* 3. GALLERY SECTION — Moments of Srishti with PatternWaves Background */}
+      <section 
+        id="gallery" 
+        className="moments-gallery-section"
+        style={{ 
+          padding: '6rem 0', 
+          background: '#0a0a0a', 
+          width: '100%', 
+          minHeight: '100vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Animated fluid PatternWaves canvas background */}
+        <div 
+          className="moments-waves-bg"
+          style={{ 
+            position: 'absolute', 
+            inset: 0, 
+            width: '100%', 
+            height: '100%', 
+            zIndex: 0, 
+            pointerEvents: 'none',
+            opacity: 0.75
+          }}
+        >
+          <PatternWaves
+            preset="silk"
+            color="#38bdf8"
+            backgroundColor="#0a0a0a"
+            fade="edges"
+            fadeSize={0.4}
+            interactive={!isMobile}
+            cursorSize={50}
+            cursorStrength={0.5}
+            opacity={0.85}
+          />
+        </div>
+
+        <h2 
+          className="section-heading" 
+          style={{ 
+            marginBottom: '4rem', 
+            color: '#fff',
+            position: 'relative',
+            zIndex: 2,
+            textShadow: '0 4px 24px rgba(0,0,0,0.9)'
+          }}
+        >
+          Moments of Srishti
+        </h2>
+        <div 
+          className="moments-masonry-wrapper"
+          style={{ 
+            width: '90%', 
+            maxWidth: '1400px', 
+            position: 'relative',
+            zIndex: 2,
+            minHeight: '600px'
+          }}
+        >
           <Masonry
             items={GALLERY_ITEMS}
             ease="power3.out"
@@ -765,6 +850,7 @@ export default function App() {
 
       {/* Supreme Global Floating Nav (Dock) */}
       <div 
+        className="dock-wrapper-fixed"
         style={{ 
           position: 'fixed', 
           bottom: '1rem', 
@@ -776,7 +862,7 @@ export default function App() {
           transition: 'opacity 0.8s ease-in-out',
         }}
       >
-        <div style={{ pointerEvents: 'auto' }}>
+        <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center', width: '100%' }}>
           <Dock 
             items={[
               { icon: <FiHome size={20} />, label: 'Home', onClick: () => navigateTo('main', 'home') },

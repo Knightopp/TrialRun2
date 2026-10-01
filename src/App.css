@@ -1054,3 +1054,39 @@
   color: #fff;
   margin: 0;
 }
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .hero-viewport {
+    padding-bottom: 5.5rem !important;
+  }
+
+  /* Disable Dodge Challenge on mobile */
+  .dodge-challenge-section {
+    display: none !important;
+  }
+
+  /* Disable scroll mouse pill animation indicator on mobile */
+  .scroll-indicator-wrap {
+    display: none !important;
+  }
+
+  /* Safe bottom anchor for static mobile dock */
+  .dock-wrapper-fixed {
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Moments of Srishti gallery spacing on mobile */
+  .moments-gallery-section {
+    padding: 4rem 0 6.5rem 0 !important;
+  }
+
+  .moments-masonry-wrapper {
+    width: 95% !important;
+  }
+
+  html, body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+}
