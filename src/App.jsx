@@ -190,7 +190,7 @@ export default function App() {
         {/* Top left corner brand lockup */}
         <div className="hero-brand-badge-top" onClick={() => navigateTo('main', 'home')}>
           <img 
-            src="/assets/logo-dark.jpg" 
+            src="/assets/logo.png" 
             alt="Srishti Logo" 
             className="brand-logo-img" 
           />
@@ -496,7 +496,7 @@ export default function App() {
       <footer className="srishti-footer">
         <div className="footer-brand-side">
           <div className="footer-logo-lockup" onClick={() => navigateTo('main', 'home')}>
-            <img src="/assets/logo-dark.jpg" alt="Srishti Logo" className="footer-logo-img" />
+            <img src="/assets/logo.png" alt="Srishti Logo" className="footer-logo-img" />
             <div className="footer-brand-text">
               <span className="footer-title">SRISHTI 2.7</span>
               <span className="footer-subtitle">NATIONAL TECH-CULTURAL FESTIVAL</span>
@@ -667,15 +667,14 @@ export default function App() {
                 <div className="pass-title-lg">OFFICIAL DELEGATE</div>
               </div>
               <img 
-                src="/assets/logo-dark.jpg" 
+                src="/assets/logo.png" 
                 alt="Srishti Official Emblem" 
                 style={{ 
-                  width: '42px', 
-                  height: '42px', 
-                  borderRadius: '10px', 
-                  objectFit: 'cover', 
-                  border: '1px solid rgba(56, 189, 248, 0.4)', 
-                  boxShadow: '0 0 16px rgba(56, 189, 248, 0.3)' 
+                  width: '38px', 
+                  height: '38px', 
+                  objectFit: 'contain',
+                  background: 'transparent',
+                  filter: 'drop-shadow(0 0 10px rgba(56, 189, 248, 0.6))' 
                 }} 
               />
             </div>
@@ -737,15 +736,14 @@ export default function App() {
       >
         <div className="loader-logo-wrap" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
           <img 
-            src="/assets/logo-dark.jpg" 
+            src="/assets/logo.png" 
             alt="Srishti Logo" 
             style={{ 
-              width: '84px', 
-              height: '84px', 
-              borderRadius: '20px', 
-              objectFit: 'cover',
-              boxShadow: '0 0 45px rgba(56, 189, 248, 0.45)',
-              border: '1px solid rgba(56, 189, 248, 0.35)'
+              width: '80px', 
+              height: '80px', 
+              objectFit: 'contain',
+              background: 'transparent',
+              filter: 'drop-shadow(0 0 30px rgba(56, 189, 248, 0.75))'
             }} 
           />
         </div>
@@ -905,7 +903,7 @@ export default function App() {
         menuButtonColor="#fff"
         openMenuButtonColor="#000"
         accentColor="#38bdf8"
-        logoUrl="/assets/logo-dark.jpg"
+        logoUrl="/assets/logo.png"
         isFixed={true}
       />
 

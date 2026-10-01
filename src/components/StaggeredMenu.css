@@ -42,9 +42,11 @@
 
 .sm-logo-img {
   display: block;
-  height: 32px;
+  height: 36px;
   width: auto;
   object-fit: contain;
+  background: transparent !important;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
 }
 
 .sm-toggle {
@@ -339,10 +341,6 @@
     left: 0;
     right: 0;
   }
-
-  .staggered-menu-wrapper[data-open] .sm-logo-img {
-    filter: invert(100%);
-  }
 }
 
 @media (max-width: 640px) {
@@ -350,10 +348,6 @@
     width: 100%;
     left: 0;
     right: 0;
-  }
-
-  .staggered-menu-wrapper[data-open] .sm-logo-img {
-    filter: invert(100%);
   }
 }
 

@@ -1119,11 +1119,14 @@
 }
 
 .brand-logo-img {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  object-fit: cover;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+  width: 26px;
+  height: 26px;
+  border-radius: 0;
+  object-fit: contain;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.75));
 }
 
 .brand-logo-text {
@@ -1172,12 +1175,14 @@
 }
 
 .footer-logo-img {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  object-fit: cover;
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  object-fit: contain;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.7));
 }
 
 .footer-brand-text {
