@@ -1,0 +1,112 @@
+/* Custom Fonts */
+@font-face {
+  font-family: 'Akira Expanded';
+  src: url('/fonts/Akira Expanded Demo.otf') format('opentype');
+  font-weight: 700 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mont';
+  src: url('/fonts/Mont-HeavyDEMO.otf') format('opentype');
+  font-weight: 700 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mont';
+  src: url('/fonts/Mont-ExtraLightDEMO.otf') format('opentype');
+  font-weight: 200 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kastroo';
+  src: url('/fonts/KASTROO.ttf') format('truetype');
+  font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kunstraub';
+  src: url('/fonts/Kunstraub.ttf') format('truetype');
+  font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Velista';
+  src: url('/fonts/VELISTA.ttf') format('truetype');
+  font-weight: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg-black: #020204;
+  --bg-surface: #07070a;
+  --bg-surface-elevated: #0f1015;
+  --border-dim: rgba(255, 255, 255, 0.1);
+  --border-bright: rgba(255, 255, 255, 0.35);
+
+  --text-primary: #ffffff;
+  --text-secondary: #9aa3af;
+  --text-tertiary: #525a66;
+
+  --accent-glow: rgba(180, 215, 255, 0.35);
+
+  --font-akira: 'Akira Expanded', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mont: 'Mont', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Akira Expanded', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-black);
+  color: var(--text-primary);
+  font-family: var(--font-mont);
+  overflow-x: hidden;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle blueprint grid matching reference */
+body {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  background-position: center center;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a2e;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #44444a;
+}
