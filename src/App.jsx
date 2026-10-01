@@ -187,6 +187,17 @@ export default function App() {
           />
         </div>
 
+        {/* Top left corner brand lockup */}
+        <div className="hero-brand-badge-top" onClick={() => navigateTo('main', 'home')}>
+          <img 
+            src="/assets/logo-dark.jpg" 
+            alt="Srishti Logo" 
+            className="brand-logo-img" 
+          />
+          <span className="brand-logo-text">SRISHTI</span>
+          <span className="brand-edition-pill">2.7</span>
+        </div>
+
         {/* Top left corner CAD bracket */}
         <div className="hero-top-left-bracket"></div>
         <div className="hero-top-right-bracket"></div>
@@ -481,6 +492,27 @@ export default function App() {
         </div>
       </section>
 
+      {/* Supreme Srishti Footer with Logo & Credentials */}
+      <footer className="srishti-footer">
+        <div className="footer-brand-side">
+          <div className="footer-logo-lockup" onClick={() => navigateTo('main', 'home')}>
+            <img src="/assets/logo-dark.jpg" alt="Srishti Logo" className="footer-logo-img" />
+            <div className="footer-brand-text">
+              <span className="footer-title">SRISHTI 2.7</span>
+              <span className="footer-subtitle">NATIONAL TECH-CULTURAL FESTIVAL</span>
+            </div>
+          </div>
+          <p className="footer-host">
+            ST. THOMAS COLLEGE (AUTONOMOUS), THRISSUR<br />
+            DEPARTMENT OF COMPUTER APPLICATIONS
+          </p>
+        </div>
+        <div className="footer-meta-side">
+          <span className="footer-edition">EDITION 2.7 • JAN 2027</span>
+          <span className="footer-copy">© 2027 SRISHTI. ALL RIGHTS RESERVED.</span>
+        </div>
+      </footer>
+
     </div>
   );
 
@@ -629,9 +661,23 @@ export default function App() {
           glowIntensity={0.8}
         >
           <div className="pass-card-wrap">
-            <div className="pass-top">
-              <div className="pass-code-tag">ENTRY PASS // SRISHTI 2.7</div>
-              <div className="pass-title-lg">OFFICIAL DELEGATE</div>
+            <div className="pass-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div className="pass-code-tag">ENTRY PASS // SRISHTI 2.7</div>
+                <div className="pass-title-lg">OFFICIAL DELEGATE</div>
+              </div>
+              <img 
+                src="/assets/logo-dark.jpg" 
+                alt="Srishti Official Emblem" 
+                style={{ 
+                  width: '42px', 
+                  height: '42px', 
+                  borderRadius: '10px', 
+                  objectFit: 'cover', 
+                  border: '1px solid rgba(56, 189, 248, 0.4)', 
+                  boxShadow: '0 0 16px rgba(56, 189, 248, 0.3)' 
+                }} 
+              />
             </div>
 
             <div className="pass-detail-row">
@@ -689,6 +735,20 @@ export default function App() {
           transform: isAppLoading ? 'translateY(0)' : 'translateY(-100%)',
         }}
       >
+        <div className="loader-logo-wrap" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+          <img 
+            src="/assets/logo-dark.jpg" 
+            alt="Srishti Logo" 
+            style={{ 
+              width: '84px', 
+              height: '84px', 
+              borderRadius: '20px', 
+              objectFit: 'cover',
+              boxShadow: '0 0 45px rgba(56, 189, 248, 0.45)',
+              border: '1px solid rgba(56, 189, 248, 0.35)'
+            }} 
+          />
+        </div>
         <SplitText
           text="SRISHTI"
           className="srishti-loader-title"
@@ -845,6 +905,7 @@ export default function App() {
         menuButtonColor="#fff"
         openMenuButtonColor="#000"
         accentColor="#38bdf8"
+        logoUrl="/assets/logo-dark.jpg"
         isFixed={true}
       />
 
