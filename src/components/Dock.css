@@ -15,10 +15,15 @@
   align-items: flex-end;
   width: fit-content;
   gap: 1rem;
-  border-radius: 1rem;
-  background-color: #ffffff;
-  border: 1px solid #e5e5e5;
-  padding: 0 0.5rem 0.5rem;
+  border-radius: 1.25rem;
+  background-color: rgba(20, 20, 24, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0 0.65rem 0.65rem;
+  box-shadow: 
+    0 20px 40px -10px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .dock-item {
@@ -26,15 +31,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background-color: #ffffff;
-  border: 1px solid #e5e5e5;
-  color: #120f17;
+  border-radius: 12px;
+  background-color: #232328;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #e2e8f0;
   box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    0 4px 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   cursor: pointer;
   outline: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dock-item:hover {
+  background-color: #2c2c34;
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #ffffff;
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(56, 189, 248, 0.25);
 }
 
 .dock-icon {
@@ -45,17 +60,21 @@
 
 .dock-label {
   position: absolute;
-  top: -1.5rem;
+  top: -1.75rem;
   left: 50%;
   width: fit-content;
   white-space: pre;
   border-radius: 0.375rem;
-  border: 1px solid #e5e5e5;
-  background-color: #ffffff;
-  padding: 0.125rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: #18181c;
+  padding: 0.2rem 0.6rem;
   font-size: 0.75rem;
-  color: #120f17;
+  font-weight: 500;
+  color: #f1f5f9;
+  letter-spacing: 0.03em;
   transform: translateX(-50%);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
 }
 
 /* Static Mobile Dock - zero animations, fixed clean touch bar */
@@ -76,9 +95,11 @@
   padding: 6px 10px !important;
   gap: 0.65rem !important;
   border-radius: 9999px !important;
-  background-color: #ffffff !important;
-  border: 1px solid #e5e5e5 !important;
-  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.35) !important;
+  background-color: rgba(20, 20, 24, 0.92) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.8) !important;
   align-items: center !important;
   justify-content: center !important;
 }
@@ -87,10 +108,10 @@
   width: 44px !important;
   height: 44px !important;
   border-radius: 12px !important;
-  background-color: #ffffff !important;
-  border: 1px solid #e5e5e5 !important;
-  color: #120f17 !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  background-color: #232328 !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
   transform: none !important;
   transition: none !important;
   animation: none !important;
@@ -99,7 +120,8 @@
 }
 
 .dock-item-static:active {
-  background-color: #f4f4f5 !important;
+  background-color: #303038 !important;
+  color: #ffffff !important;
 }
 
 @media (max-width: 768px) {
