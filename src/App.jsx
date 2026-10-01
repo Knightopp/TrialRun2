@@ -61,7 +61,6 @@ export default function App() {
 
   // Initial loader states
   const [isAppLoading, setIsAppLoading] = useState(true);
-  const [loaderStatus, setLoaderStatus] = useState('working');
 
   // Registration form states
   const [formName, setFormName] = useState('');
@@ -119,16 +118,36 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Lock scroll to top initially and prevent browser scroll restoration
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+    document.body.style.overflow = 'hidden';
+
     // Initial artificial loading sequence
     const loaderTimer = setTimeout(() => {
-      setLoaderStatus('done');
-      // Wait for done animation to finish, then hide loader
+      setIsAppLoading(false);
+      document.body.style.overflow = 'auto';
+      
+      // Force scroll to top again just in case browser tried to snap to a hash
+      window.scrollTo(0, 0);
+      
+      // Refresh ScrollTrigger after the slide-up animation finishes (0.8s)
       setTimeout(() => {
-        setIsAppLoading(false);
-      }, 1000); // Wait 1s for "done" state animation to show
-    }, 2500); // 2.5s of "working" phase
+        import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
+          ScrollTrigger.refresh();
+          // GSAP sometimes tries to restore scroll position after refresh.
+          // Force scroll to top immediately after to override it.
+          window.scrollTo(0, 0);
+        });
+      }, 850);
+    }, 800);
 
-    return () => clearTimeout(loaderTimer);
+    return () => {
+      clearTimeout(loaderTimer);
+      document.body.style.overflow = 'auto';
+    };
   }, []);
 
   // Main Single-Page Content
@@ -377,81 +396,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* Selected Event Details Modal - StaggeredMenu Side Panel */}
-      {/* Selected Event Details Modal - StaggeredMenu Side Panel */}
-      <StaggeredMenu
-        position="right"
-        isOpen={!!selectedEventDetails}
-        onClose={() => setSelectedEventDetails(null)}
-        items={selectedEventDetails ? [
-          { 
-            isNonInteractive: true,
-            label: (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: 'clamp(200px, 100%, 350px)' }}>
-                <img 
-                  src={selectedEventDetails.image} 
-                  alt={selectedEventDetails.label}
-                  style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: '12px', pointerEvents: 'none' }} 
-                />
-                <GradientText
-                  colors={['#ff4081', '#7c4dff', '#18ffff', '#ff4081']}
-                  animationSpeed={4}
-                  showBorder={false}
-                  className="staggered-event-title"
-                >
-                  <span style={{ 
-                    fontSize: '2.5rem', 
-                    lineHeight: '1.05', 
-                    textTransform: 'uppercase', 
-                    display: 'block', 
-                    textAlign: 'left',
-                    fontWeight: '900',
-                    fontFamily: '"Montserrat", "Inter", sans-serif',
-                    letterSpacing: '-1px'
-                  }}>
-                    {selectedEventDetails.label}
-                  </span>
-                </GradientText>
-              </div>
-            )
-          },
-          { 
-            label: 'Register Now', 
-            ariaLabel: 'Register', 
-            onClick: (e) => {
-              e.preventDefault();
-              setSelectedEventTrack(selectedEventDetails.label);
-              setSelectedEventDetails(null);
-              navigateTo('register');
-            }
-          }
-        ] : []}
-        socialItems={selectedEventDetails ? [
-          { label: (
-              <div style={{ 
-                background: '#38bdf8', 
-                color: '#fff', 
-                padding: '0.75rem 1.5rem', 
-                borderRadius: '8px', 
-                fontWeight: '600', 
-                fontSize: '1.1rem',
-                display: 'inline-block',
-                marginTop: '0.5rem',
-                boxShadow: '0 4px 14px rgba(56, 189, 248, 0.4)'
-              }}>
-                View Poster & Rules
-              </div>
-            ), link: '#' },
-          { label: <span style={{ display: 'block', marginTop: '1.5rem', color: '#888', fontSize: '0.9rem', textTransform: 'uppercase' }}>Coordinators</span>, link: '#' },
-          { label: 'Alex Johnson: +91 98765 43210', link: 'tel:+919876543210' },
-          { label: 'Sarah Williams: +91 98765 43211', link: 'tel:+919876543211' }
-        ] : []}
-        colors={['#1e1e22', '#38bdf8']}
-        menuButtonColor="#fff"
-        openMenuButtonColor="#000"
-        accentColor="#38bdf8"
-        isFixed={true}
-      />
     </div>
   );
 
@@ -655,9 +599,9 @@ export default function App() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: isAppLoading ? 1 : 0,
           pointerEvents: isAppLoading ? 'auto' : 'none',
-          transition: 'opacity 0.6s ease-out',
+          transition: 'transform 0.8s cubic-bezier(0.77, 0, 0.175, 1)',
+          transform: isAppLoading ? 'translateY(0)' : 'translateY(-100%)',
         }}
       >
         <SplitText
@@ -672,57 +616,166 @@ export default function App() {
         />
         <div style={{ marginTop: '3rem' }}>
           <LatticeLoader
-            status={loaderStatus}
-            label="Booting Systems"
-            doneLabel="Ready"
-            errorLabel="Failed"
+            status="working"
+            label=""
+            doneLabel=""
+            errorLabel=""
             pattern="orbit"
             grid={3}
-            shape="square"
-            color="#fff"
-            doneColor="#38bdf8"
+            shape="round"
+            color="#ffffff"
+            doneColor="#ffffff"
             cellSize={10}
             gap={4}
             fontSize={16}
             step={120}
             idleOpacity={0.15}
             glow={true}
-            glowColor="#c084fc"
+            glowColor="#0036ff"
             showTimer={false}
           />
         </div>
       </div>
 
-      {/* Fixed full-screen CursorGrid background */}
+      {/* Main App Content that slides up */}
       <div
         style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: 'none',
+          transition: 'transform 0.8s cubic-bezier(0.77, 0, 0.175, 1)',
+          transform: isAppLoading ? 'translateY(100vh)' : 'translateY(0)',
+          minHeight: '100vh',
+          width: '100%',
         }}
       >
-        <div style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}>
-          <CursorGrid
-            cellSize={70}
-            color="#38bdf8"
-            radius={160}
-            falloff="smooth"
-            holdTime={350}
-            fadeDuration={900}
-            lineWidth={1}
-            maxOpacity={0.7}
-            fillOpacity={0.04}
-            gridOpacity={0.04}
-            cellRadius={0}
-            clickPulse
-            pulseSpeed={650}
-          />
+        {/* Fixed full-screen CursorGrid background */}
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}>
+            <CursorGrid
+              cellSize={70}
+              color="#38bdf8"
+              radius={160}
+              falloff="smooth"
+              holdTime={350}
+              fadeDuration={900}
+              lineWidth={1}
+              maxOpacity={0.7}
+              fillOpacity={0.04}
+              gridOpacity={0.04}
+              cellRadius={0}
+              clickPulse
+              pulseSpeed={650}
+            />
+          </div>
         </div>
+
+        {/* Main Single Page and Separate Registration Page transitioned via PixelSwap */}
+        <PixelSwap
+          firstContent={mainSinglePageContent}
+          secondContent={separateRegisterPageContent}
+          active={pixelActive}
+          pixelSize={64}
+          duration={420}
+          pattern="random"
+        />
       </div>
 
-      {/* Bottom Floating Nav (Dock) */}
-      <div style={{ position: 'fixed', bottom: '1rem', left: '0', right: '0', zIndex: 100, pointerEvents: 'none' }}>
+      {/* Selected Event Details Modal - StaggeredMenu Side Panel */}
+      <StaggeredMenu
+        position="right"
+        isFixed={true}
+        hideToggleButton={true}
+        isOpen={!!selectedEventDetails}
+        onClose={() => setSelectedEventDetails(null)}
+        refreshTrigger={selectedEventDetails?.id}
+        items={selectedEventDetails ? [
+          { 
+            isNonInteractive: true,
+            label: (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: 'clamp(200px, 100%, 350px)' }}>
+                <img 
+                  src={selectedEventDetails.image} 
+                  alt={selectedEventDetails.label}
+                  style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: '12px', pointerEvents: 'none' }} 
+                />
+                <GradientText
+                  colors={['#ff4081', '#7c4dff', '#18ffff', '#ff4081']}
+                  animationSpeed={4}
+                  showBorder={false}
+                  className="staggered-event-title"
+                >
+                  <span style={{ 
+                    fontSize: '2.5rem', 
+                    lineHeight: '1.05', 
+                    textTransform: 'uppercase', 
+                    display: 'block', 
+                    textAlign: 'left',
+                    fontWeight: '900',
+                    fontFamily: '"Montserrat", "Inter", sans-serif',
+                    letterSpacing: '-1px'
+                  }}>
+                    {selectedEventDetails.label}
+                  </span>
+                </GradientText>
+              </div>
+            )
+          },
+          { 
+            label: 'Register Now', 
+            ariaLabel: 'Register', 
+            onClick: (e) => {
+              e.preventDefault();
+              setSelectedEventTrack(selectedEventDetails.label);
+              setSelectedEventDetails(null);
+              navigateTo('register');
+            }
+          }
+        ] : []}
+        socialItems={selectedEventDetails ? [
+          { label: (
+              <div style={{ 
+                background: '#38bdf8', 
+                color: '#fff', 
+                padding: '0.75rem 1.5rem', 
+                borderRadius: '8px', 
+                fontWeight: '600', 
+                fontSize: '1.1rem',
+                display: 'inline-block',
+                marginTop: '0.5rem',
+                boxShadow: '0 4px 14px rgba(56, 189, 248, 0.4)'
+              }}>
+                View Poster & Rules
+              </div>
+            ), link: '#' },
+          { label: <span style={{ display: 'block', marginTop: '1.5rem', color: '#888', fontSize: '0.9rem', textTransform: 'uppercase' }}>Coordinators</span>, link: '#' },
+          { label: 'Alex Johnson: +91 98765 43210', link: 'tel:+919876543210' },
+          { label: 'Sarah Williams: +91 98765 43211', link: 'tel:+919876543211' }
+        ] : []}
+        colors={['#1e1e22', '#38bdf8']}
+        menuButtonColor="#fff"
+        openMenuButtonColor="#000"
+        accentColor="#38bdf8"
+        isFixed={true}
+      />
+
+      {/* Supreme Global Floating Nav (Dock) */}
+      <div 
+        style={{ 
+          position: 'fixed', 
+          bottom: '1rem', 
+          left: '0', 
+          right: '0', 
+          zIndex: 999999, 
+          pointerEvents: 'none',
+          opacity: isAppLoading ? 0 : 1,
+          transition: 'opacity 0.8s ease-in-out',
+        }}
+      >
         <div style={{ pointerEvents: 'auto' }}>
           <Dock 
             items={[
@@ -737,16 +790,6 @@ export default function App() {
           />
         </div>
       </div>
-
-      {/* Main Single Page and Separate Registration Page transitioned via PixelSwap */}
-      <PixelSwap
-        firstContent={mainSinglePageContent}
-        secondContent={separateRegisterPageContent}
-        active={pixelActive}
-        pixelSize={64}
-        duration={420}
-        pattern="random"
-      />
     </>
   );
 }

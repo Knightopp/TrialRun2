@@ -1047,11 +1047,10 @@
 
 /* Loader Title */
 .srishti-loader-title {
-  font-family: var(--font-mono);
-  font-size: clamp(3rem, 10vw, 6rem);
+  font-family: 'Akira Expanded', sans-serif;
+  font-size: clamp(3rem, 10vw, 5.5rem);
   font-weight: 800;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.1em;
   color: #fff;
-  text-shadow: 0 0 20px rgba(192, 132, 252, 0.5);
   margin: 0;
 }

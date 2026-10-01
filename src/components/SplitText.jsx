@@ -4,9 +4,8 @@ import { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText as GSAPSplitText } from 'gsap/SplitText';
-import { useGSAP } from '@gsap/react';
 
-gsap.registerPlugin(ScrollTrigger, GSAPSplitText, useGSAP);
+gsap.registerPlugin(ScrollTrigger, GSAPSplitText);
 
 const SplitText = ({
   text,
@@ -43,19 +42,17 @@ const SplitText = ({
     }
   }, []);
 
-  useGSAP(
-    () => {
-      if (!ref.current || !text || !fontsLoaded) return;
-      // Prevent re-animation if already completed
-      if (animationCompletedRef.current) return;
-      const el = ref.current;
-
+  useEffect(() => {
+    if (!ref.current || !text || !fontsLoaded) return;
+    if (animationCompletedRef.current) return;
+    
+    const el = ref.current;
+    
+    let ctx = gsap.context(() => {
       if (el._rbsplitInstance) {
         try {
           el._rbsplitInstance.revert();
-        } catch (_) {
-          /* noop */
-        }
+        } catch (_) {}
         el._rbsplitInstance = null;
       }
 
@@ -63,12 +60,7 @@ const SplitText = ({
       const marginMatch = /^(-?\d+(?:\.\d+)?)(px|em|rem|%)?$/.exec(rootMargin);
       const marginValue = marginMatch ? parseFloat(marginMatch[1]) : 0;
       const marginUnit = marginMatch ? marginMatch[2] || 'px' : 'px';
-      const sign =
-        marginValue === 0
-          ? ''
-          : marginValue < 0
-            ? `-=${Math.abs(marginValue)}${marginUnit}`
-            : `+=${marginValue}${marginUnit}`;
+      const sign = marginValue === 0 ? '' : marginValue < 0 ? `-=${Math.abs(marginValue)}${marginUnit}` : `+=${marginValue}${marginUnit}`;
       const start = `top ${startPct}%${sign}`;
 
       let targets;
@@ -89,7 +81,8 @@ const SplitText = ({
         reduceWhiteSpace: false,
         onSplit: self => {
           assignTargets(self);
-          const tween = gsap.fromTo(
+          gsap.set(el, { opacity: 1 }); // Reveal parent now that children are split and ready
+          gsap.fromTo(
             targets,
             { ...from },
             {
@@ -112,40 +105,25 @@ const SplitText = ({
               force3D: true
             }
           );
-          return tween;
         }
       });
-
       el._rbsplitInstance = splitInstance;
+    }, ref);
 
-      return () => {
-        ScrollTrigger.getAll().forEach(st => {
-          if (st.trigger === el) st.kill();
-        });
+    return () => {
+      ctx.revert();
+      if (el._rbsplitInstance) {
         try {
-          splitInstance.revert();
-        } catch (_) {
-          /* noop */
-        }
+          el._rbsplitInstance.revert();
+        } catch (_) {}
         el._rbsplitInstance = null;
-      };
-    },
-    {
-      dependencies: [
-        text,
-        delay,
-        duration,
-        ease,
-        splitType,
-        JSON.stringify(from),
-        JSON.stringify(to),
-        threshold,
-        rootMargin,
-        fontsLoaded
-      ],
-      scope: ref
-    }
-  );
+      }
+    };
+  }, [
+    text, delay, duration, ease, splitType, 
+    JSON.stringify(from), JSON.stringify(to), 
+    threshold, rootMargin, fontsLoaded
+  ]);
 
   const renderTag = () => {
     const style = {
@@ -154,7 +132,8 @@ const SplitText = ({
       display: 'inline-block',
       whiteSpace: 'normal',
       wordWrap: 'break-word',
-      willChange: 'transform, opacity'
+      willChange: 'transform, opacity',
+      opacity: 0 // Hide parent completely to prevent FOUT until GSAP initializes
     };
     const classes = `split-parent ${className}`;
     const Tag = tag || 'p';

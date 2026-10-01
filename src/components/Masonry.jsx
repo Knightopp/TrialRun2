@@ -162,7 +162,7 @@ const Masonry = ({
           delay: index * stagger,
           scrollTrigger: {
             trigger: containerRef.current,
-            start: 'top bottom',
+            start: 'top 90%',
             toggleActions: 'play none none reverse',
           }
         });
@@ -175,8 +175,15 @@ const Masonry = ({
         });
       }
     });
+    
+    // Crucial: Set container height so ScrollTrigger has an actual area to trigger within!
+    if (containerRef.current && grid.length > 0) {
+      const maxColHeight = Math.max(...grid.map(item => item.y + item.h));
+      containerRef.current.style.height = `${maxColHeight}px`;
+    }
 
     hasMounted.current = true;
+    ScrollTrigger.refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grid, imagesReady, stagger, animateFrom, blurToFocus, duration, ease]);
 
