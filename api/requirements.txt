@@ -1,1 +1,1 @@
-fampay-verify
+git+https://github.com/iflexvault/fampay-verify.git

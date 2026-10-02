@@ -115,6 +115,8 @@ export default function App() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
   const [utrNumber, setUtrNumber] = useState('');
+  const [qrCodeData, setQrCodeData] = useState(null);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
   useEffect(() => {
     if (activeEventData) {
@@ -127,6 +129,31 @@ export default function App() {
       }
     }
   }, [activeEventData]);
+
+  useEffect(() => {
+    if (activeStep === formTeamSize + 2 && !qrCodeData && !isGeneratingQr) {
+      const fetchQr = async () => {
+        setIsGeneratingQr(true);
+        try {
+          const expectedAmount = formTeamSize * 150;
+          const res = await fetch('/api/qr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: expectedAmount, name: activeEventData?.label || 'Event Registration' })
+          });
+          const data = await res.json();
+          if (data.qr_image) {
+            setQrCodeData(data.qr_image);
+          }
+        } catch (err) {
+          console.error('Failed to load QR code', err);
+        } finally {
+          setIsGeneratingQr(false);
+        }
+      };
+      fetchQr();
+    }
+  }, [activeStep, formTeamSize, qrCodeData, isGeneratingQr, activeEventData]);
 
   const verifyPayment = async () => {
     if (!utrNumber || utrNumber.length < 12) {
@@ -1035,14 +1062,25 @@ export default function App() {
                             <Step>
                               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                                 <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Payment Verification</h4>
-                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Please send ₹{formTeamSize * 150} to our FamPay account, then click verify.</p>
+                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Please scan the QR code to send ₹{formTeamSize * 150} via FamPay, then enter your UTR number below.</p>
                                 
                                 {paymentVerified ? (
                                   <div style={{ color: '#10b981', padding: '1rem', border: '1px solid #10b981', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)' }}>
                                     Payment Verified successfully! You can now complete registration.
                                   </div>
                                 ) : (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
+                                    
+                                    <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block' }}>
+                                      {isGeneratingQr || !qrCodeData ? (
+                                        <div style={{ width: '200px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a' }}>
+                                          Generating QR...
+                                        </div>
+                                      ) : (
+                                        <img src={`data:image/png;base64,${qrCodeData}`} alt="Payment QR" style={{ width: '200px', height: '200px', display: 'block' }} />
+                                      )}
+                                    </div>
+
                                     <div className="form-group-item" style={{ width: '100%', maxWidth: '300px' }}>
                                       <input 
                                         type="text" 

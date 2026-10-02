@@ -2,16 +2,13 @@ from http.server import BaseHTTPRequestHandler
 import json
 import os
 import asyncio
-from fampay_verify.models import FamPayVerifierConfig, VerifyPaymentParams
+from fampay_verify.models import FamPayVerifierConfig, GenerateQrParams
 from fampay_verify import FamPayVerifier
 
 # Retrieve the app password and email from environment variables
-# You can set this in your Vercel project settings under Environment Variables
-app_password = os.environ.get("GMAIL_APP_PASSWORD")
+app_password = os.environ.get("GMAIL_APP_PASSWORD", "")
 gmail_account = os.environ.get("GMAIL_ACCOUNT", "famgatewayin@gmail.com")
-
-if not app_password:
-    raise Exception("GMAIL_APP_PASSWORD environment variable is not set")
+upi_id = os.environ.get("UPI_ID", "famgatewayin@fbl")
 
 config = FamPayVerifierConfig(
     gmail=gmail_account,
@@ -27,7 +24,7 @@ class handler(BaseHTTPRequestHandler):
             body = json.loads(post_data.decode('utf-8'))
             
             amount = body.get("amount")
-            utr = body.get("utr")
+            name = body.get("name", "Event Registration")
             
             if not amount:
                 self.send_response(400)
@@ -36,20 +33,18 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": "amount is required"}).encode())
                 return
                 
-            # Verify the payment using the fampay-verify package (which is async)
-            result = asyncio.run(verifier.verify_payment(VerifyPaymentParams(amount=amount, utr=utr)))
+            # Generate the QR code using the fampay-verify package
+            result = asyncio.run(verifier.generate_qr(GenerateQrParams(upi_id=upi_id, amount=amount, name=name)))
             
             # Respond to the frontend
-            self.send_response(200 if result.verified else 400)
+            self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             
             response_data = {
-                "verified": result.verified,
-                "message": result.message,
+                "qr_image": result.qr_image,
+                "upi_uri": result.upi_uri
             }
-            if hasattr(result, "utr"):
-                response_data["utr"] = getattr(result, "utr")
                 
             self.wfile.write(json.dumps(response_data).encode())
             
