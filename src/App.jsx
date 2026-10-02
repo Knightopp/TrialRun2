@@ -26,6 +26,7 @@ import { FiHome, FiCalendar, FiActivity, FiUserPlus } from 'react-icons/fi';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import ColorBends from './components/ColorBends';
 import GlareHover from './components/GlareHover';
+import ProfilePage from './components/ProfilePage';
 import { supabase } from './supabaseClient';
 import './App.css';
 
@@ -72,6 +73,7 @@ export default function App() {
   const location = useLocation();
 
   const isRegisterPage = location.pathname.startsWith('/register');
+  const isProfilePage = location.pathname.startsWith('/profile');
 
   const matchEventRoute = location.pathname.match(/^\/register\/([a-zA-Z0-9-]+)$/);
   const activeEventData = matchEventRoute ? FEST_EVENTS.find(e => e.id === matchEventRoute[1]) : null;
@@ -775,6 +777,10 @@ export default function App() {
     </div>
   );
 
+  if (isProfilePage) {
+    return <ProfilePage />;
+  }
+
   return (
     <>
       {/* INITIAL LOAD OVERLAY */}
@@ -1424,7 +1430,7 @@ export default function App() {
               { icon: <FiHome size={20} />, label: 'Home', onClick: () => navigateTo('main', 'home') },
               { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => navigateTo('main', 'events') },
               { icon: <FiActivity size={20} />, label: 'Experience', onClick: () => navigateTo('main', 'experience') },
-              { icon: <FiUserPlus size={20} />, label: 'Register', onClick: () => navigateTo('register') },
+              { icon: <FiUserPlus size={20} />, label: 'Profile', onClick: () => navigate('/profile') },
             ]}
             panelHeight={68}
             baseItemSize={50}
