@@ -1144,71 +1144,102 @@ export default function App() {
                           <div style={{ textAlign: 'center', padding: '1rem 0', display: 'flex', justifyContent: 'center' }}>
                             {isRegistered && qrCodeDataUrl ? (
                               <TearTicket
-                                image="/assets/logo.png"
-                                imageAlt="Srishti Logo"
-                                stub={
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '0.5rem', background: '#fff' }}>
-                                    <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '0.75rem', marginBottom: '0.5rem' }}>SCAN ME</h4>
-                                    <QRCodeSVG
-                                      value={participantCode}
-                                      size={100}
-                                      bgColor="#ffffff"
-                                      fgColor="#0f172a"
-                                      level="H"
-                                      imageSettings={{
-                                        src: "/assets/logo.png",
-                                        height: 24,
-                                        width: 24,
-                                        excavate: true,
-                                      }}
-                                    />
-                                    <span style={{ fontSize: '0.65rem', color: '#666', marginTop: '0.5rem', fontFamily: 'var(--font-mono)' }}>{participantCode}</span>
-                                  </div>
-                                }
                                 orientation="horizontal"
-                                scrim={true}
-                                imageRadius={8}
-                                width={460}
-                                height={220}
-                                stubSize={130}
+                                scrim={false}
+                                width={650}
+                                height={300}
+                                stubSize={180}
                                 radius={16}
-                                holes={10}
-                                holeSize={6}
-                                notch={4}
-                                roughness={0}
-                                tearAngle={30}
+                                holes={12}
+                                holeSize={7}
+                                notch={5}
+                                tearAngle={25}
                                 stretch={30}
-                                resistance={0.45}
-                                rotate={-2}
+                                resistance={0.5}
+                                rotate={-1.5}
                                 tilt={true}
-                                tiltMax={9}
-                                tiltReach={260}
-                                parallax={6}
+                                tiltMax={12}
+                                tiltReach={300}
+                                parallax={8}
                                 perspective={1000}
-                                background="#ffffff"
-                                color="#000000"
+                                background="#070a13"
+                                stubBackground="#ffffff"
+                                color="#ffffff"
                                 border={true}
-                                borderColor="#e2e8f0"
+                                borderColor="rgba(56,189,248,0.2)"
                                 borderWidth={1}
                                 recenter={true}
+                                stub={
+                                  <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1.25rem', background: '#fff', overflow: 'hidden' }}>
+                                    <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'linear-gradient(135deg, rgba(165,243,252,0.6), rgba(56,189,248,0.8))', transform: 'rotate(45deg)', opacity: 0.6, zIndex: 0 }}></div>
+                                    <div style={{ position: 'absolute', bottom: '-40px', left: '-30px', width: '150px', height: '120px', background: 'linear-gradient(135deg, rgba(56,189,248,0.8), rgba(29,78,216,0.8))', transform: 'rotate(35deg)', opacity: 0.8, zIndex: 0 }}></div>
+                                    
+                                    <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                                      <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '1.1rem', marginBottom: '1.25rem', letterSpacing: '0.05em' }}>SCAN ME</h4>
+                                      
+                                      <div style={{ position: 'relative', padding: '12px' }}>
+                                        <div style={{ position: 'absolute', top: 0, left: 0, width: '18px', height: '18px', borderTop: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '4px 0 0 0' }}></div>
+                                        <div style={{ position: 'absolute', top: 0, right: 0, width: '18px', height: '18px', borderTop: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 4px 0 0' }}></div>
+                                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '18px', height: '18px', borderBottom: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '0 0 0 4px' }}></div>
+                                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: '18px', height: '18px', borderBottom: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 0 4px 0' }}></div>
+                                        
+                                        <QRCodeSVG
+                                          value={participantCode}
+                                          size={120}
+                                          bgColor="#ffffff"
+                                          fgColor="#000000"
+                                          level="H"
+                                          imageSettings={{
+                                            src: "/assets/logo.png",
+                                            height: 28,
+                                            width: 28,
+                                            excavate: true,
+                                          }}
+                                        />
+                                      </div>
+                                      
+                                      <span style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '1.25rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{participantCode}</span>
+                                    </div>
+                                  </div>
+                                }
                               >
-                                <div style={{ padding: '1.5rem', textAlign: 'left', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                                  <div>
-                                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: '#64748b', letterSpacing: '0.05em' }}>SRISHTI 2.7 ENTRY PASS</div>
-                                    <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '1.5rem', color: '#0f172a', margin: '0.5rem 0', lineHeight: 1.1 }}>
+                                <div style={{ position: 'relative', width: '100%', height: '100%', padding: '2.5rem', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, background: 'radial-gradient(circle at 30% 50%, rgba(14,165,233,0.2) 0%, transparent 60%)' }}></div>
+                                  <div style={{ position: 'absolute', top: '-10%', left: '20%', width: '150%', height: '120%', zIndex: 0, background: 'repeating-linear-gradient(90deg, rgba(14,165,233,0) 0px, rgba(14,165,233,0) 40px, rgba(14,165,233,0.3) 40px, rgba(14,165,233,0.6) 60px, rgba(14,165,233,0) 60px, rgba(14,165,233,0) 80px)', transform: 'skewX(-15deg)', opacity: 0.6 }}></div>
+                              
+                                  <div style={{ position: 'relative', zIndex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: '#e2e8f0', letterSpacing: '0.2em', lineHeight: 1.4 }}>SRISHTI 2.7<br/><span style={{ color: '#38bdf8' }}>ENTRY PASS</span></div>
+                                      <div style={{ height: '2px', width: '60px', background: 'linear-gradient(90deg, #38bdf8, transparent)' }}></div>
+                                    </div>
+                                    
+                                    <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '2.5rem', color: '#fff', margin: '0 0 1.5rem 0', lineHeight: 1, textTransform: 'uppercase', textShadow: '0 0 20px rgba(56,189,248,0.7), 0 0 40px rgba(56,189,248,0.3)' }}>
                                       {activeEventData?.label || 'EVENT'}
                                     </h3>
-                                    <p style={{ color: '#334155', fontWeight: 'bold', margin: '0.5rem 0' }}>{formName}</p>
-                                    <p style={{ color: '#64748b', fontSize: '0.85rem' }}>{formCollege}</p>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                                    <div style={{ background: '#f1f5f9', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                      <span style={{ display: 'block', fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>STATUS</span>
-                                      <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.85rem' }}>VERIFIED</span>
+                                    
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                       <div style={{ width: '4px', height: '40px', background: '#38bdf8', borderRadius: '2px', boxShadow: '0 0 10px #38bdf8' }}></div>
+                                       <div>
+                                         <p style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.3rem', margin: '0' }}>{formName}</p>
+                                         <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0' }}>{formCollege}</p>
+                                       </div>
                                     </div>
+                                  </div>
+                                  
+                                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', padding: '0.75rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(56,189,248,0.3)', display: 'inline-flex', flexDirection: 'column', gap: '0.25rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+                                      <span style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.1em' }}>STATUS</span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div style={{ width: '18px', height: '18px', background: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 10px #10b981' }}>
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        </div>
+                                        <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '0.05em' }}>VERIFIED</span>
+                                      </div>
+                                    </div>
+                                    
                                     <div style={{ textAlign: 'right' }}>
-                                      <span style={{ display: 'block', fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>TEAM</span>
-                                      <span style={{ color: '#0f172a', fontWeight: 'bold', fontSize: '0.9rem' }}>{formTeamSize} Member(s)</span>
+                                      <span style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>TEAM</span>
+                                      <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.3rem' }}>{formTeamSize} Member(s)</span>
                                     </div>
                                   </div>
                                 </div>
