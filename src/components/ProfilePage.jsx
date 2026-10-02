@@ -24,6 +24,13 @@ export default function ProfilePage() {
   const [onboardingPhone, setOnboardingPhone] = useState('');
   const [onboardingCollege, setOnboardingCollege] = useState('');
 
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editCollege, setEditCollege] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     const savedEmail = localStorage.getItem('srishti_session');
     if (savedEmail) {
@@ -55,6 +62,12 @@ export default function ProfilePage() {
 
       if (pError) throw pError;
       setParticipantData(participant);
+      
+      if (participant) {
+        setEditName(participant.name || '');
+        setEditCollege(participant.college || '');
+        setEditPhone(participant.phone || '');
+      }
 
       if (participant) {
         const { data: regs, error: rError } = await supabase
@@ -179,6 +192,26 @@ export default function ProfilePage() {
     setEmail('');
   };
 
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('participants')
+        .update({ name: editName, college: editCollege, phone: editPhone })
+        .eq('id', participantData.id);
+      
+      if (error) throw error;
+      setParticipantData({ ...participantData, name: editName, college: editCollege, phone: editPhone });
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      alert('Failed to update profile.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const isNextDisabled = () => {
     if (onboardingStep === 1 && !onboardingName.trim()) return true;
     if (onboardingStep === 2 && (!onboardingCollege.trim() || !onboardingPhone.trim())) return true;
@@ -261,14 +294,49 @@ export default function ProfilePage() {
             {loading ? (
               <div style={{ marginTop: '4rem', textAlign: 'center' }}>Loading your data...</div>
             ) : (
-              <div style={{ marginTop: '4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+              <div style={{ marginTop: '4rem', display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
                 
                 {/* Profile Card */}
-                <div style={{ padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222' }}>
-                  <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FiUser /> Profile Overview
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ flex: '1 1 300px', maxWidth: '100%', padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                    <h3 style={{ fontSize: '1.2rem', color: '#888', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <FiUser /> Profile Overview
+                    </h3>
+                    {!isEditing && (
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        style={{ background: 'none', border: '1px solid #333', color: '#fff', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isEditing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div>
+                        <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Name</label>
+                        <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
+                      </div>
+                      <div>
+                        <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>College</label>
+                        <input type="text" value={editCollege} onChange={e => setEditCollege(e.target.value)} style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
+                      </div>
+                      <div>
+                        <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Phone</label>
+                        <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)} style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                        <button onClick={handleSaveProfile} disabled={isSaving} style={{ flex: 1, padding: '0.75rem', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
+                          {isSaving ? 'Saving...' : 'Save'}
+                        </button>
+                        <button onClick={() => setIsEditing(false)} style={{ flex: 1, padding: '0.75rem', background: 'transparent', color: '#fff', border: '1px solid #333', borderRadius: '8px', cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div>
                       <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Name</p>
                       <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData?.name || 'Admin'}</p>
@@ -282,17 +350,19 @@ export default function ProfilePage() {
                       <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData?.phone || '-'}</p>
                     </div>
                   </div>
+                  )}
                 </div>
 
                 {/* Srishti Entry Pass */}
-                <div style={{ padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ flex: '2 1 480px', padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <FiCalendar /> Digital Entry Pass
                   </h3>
                   {registrations.length === 0 ? (
-                    <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)', transformOrigin: 'top center', display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)', transformOrigin: 'top center', display: 'flex', justifyContent: 'center', width: '100%' }}>
                       <TearTicket 
-                        width={360}
+                        width={460}
+                        tilt={false}
                         stub={
                           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Admit One</div>
@@ -303,25 +373,23 @@ export default function ProfilePage() {
                         <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
                           <div>
                             <div style={{ fontSize: '0.8rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1px' }}>Srishti 2.7 Entry Pass</div>
-                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: '0.5rem 0' }}>Register to unlock</div>
+                            <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#fff', margin: '0.25rem 0', lineHeight: 1.1, textTransform: 'lowercase' }}>{participantData?.name || 'Participant'}</div>
+                            <div style={{ fontSize: '1rem', color: '#888' }}>{participantData?.college || '-'}</div>
                           </div>
                           <div style={{ display: 'flex', gap: '2rem', marginTop: 'auto' }}>
                             <div>
-                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Participant</div>
-                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>{participantData?.name || 'Admin'}</div>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>College</div>
-                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>{participantData?.college || '-'}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Status</div>
+                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>Register to unlock</div>
                             </div>
                           </div>
                         </div>
                       </TearTicket>
                     </div>
                   ) : (
-                    <div style={{ transformOrigin: 'top center', display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ transformOrigin: 'top center', display: 'flex', justifyContent: 'center', width: '100%' }}>
                       <TearTicket 
-                        width={360}
+                        width={460}
+                        tilt={false}
                         stub={
                           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Pass ID</div>
@@ -334,16 +402,13 @@ export default function ProfilePage() {
                         <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
                           <div>
                             <div style={{ fontSize: '0.8rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1px' }}>Srishti 2.7 Entry Pass</div>
-                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: '0.5rem 0' }}>Main Campus</div>
+                            <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#fff', margin: '0.25rem 0', lineHeight: 1.1, textTransform: 'lowercase' }}>{participantData?.name || 'Participant'}</div>
+                            <div style={{ fontSize: '1rem', color: '#888' }}>{participantData?.college || '-'}</div>
                           </div>
                           <div style={{ display: 'flex', gap: '2rem', marginTop: 'auto' }}>
                             <div>
-                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Participant</div>
-                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>{participantData?.name || 'Admin'}</div>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>College</div>
-                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>{participantData?.college || '-'}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Pass Level</div>
+                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>Main Campus</div>
                             </div>
                           </div>
                         </div>
@@ -353,7 +418,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Events List */}
-                <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                <div style={{ flex: '1 1 100%', marginTop: '1rem' }}>
                   {registrations.length === 0 ? (
                     <div style={{ padding: '4rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', textAlign: 'center' }}>
                       <FiCalendar size={48} color="#444" style={{ marginBottom: '1.5rem' }} />
