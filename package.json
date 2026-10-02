@@ -12,6 +12,7 @@
   "dependencies": {
     "@gsap/react": "^2.1.2",
     "@react-three/fiber": "^9.8.1",
+    "@supabase/supabase-js": "^2.117.2",
     "gsap": "^3.15.0",
     "motion": "^13.4.6",
     "ogl": "^1.0.11",

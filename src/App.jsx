@@ -23,6 +23,7 @@ import { FiHome, FiCalendar, FiActivity, FiUserPlus } from 'react-icons/fi';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import ColorBends from './components/ColorBends';
 import GlareHover from './components/GlareHover';
+import { supabase } from './supabaseClient';
 import './App.css';
 
 const FEST_EVENTS = [
@@ -110,6 +111,11 @@ export default function App() {
     setTeamMembers(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   };
 
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+  const [utrNumber, setUtrNumber] = useState('');
+
   useEffect(() => {
     if (activeEventData) {
       if (activeEventData.id === 'hackathon') {
@@ -122,6 +128,34 @@ export default function App() {
     }
   }, [activeEventData]);
 
+  const verifyPayment = async () => {
+    if (!utrNumber || utrNumber.length < 12) {
+      setPaymentError('Please enter a valid 12-digit UTR number.');
+      return;
+    }
+    
+    setIsVerifying(true);
+    setPaymentError(null);
+    try {
+      const expectedAmount = formTeamSize * 150; // Example: 150 per person
+      const res = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: expectedAmount, utr: utrNumber })
+      });
+      const data = await res.json();
+      if (res.ok && data.verified) {
+        setPaymentVerified(true);
+      } else {
+        setPaymentError(data.message || 'Payment not found. Try again in a minute.');
+      }
+    } catch (err) {
+      setPaymentError('Network error. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   const isStepValid = (step) => {
     if (step === 1) return true;
     if (step === 2) return formName.trim() !== '' && formCollege.trim() !== '' && formEmail.trim() !== '' && formPhone.trim() !== '';
@@ -132,6 +166,9 @@ export default function App() {
        if (!member) return false;
        return member.name.trim() !== '' && member.email.trim() !== '' && member.phone.trim() !== '';
     }
+    
+    if (step === formTeamSize + 2) return paymentVerified;
+    
     return true;
   };
 
@@ -190,14 +227,52 @@ export default function App() {
     }
   };
 
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!formName.trim() || !formEmail.trim()) return;
     setFormStatus('working');
-    setTimeout(() => {
+    
+    // Prepare members array
+    const members = [];
+    for (let i = 2; i <= formTeamSize; i++) {
+      if (teamMembers[i]) {
+        members.push({
+          member_index: i,
+          name: teamMembers[i].name,
+          email: teamMembers[i].email,
+          phone: teamMembers[i].phone,
+          roll: teamMembers[i].roll
+        });
+      }
+    }
+
+    try {
+      const { error } = await supabase
+        .from('registrations')
+        .insert([
+          {
+            event_id: activeEventData.id,
+            event_name: activeEventData.label,
+            team_size: formTeamSize,
+            lead_name: formName,
+            lead_college: formCollege,
+            lead_email: formEmail,
+            lead_phone: formPhone,
+            lead_roll: formRoll,
+            team_members: members,
+            payment_status: 'verified' // By Option A logic, it only hits here if paymentVerified is true
+          }
+        ]);
+
+      if (error) throw error;
+      
       setFormStatus('done');
       setIsRegistered(true);
-    }, 1000);
+    } catch (error) {
+      console.error('Error saving registration:', error);
+      alert('There was an error saving your registration to the database. Please contact support.');
+      setFormStatus('idle'); // Let them try again
+    }
   };
 
   useEffect(() => {
@@ -959,13 +1034,37 @@ export default function App() {
 
                             <Step>
                               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                                <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Ready to submit?</h4>
-                                <p style={{ color: '#94a3b8', marginBottom: '2rem' }}>Please verify all details before completing registration.</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#cbd5e1', textAlign: 'center' }}>
-                                    FREE BADGE • JAN 2027
-                                  </span>
-                                </div>
+                                <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Payment Verification</h4>
+                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Please send ₹{formTeamSize * 150} to our FamPay account, then click verify.</p>
+                                
+                                {paymentVerified ? (
+                                  <div style={{ color: '#10b981', padding: '1rem', border: '1px solid #10b981', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)' }}>
+                                    Payment Verified successfully! You can now complete registration.
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                                    <div className="form-group-item" style={{ width: '100%', maxWidth: '300px' }}>
+                                      <input 
+                                        type="text" 
+                                        className="app-input" 
+                                        placeholder="12-Digit UTR Number" 
+                                        value={utrNumber} 
+                                        onChange={(e) => setUtrNumber(e.target.value)} 
+                                        style={{ textAlign: 'center', letterSpacing: '0.1em' }}
+                                        maxLength={12}
+                                      />
+                                    </div>
+                                    <button 
+                                      type="button" 
+                                      onClick={verifyPayment} 
+                                      disabled={isVerifying}
+                                      style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '0.75rem 2rem', borderRadius: '8px', fontWeight: 'bold', cursor: isVerifying ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)' }}
+                                    >
+                                      {isVerifying ? 'VERIFYING...' : 'VERIFY FAMPAY PAYMENT'}
+                                    </button>
+                                    {paymentError && <p style={{ color: '#ef4444', fontSize: '0.85rem' }}>{paymentError}</p>}
+                                  </div>
+                                )}
                               </div>
                             </Step>
                           </Stepper>
