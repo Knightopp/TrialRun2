@@ -27,7 +27,6 @@ class handler(BaseHTTPRequestHandler):
             body = json.loads(post_data.decode('utf-8'))
             
             amount = body.get("amount")
-            utr = body.get("utr")
             
             if not amount:
                 self.send_response(400)
@@ -37,7 +36,7 @@ class handler(BaseHTTPRequestHandler):
                 return
                 
             # Verify the payment using the fampay-verify package (which is async)
-            result = asyncio.run(verifier.verify_payment(VerifyPaymentParams(amount=amount, utr=utr)))
+            result = asyncio.run(verifier.verify_payment(VerifyPaymentParams(amount=amount)))
             
             # Respond to the frontend
             self.send_response(200 if result.verified else 400)

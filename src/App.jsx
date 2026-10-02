@@ -114,7 +114,7 @@ export default function App() {
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
-  const [utrNumber, setUtrNumber] = useState('');
+  const [paymentFraction, setPaymentFraction] = useState(0);
 
   useEffect(() => {
     if (activeEventData) {
@@ -128,20 +128,23 @@ export default function App() {
     }
   }, [activeEventData]);
 
-  const verifyPayment = async () => {
-    if (!utrNumber || utrNumber.length < 12) {
-      setPaymentError('Please enter a valid 12-digit UTR number.');
-      return;
+  useEffect(() => {
+    // Generate a stable random fraction between 0.01 and 0.99 for verification when arriving at step
+    if (activeStep === formTeamSize + 2 && paymentFraction === 0) {
+       const randomCents = Math.floor(Math.random() * 99) + 1;
+       setPaymentFraction(randomCents / 100);
     }
-    
+  }, [activeStep, formTeamSize, paymentFraction]);
+
+  const verifyPayment = async () => {
     setIsVerifying(true);
     setPaymentError(null);
     try {
-      const expectedAmount = formTeamSize * 10; // Example: 10 per person
+      const expectedAmount = (formTeamSize * 10) + paymentFraction;
       const res = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: expectedAmount, utr: utrNumber })
+        body: JSON.stringify({ amount: expectedAmount })
       });
       const data = await res.json();
       if (res.ok && data.verified) {
@@ -1035,7 +1038,7 @@ export default function App() {
                             <Step>
                               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                                 <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Payment Verification</h4>
-                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Please scan the QR code to send ₹{formTeamSize * 10} via FamPay, then enter your UTR number below.</p>
+                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Please scan the QR code to send exactly ₹{((formTeamSize * 10) + paymentFraction).toFixed(2)} via FamPay. The random fraction ensures instant automatic verification.</p>
                                 
                                 {paymentVerified ? (
                                   <div style={{ color: '#10b981', padding: '1rem', border: '1px solid #10b981', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)' }}>
@@ -1046,7 +1049,7 @@ export default function App() {
                                     
                                     <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block' }}>
                                       {(() => {
-                                        const amount = formTeamSize * 10;
+                                        const amount = ((formTeamSize * 10) + paymentFraction).toFixed(2);
                                         const upiId = import.meta.env.VITE_UPI_ID || '9188811692@fam';
                                         
                                         // Clean the strings so they are safe for the URI
@@ -1062,24 +1065,13 @@ export default function App() {
                                       })()}
                                     </div>
 
-                                    <div className="form-group-item" style={{ width: '100%', maxWidth: '300px' }}>
-                                      <input 
-                                        type="text" 
-                                        className="app-input" 
-                                        placeholder="12-Digit UTR Number" 
-                                        value={utrNumber} 
-                                        onChange={(e) => setUtrNumber(e.target.value)} 
-                                        style={{ textAlign: 'center', letterSpacing: '0.1em' }}
-                                        maxLength={12}
-                                      />
-                                    </div>
                                     <button 
                                       type="button" 
                                       onClick={verifyPayment} 
                                       disabled={isVerifying}
                                       style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '0.75rem 2rem', borderRadius: '8px', fontWeight: 'bold', cursor: isVerifying ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)' }}
                                     >
-                                      {isVerifying ? 'VERIFYING...' : 'VERIFY FAMPAY PAYMENT'}
+                                      {isVerifying ? 'VERIFYING...' : 'VERIFY PAYMENT'}
                                     </button>
                                     {paymentError && <p style={{ color: '#ef4444', fontSize: '0.85rem' }}>{paymentError}</p>}
                                   </div>
