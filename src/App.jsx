@@ -738,23 +738,25 @@ export default function App() {
           } />
           <Route path="/register" element={
             <>
-              {/* ColorBends Background for Registration Page */}
-              <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1 }}>
-                <ColorBends
-                  colors={["#0036ff", "#38bdf8", "#0ea5e9"]}
-                  rotation={90}
-                  speed={0.2}
-                  scale={1}
-                  frequency={1}
-                  warpStrength={1}
-                  mouseInfluence={1}
-                  noise={0.15}
-                  parallax={0.5}
-                  iterations={1}
-                  intensity={1.5}
-                  bandWidth={6}
-                  transparent={true}
-                />
+              {/* ColorBends Background for Registration Page (Disabled on mobile to prevent lag) */}
+              <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1, background: '#020617' }}>
+                {!isMobile && (
+                  <ColorBends
+                    colors={["#0036ff", "#38bdf8", "#0ea5e9"]}
+                    rotation={90}
+                    speed={0.2}
+                    scale={1}
+                    frequency={1}
+                    warpStrength={1}
+                    mouseInfluence={1}
+                    noise={0.15}
+                    parallax={0.5}
+                    iterations={1}
+                    intensity={1.5}
+                    bandWidth={6}
+                    transparent={true}
+                  />
+                )}
               </div>
               {separateRegisterPageContent}
             </>
