@@ -363,6 +363,7 @@ export default function ProfilePage() {
                       <TearTicket 
                         width={460}
                         tilt={false}
+                        rotate={0}
                         stub={
                           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Admit One</div>
