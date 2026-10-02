@@ -298,16 +298,27 @@ export default function App() {
     try {
       const uniqueCode = 'SR27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      // 1. Sync with the 'participants' table for the Flutter App and get the UUID
-      const { data: pData } = await supabase.from('participants').insert([{
-         participant_code: uniqueCode,
-         name: formName,
-         email: formEmail.trim().toLowerCase(),
-         phone: formPhone,
-         college: formCollege,
-         department: 'N/A',
-         year: 'N/A'
-      }]).select().single();
+      let pData = null;
+      const { data: existingParticipant } = await supabase
+        .from('participants')
+        .select('*')
+        .ilike('email', formEmail.trim())
+        .maybeSingle();
+
+      if (existingParticipant) {
+        pData = existingParticipant;
+      } else {
+        const { data: newParticipant } = await supabase.from('participants').insert([{
+           participant_code: uniqueCode,
+           name: formName,
+           email: formEmail.trim().toLowerCase(),
+           phone: formPhone,
+           college: formCollege,
+           department: 'N/A',
+           year: 'N/A'
+        }]).select().single();
+        pData = newParticipant;
+      }
 
       // 2. Insert into website's registrations table using the new participant_id
       const { error } = await supabase

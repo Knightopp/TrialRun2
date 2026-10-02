@@ -59,7 +59,7 @@ export default function ProfilePage() {
       if (participant) {
         const { data: regs, error: rError } = await supabase
           .from('registrations')
-          .select('*, events (*)')
+          .select('*')
           .eq('participant_id', participant.id);
 
         if (rError) throw rError;
