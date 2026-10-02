@@ -20,6 +20,7 @@ export const StaggeredMenu = ({
   isFixed = false,
   closeOnClickAway = true,
   hideToggleButton = false,
+  children,
   onMenuOpen,
   onMenuClose,
   // Extended props for controlled mode
@@ -536,6 +537,7 @@ export const StaggeredMenu = ({
               </ul>
             </div>
           )}
+          {children}
         </div>
       </aside>
     </div>

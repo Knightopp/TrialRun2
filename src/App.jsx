@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import TechText from './TechText';
 import InfiniteSpiral from './components/InfiniteSpiral';
 import FlowingMenu from './components/FlowingMenu';
@@ -8,6 +9,9 @@ import RippleDistortion from './components/RippleDistortion';
 import CursorGrid from './components/CursorGrid';
 import Dock from './components/Dock';
 import StaggeredMenu from './components/StaggeredMenu';
+import ClickExpand from './components/ClickExpand';
+import MorphSlider from './components/MorphSlider';
+import Stepper, { Step } from './components/Stepper';
 import DodgeField from './components/DodgeField';
 import Masonry from './components/Masonry';
 import BorderGlow from './components/BorderGlow';
@@ -15,20 +19,23 @@ import GradientText from './components/GradientText';
 import SplitText from './components/SplitText';
 import PatternWaves from './components/PatternWaves';
 import { FiHome, FiCalendar, FiActivity, FiUserPlus } from 'react-icons/fi';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import ColorBends from './components/ColorBends';
+import GlareHover from './components/GlareHover';
 import './App.css';
 
 const FEST_EVENTS = [
-  { id: 'tracebot', label: 'TRACE BOT', category: 'ROBOTICS', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', details: 'Build an autonomous line-following robot to race the tracks.' },
-  { id: 'treasurehunt', label: 'TREASURE HUNT', category: 'FUN', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'Solve cryptic clues to find the hidden technical treasures.' },
-  { id: 'codingdebugging', label: 'CODING & DEBUGGING', category: 'DEV', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Test your algorithmic logic and debugging skills against time.' },
-  { id: 'aiwebsitemaking', label: 'AI WEBSITE MAKING', category: 'DEV', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Use AI tools to rapidly prototype and design stunning websites.' },
-  { id: 'blindcoding', label: 'BLIND CODING', category: 'DEV', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'Code with your monitor off! Test your syntax muscle memory.' },
-  { id: 'ideathon', label: 'IDEATHON', category: 'INNOVATION', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'Pitch your groundbreaking tech startup ideas to the jury.' },
-  { id: 'waltz', label: 'WALTZ (DANCE)', category: 'CULTURE', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'A spectacular dance competition combining grace and rhythm.' },
-  { id: 'mindgame', label: 'MINDGAME', category: 'PUZZLE', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'A series of logic puzzles and lateral thinking challenges.' },
-  { id: 'itquiz', label: 'IT QUIZ', category: 'KNOWLEDGE', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Test your knowledge of the latest in tech, IT history, and trivia.' },
-  { id: 'facepainting', label: 'FACE PAINTING', category: 'ART', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Express your creativity on a human canvas with vibrant colors.' },
-  { id: 'hackathon', label: 'HACKATHON', category: 'DEV', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'A 48-hour coding marathon to build innovative solutions.' }
+  { id: 'tracebot', label: 'TRACE BOT', category: 'ROBOTICS', group: 'Team Events', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', details: 'Build an autonomous line-following robot to race the tracks.' },
+  { id: 'treasurehunt', label: 'TREASURE HUNT', category: 'FUN', group: 'Popular', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'Solve cryptic clues to find the hidden technical treasures.' },
+  { id: 'codingdebugging', label: 'CODING & DEBUGGING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Test your algorithmic logic and debugging skills against time.' },
+  { id: 'aiwebsitemaking', label: 'AI WEBSITE MAKING', category: 'DEV', group: 'Popular', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Use AI tools to rapidly prototype and design stunning websites.' },
+  { id: 'blindcoding', label: 'BLIND CODING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'Code with your monitor off! Test your syntax muscle memory.' },
+  { id: 'ideathon', label: 'IDEATHON', category: 'INNOVATION', group: 'Team Events', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'Pitch your groundbreaking tech startup ideas to the jury.' },
+  { id: 'waltz', label: 'WALTZ (DANCE)', category: 'CULTURE', group: 'Team Events', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'A spectacular dance competition combining grace and rhythm.' },
+  { id: 'mindgame', label: 'MINDGAME', category: 'PUZZLE', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'A series of logic puzzles and lateral thinking challenges.' },
+  { id: 'itquiz', label: 'IT QUIZ', category: 'KNOWLEDGE', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Test your knowledge of the latest in tech, IT history, and trivia.' },
+  { id: 'facepainting', label: 'FACE PAINTING', category: 'ART', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Express your creativity on a human canvas with vibrant colors.' },
+  { id: 'hackathon', label: 'HACKATHON', category: 'DEV', group: 'Popular', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'A 48-hour coding marathon to build innovative solutions.' }
 ];
 
 const SPIRAL_MOMENTS = [
@@ -55,9 +62,23 @@ const GALLERY_ITEMS = [
 
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('main'); // 'main' (single page) | 'register' (separate page)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isRegisterPage = location.pathname.startsWith('/register');
+
+  const matchEventRoute = location.pathname.match(/^\/register\/([a-zA-Z0-9-]+)$/);
+  const activeEventData = matchEventRoute ? FEST_EVENTS.find(e => e.id === matchEventRoute[1]) : null;
+
+  const sliderItems = React.useMemo(() => {
+    if (!activeEventData) return [];
+    return [
+      { image: activeEventData.image, caption: 'Poster' },
+      { image: 'https://images.unsplash.com/photo-1516222338250-863216ce01ea?q=80&w=1600&auto=format&fit=crop', caption: 'Rules' }
+    ];
+  }, [activeEventData]);
+
   const [activeSection, setActiveSection] = useState('home');
-  const [selectedEventTrack, setSelectedEventTrack] = useState('HACKATHON');
+  const [selectedEventTrack, setSelectedEventTrack] = useState('');
   const [selectedEventDetails, setSelectedEventDetails] = useState(null);
 
   // Initial loader states
@@ -67,12 +88,38 @@ export default function App() {
   const [formName, setFormName] = useState('');
   const [formCollege, setFormCollege] = useState('');
   const [formEmail, setFormEmail] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formRoll, setFormRoll] = useState('');
   const [formTeamSize, setFormTeamSize] = useState('Squad of 4');
   const [formStatus, setFormStatus] = useState('idle');
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isFormMenuOpen, setIsFormMenuOpen] = useState(false);
 
-  // PixelSwap transition states between Single Page and Registration Page
-  const [pixelActive, setPixelActive] = useState(false);
+  const [activeStep, setActiveStep] = useState(1);
+  const [teamMembers, setTeamMembers] = useState({
+    2: { name: '', email: '', phone: '', roll: '' },
+    3: { name: '', email: '', phone: '', roll: '' },
+    4: { name: '', email: '', phone: '', roll: '' },
+  });
+
+  const updateTeamMember = (id, field, value) => {
+    setTeamMembers(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  };
+
+  const isStepValid = (step) => {
+    if (step === 1) return !!formTeamSize;
+    if (step === 2) return formName.trim() !== '' && formCollege.trim() !== '' && formEmail.trim() !== '' && formPhone.trim() !== '';
+    
+    if (formTeamSize === 'Team of 2') {
+      if (step === 3) return teamMembers[2].name.trim() !== '' && teamMembers[2].email.trim() !== '' && teamMembers[2].phone.trim() !== '';
+    } else if (formTeamSize === 'Squad of 4') {
+      if (step === 3) return teamMembers[2].name.trim() !== '' && teamMembers[2].email.trim() !== '' && teamMembers[2].phone.trim() !== '';
+      if (step === 4) return teamMembers[3].name.trim() !== '' && teamMembers[3].email.trim() !== '' && teamMembers[3].phone.trim() !== '';
+      if (step === 5) return teamMembers[4].name.trim() !== '' && teamMembers[4].email.trim() !== '' && teamMembers[4].phone.trim() !== '';
+    }
+    return true;
+  };
+
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -98,15 +145,13 @@ export default function App() {
     };
 
     if (page === 'register') {
-      if (currentPage !== 'register') {
-        setCurrentPage('register');
-        setPixelActive(true);
+      if (!isRegisterPage) {
+        navigate('/register');
         window.scrollTo(scrollOpt);
       }
     } else {
-      if (currentPage === 'register') {
-        setCurrentPage('main');
-        setPixelActive(false);
+      if (isRegisterPage) {
+        navigate('/');
         setTimeout(() => {
           if (targetSection) {
             const el = getTargetEl(targetSection);
@@ -131,7 +176,7 @@ export default function App() {
   };
 
   const handleRegisterSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!formName.trim() || !formEmail.trim()) return;
     setFormStatus('working');
     setTimeout(() => {
@@ -533,185 +578,49 @@ export default function App() {
         </button>
       </div>
 
-      <div className="reg-split-layout">
-        <BorderGlow
-          borderRadius={16}
-          glowRadius={28}
-          backgroundColor="#080808"
-          glowColor="0 0 100"
-          glowIntensity={1.2}
-        >
-          <form className="form-inner-pad" onSubmit={handleRegisterSubmit}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '1rem', color: '#ffffff' }}>
-                REGISTRATION FORM
-              </h3>
-              {formStatus !== 'idle' && (
-                <LatticeLoader
-                  status={formStatus === 'done' ? 'done' : 'working'}
-                  label="VERIFYING"
-                  doneLabel="CONFIRMED IN"
-                  color="#ffffff"
-                  doneColor="#ffffff"
-                  shape="square"
-                  grid={3}
-                />
-              )}
-            </div>
-
-            <div className="reg-form-fields">
-              <div className="form-group-item">
-                <label className="field-caption">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  className="app-input"
-                  placeholder="e.g. Alex Morgan"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group-item">
-                <label className="field-caption">College / Institute</label>
-                <input
-                  type="text"
-                  required
-                  className="app-input"
-                  placeholder="e.g. St Thomas College"
-                  value={formCollege}
-                  onChange={(e) => setFormCollege(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group-item">
-                <label className="field-caption">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  className="app-input"
-                  placeholder="alex@domain.edu"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group-item">
-                <label className="field-caption">Event Track</label>
-                <select
-                  className="app-select"
-                  value={selectedEventTrack}
-                  onChange={(e) => {
-                    const label = e.target.value;
-                    setSelectedEventTrack(label);
-                  }}
+      {['Popular', 'Solo Events', 'Team Events'].map(groupName => (
+        <div key={groupName} style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+            {groupName.toUpperCase()}
+          </h3>
+          <div className="reg-events-carousel">
+            {FEST_EVENTS.filter(ev => ev.group === groupName).map((ev) => (
+              <div 
+                key={ev.id} 
+                className={`reg-event-card ${selectedEventTrack === ev.label ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedEventTrack(ev.label);
+                  navigate(`/register/${ev.id}`);
+                }}
+                style={{ flexShrink: 0, scrollSnapAlign: 'start' }}
+              >
+                <GlareHover
+                  width="240px"
+                  height="340px"
+                  glareColor="#ffffff"
+                  glareOpacity={0.2}
+                  glareAngle={-30}
+                  glareSize={200}
+                  borderRadius="12px"
+                  borderColor={selectedEventTrack === ev.label ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'}
                 >
-                  {FEST_EVENTS.map(ev => (
-                    <option key={ev.id} value={ev.label}>
-                      {ev.label} ({ev.category})
-                    </option>
-                  ))}
-                </select>
+                  <div className="reg-event-card-inner">
+                    <img src={ev.image} alt={ev.label} className="reg-event-card-bg" />
+                    <div className="reg-event-card-overlay"></div>
+                    <div className="reg-event-card-content">
+                      <div className="reg-event-card-title">{ev.label}</div>
+                      <div className="reg-event-card-category">{ev.category}</div>
+                      <div className="reg-event-card-active-line"></div>
+                    </div>
+                  </div>
+                </GlareHover>
               </div>
-
-              <div className="form-group-item">
-                <label className="field-caption">Participation Type</label>
-                <select
-                  className="app-select"
-                  value={formTeamSize}
-                  onChange={(e) => setFormTeamSize(e.target.value)}
-                >
-                  <option value="Solo Delegate">Solo Delegate</option>
-                  <option value="Team of 2">Team of 2</option>
-                  <option value="Squad of 4">Squad of 4</option>
-                </select>
-              </div>
-
-              <div className="form-group-item">
-                <label className="field-caption">Roll / Register ID</label>
-                <input
-                  type="text"
-                  className="app-input"
-                  placeholder="e.g. 2024CS1044"
-                />
-              </div>
-
-              <div className="form-group-item span-2" style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button
-                  type="submit"
-                  className="btn-confirm-reg"
-                  disabled={formStatus === 'working'}
-                >
-                  {isRegistered ? 'PASS ISSUED' : 'COMPLETE REGISTRATION'}
-                </button>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#64748b' }}>
-                  FREE BADGE • JAN 2027
-                </span>
-              </div>
-            </div>
-          </form>
-        </BorderGlow>
-
-        {/* Digital Pass Preview */}
-        <BorderGlow
-          borderRadius={16}
-          glowRadius={24}
-          backgroundColor="#080808"
-          glowColor="0 0 100"
-          glowIntensity={0.8}
-        >
-          <div className="pass-card-wrap">
-            <div className="pass-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div className="pass-code-tag">ENTRY PASS // SRISHTI 2.7</div>
-                <div className="pass-title-lg">OFFICIAL DELEGATE</div>
-              </div>
-              <img 
-                src="/assets/logo.png" 
-                alt="Srishti Official Emblem" 
-                style={{ 
-                  width: '38px', 
-                  height: '38px', 
-                  objectFit: 'contain',
-                  background: 'transparent',
-                  filter: 'drop-shadow(0 0 10px rgba(56, 189, 248, 0.6))' 
-                }} 
-              />
-            </div>
-
-            <div className="pass-detail-row">
-              <span className="pass-detail-label">DELEGATE</span>
-              <span className="pass-detail-val">{formName || 'CANDIDATE'}</span>
-            </div>
-
-            <div className="pass-detail-row">
-              <span className="pass-detail-label">INSTITUTE</span>
-              <span className="pass-detail-val">{formCollege || 'AFFILIATED CAMPUS'}</span>
-            </div>
-
-            <div className="pass-detail-row">
-              <span className="pass-detail-label">TRACK</span>
-              <span className="pass-detail-val">{selectedEventTrack}</span>
-            </div>
-
-            <div className="pass-detail-row">
-              <span className="pass-detail-label">VENUE</span>
-              <span className="pass-detail-val">ST THOMAS COLLEGE</span>
-            </div>
-
-            <div className="pass-detail-row">
-              <span className="pass-detail-label">STATUS</span>
-              <span className="pass-detail-val" style={{ color: isRegistered ? '#ffffff' : '#64748b' }}>
-                {isRegistered ? 'VERIFIED // ACTIVE' : 'PENDING SUBMISSION'}
-              </span>
-            </div>
-
-            <div className="pass-barcode"></div>
+            ))}
+            {/* Cross-browser bulletproof DOM spacer to force scroll space */}
+            <div style={{ flexShrink: 0, width: '1.5rem', height: '1px', pointerEvents: 'none' }} aria-hidden="true" />
           </div>
-        </BorderGlow>
-      </div>
-
-
+        </div>
+      ))}
     </div>
   );
 
@@ -793,43 +702,253 @@ export default function App() {
           width: '100%',
         }}
       >
-        {/* Fixed full-screen CursorGrid background */}
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 0,
-            pointerEvents: 'none',
-          }}
-        >
-          <div style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}>
-            <CursorGrid
-              cellSize={70}
-              color="#38bdf8"
-              radius={160}
-              falloff="smooth"
-              holdTime={350}
-              fadeDuration={900}
-              lineWidth={1}
-              maxOpacity={0.7}
-              fillOpacity={0.04}
-              gridOpacity={0.04}
-              cellRadius={0}
-              clickPulse
-              pulseSpeed={650}
-            />
-          </div>
-        </div>
+        {/* Main Single Page and Separate Registration Page routing */}
+        <Routes>
+          <Route path="/" element={
+            <>
+              {/* Fixed full-screen CursorGrid background for Home Page */}
+              <div
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 0,
+                  pointerEvents: 'none',
+                }}
+              >
+                <div style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}>
+                  <CursorGrid
+                    cellSize={70}
+                    color="#38bdf8"
+                    radius={160}
+                    falloff="smooth"
+                    holdTime={350}
+                    fadeDuration={900}
+                    lineWidth={1}
+                    maxOpacity={0.7}
+                    fillOpacity={0.04}
+                    gridOpacity={0.04}
+                    cellRadius={0}
+                    clickPulse
+                    pulseSpeed={650}
+                  />
+                </div>
+              </div>
+              {mainSinglePageContent}
+            </>
+          } />
+          <Route path="/register" element={
+            <>
+              {/* ColorBends Background for Registration Page */}
+              <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1 }}>
+                <ColorBends
+                  colors={["#0036ff", "#38bdf8", "#0ea5e9"]}
+                  rotation={90}
+                  speed={0.2}
+                  scale={1}
+                  frequency={1}
+                  warpStrength={1}
+                  mouseInfluence={1}
+                  noise={0.15}
+                  parallax={0.5}
+                  iterations={1}
+                  intensity={1.5}
+                  bandWidth={6}
+                  transparent={true}
+                />
+              </div>
+              {separateRegisterPageContent}
+            </>
+          } />
+          <Route path="/register/:eventId" element={
+            activeEventData ? (
+              <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#0a0a0a' }}>
+                <ClickExpand
+                  src={activeEventData.image}
+                  title={activeEventData.label}
+                  clickHint="CLICK TO REGISTER"
+                  mediaZoom={1.2}
+                  overlayScrim={0.8}
+                  onClose={() => navigate('/register')}
+                >
+                  <div style={{ display: 'flex', width: '100%', height: '100%', padding: '4rem 6rem', gap: '4rem', boxSizing: 'border-box', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div className="form-inner-pad" style={{ width: '100%', maxWidth: '520px', background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(24px)', borderRadius: '24px', padding: '2rem 1rem', border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem', padding: '0 1rem' }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', letterSpacing: '0.15em', color: '#38bdf8' }}>REGISTRATION</div>
+                          <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '1.25rem', color: '#ffffff', lineHeight: 1.2 }}>
+                            {activeEventData.label}
+                          </h3>
+                          {formStatus !== 'idle' && (
+                            <div style={{ marginTop: '1rem' }}>
+                              <LatticeLoader
+                                status={formStatus === 'done' ? 'done' : 'working'}
+                                label="VERIFYING"
+                                doneLabel="CONFIRMED"
+                                color="#ffffff"
+                                doneColor="#ffffff"
+                                shape="square"
+                                grid={3}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {formStatus === 'idle' ? (
+                          <Stepper
+                            initialStep={1}
+                            onStepChange={setActiveStep}
+                            onFinalStepCompleted={handleRegisterSubmit}
+                            backButtonText="Previous"
+                            nextButtonText="Continue"
+                            nextButtonProps={{ disabled: !isStepValid(activeStep) }}
+                          >
+                            <Step>
+                              <div className="form-group-item">
+                                <label className="field-caption" style={{ color: '#cbd5e1' }}>Participation Type</label>
+                                <select className="app-select" value={formTeamSize} onChange={(e) => setFormTeamSize(e.target.value)}>
+                                  <option value="Solo Delegate">Solo Delegate</option>
+                                  <option value="Team of 2">Team of 2</option>
+                                  <option value="Squad of 4">Squad of 4</option>
+                                </select>
+                              </div>
+                            </Step>
 
-        {/* Main Single Page and Separate Registration Page transitioned via PixelSwap */}
-        <PixelSwap
-          firstContent={mainSinglePageContent}
-          secondContent={separateRegisterPageContent}
-          active={pixelActive}
-          pixelSize={64}
-          duration={420}
-          pattern="random"
-        />
+                            <Step>
+                              <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                <div className="form-group-item">
+                                  <label className="field-caption" style={{ color: '#cbd5e1' }}>Primary Contact (Team Lead)</label>
+                                  <input type="text" required className="app-input" placeholder="e.g. Alex Morgan" value={formName} onChange={(e) => setFormName(e.target.value)} />
+                                </div>
+                                <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                  <label className="field-caption" style={{ color: '#cbd5e1' }}>College / Institute</label>
+                                  <input type="text" required className="app-input" placeholder="e.g. St Thomas College" value={formCollege} onChange={(e) => setFormCollege(e.target.value)} />
+                                </div>
+                                <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                  <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
+                                  <input type="email" required className="app-input" placeholder="alex@domain.edu" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
+                                </div>
+                                <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                  <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
+                                  <input type="tel" required className="app-input" placeholder="+1 (555) 000-0000" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} />
+                                </div>
+                                <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                  <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID (Optional)</label>
+                                  <input type="text" className="app-input" placeholder="e.g. 2024CS1044" value={formRoll} onChange={(e) => setFormRoll(e.target.value)} />
+                                </div>
+                              </div>
+                            </Step>
+
+                            {(formTeamSize === 'Team of 2' || formTeamSize === 'Squad of 4') && (
+                              <Step>
+                                <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 2</div>
+                                  <div className="form-group-item">
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
+                                    <input type="text" required className="app-input" placeholder="Full Name" value={teamMembers[2].name} onChange={(e) => updateTeamMember(2, 'name', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
+                                    <input type="email" required className="app-input" placeholder="Email Address" value={teamMembers[2].email} onChange={(e) => updateTeamMember(2, 'email', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
+                                    <input type="tel" required className="app-input" placeholder="Phone Number" value={teamMembers[2].phone} onChange={(e) => updateTeamMember(2, 'phone', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
+                                    <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[2].roll} onChange={(e) => updateTeamMember(2, 'roll', e.target.value)} />
+                                  </div>
+                                </div>
+                              </Step>
+                            )}
+
+                            {formTeamSize === 'Squad of 4' && (
+                              <Step>
+                                <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 3</div>
+                                  <div className="form-group-item">
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
+                                    <input type="text" required className="app-input" placeholder="Full Name" value={teamMembers[3].name} onChange={(e) => updateTeamMember(3, 'name', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
+                                    <input type="email" required className="app-input" placeholder="Email Address" value={teamMembers[3].email} onChange={(e) => updateTeamMember(3, 'email', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
+                                    <input type="tel" required className="app-input" placeholder="Phone Number" value={teamMembers[3].phone} onChange={(e) => updateTeamMember(3, 'phone', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
+                                    <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[3].roll} onChange={(e) => updateTeamMember(3, 'roll', e.target.value)} />
+                                  </div>
+                                </div>
+                              </Step>
+                            )}
+
+                            {formTeamSize === 'Squad of 4' && (
+                              <Step>
+                                <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 4</div>
+                                  <div className="form-group-item">
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
+                                    <input type="text" required className="app-input" placeholder="Full Name" value={teamMembers[4].name} onChange={(e) => updateTeamMember(4, 'name', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
+                                    <input type="email" required className="app-input" placeholder="Email Address" value={teamMembers[4].email} onChange={(e) => updateTeamMember(4, 'email', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
+                                    <input type="tel" required className="app-input" placeholder="Phone Number" value={teamMembers[4].phone} onChange={(e) => updateTeamMember(4, 'phone', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
+                                    <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[4].roll} onChange={(e) => updateTeamMember(4, 'roll', e.target.value)} />
+                                  </div>
+                                </div>
+                              </Step>
+                            )}
+
+                            <Step>
+                              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                                <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Ready to submit?</h4>
+                                <p style={{ color: '#94a3b8', marginBottom: '2rem' }}>Please verify all details before completing registration.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#cbd5e1', textAlign: 'center' }}>
+                                    FREE BADGE • JAN 2027
+                                  </span>
+                                </div>
+                              </div>
+                            </Step>
+                          </Stepper>
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
+                            <h4 style={{ fontFamily: 'var(--font-akira)', color: '#38bdf8', fontSize: '1.5rem', marginBottom: '1rem' }}>{isRegistered ? 'PASS ISSUED' : 'PROCESSING...'}</h4>
+                            <p style={{ color: '#94a3b8' }}>{isRegistered ? 'Check your email for your digital badge.' : 'Hold on tight.'}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '100%', maxWidth: '750px', height: '85vh', maxHeight: '850px', position: 'relative' }}>
+                        <MorphSlider
+                          items={sliderItems}
+                          transition="melt"
+                          intensity={0.55}
+                          aberration={0.35}
+                          drift={0.4}
+                          autoplay={false}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </ClickExpand>
+              </div>
+            ) : null
+          } />
+        </Routes>
       </div>
 
       {/* Selected Event Details Modal - StaggeredMenu Side Panel */}
@@ -877,9 +996,10 @@ export default function App() {
             ariaLabel: 'Register', 
             onClick: (e) => {
               e.preventDefault();
+              const eventId = selectedEventDetails.id;
               setSelectedEventTrack(selectedEventDetails.label);
               setSelectedEventDetails(null);
-              navigateTo('register');
+              navigate(`/register/${eventId}`);
             }
           }
         ] : []}
