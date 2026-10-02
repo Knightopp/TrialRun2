@@ -1048,7 +1048,13 @@ export default function App() {
                                       {(() => {
                                         const amount = formTeamSize * 10;
                                         const upiId = import.meta.env.VITE_UPI_ID || '9188811692@fam';
-                                        const upiString = `upi://pay?pa=${upiId}&pn=Event Registration&am=${amount}&cu=INR`;
+                                        
+                                        // Clean the strings so they are safe for the URI
+                                        const safeEventName = activeEventData?.label?.substring(0, 20) || 'Event';
+                                        const safeLeadName = formName?.substring(0, 15) || 'Team';
+                                        const transactionNote = encodeURIComponent(`Knightopp: ${safeEventName} - ${safeLeadName}`);
+                                        
+                                        const upiString = `upi://pay?pa=${upiId}&pn=Event Registration&tn=${transactionNote}&am=${amount}&cu=INR`;
                                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
                                         return (
                                           <img src={qrUrl} alt="Payment QR" style={{ width: '200px', height: '200px', display: 'block' }} />
