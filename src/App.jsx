@@ -1487,7 +1487,7 @@ export default function App() {
             items={[
               { icon: <FiHome size={20} />, label: 'Home', onClick: () => navigateTo('main', 'home') },
               { icon: <FiActivity size={20} />, label: 'Experience', onClick: () => navigateTo('main', 'experience') },
-              { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => navigateTo('main', 'events') },
+              { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => navigate('/register/') },
               { icon: <FiUserPlus size={20} />, label: 'Profile', onClick: () => navigate('/profile') },
             ]}
             panelHeight={68}

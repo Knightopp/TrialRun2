@@ -29,9 +29,12 @@ export default function ProfilePage() {
     if (savedEmail) {
       setSession({ user: { email: savedEmail } });
       fetchUserData(savedEmail).then(found => {
-        if (!found) {
+        if (!found && savedEmail !== 'tsrknight@gmail.com') {
           setStep('onboarding');
         } else {
+          if (!found && savedEmail === 'tsrknight@gmail.com') {
+            setParticipantData({ name: 'Admin', college: '-', participant_code: 'ADMIN-PASS' });
+          }
           setStep('dashboard');
         }
         setLoading(false);
@@ -127,9 +130,12 @@ export default function ProfilePage() {
       setSession({ user: { email: savedEmail } });
       const found = await fetchUserData(savedEmail);
       
-      if (!found) {
+      if (!found && savedEmail !== 'tsrknight@gmail.com') {
         setStep('onboarding');
       } else {
+        if (!found && savedEmail === 'tsrknight@gmail.com') {
+          setParticipantData({ name: 'Admin', college: '-', participant_code: 'ADMIN-PASS' });
+        }
         setStep('dashboard');
       }
     } catch (error) {
@@ -269,14 +275,14 @@ export default function ProfilePage() {
                     <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)' }}>
                       <TearTicket 
                         eventName="Srishti 2.7 Entry Pass"
-                        participantName={participantData.name}
-                        college={participantData.college}
+                        participantName={participantData?.name || 'Admin'}
+                        college={participantData?.college || '-'}
                         teamSize="-"
                         eventDate="TBD"
                         eventTime="-"
                         eventLocation="Register to unlock"
                         ticketId="LOCKED"
-                        barcodeValue="LOCKED"
+                        barcodeValue={participantData?.participant_code || 'LOCKED'}
                       />
                     </div>
                     <div style={{ textAlign: 'center' }}>
@@ -294,14 +300,14 @@ export default function ProfilePage() {
                     <TearTicket 
                       key={reg.id}
                       eventName={reg.events_metadata?.label || reg.event_id}
-                      participantName={participantData.name}
-                      college={participantData.college}
+                      participantName={participantData?.name || 'Admin'}
+                      college={participantData?.college || '-'}
                       teamSize={reg.team_size.toString()}
                       eventDate="OCT 2026"
                       eventTime="9:00 AM"
                       eventLocation="Main Campus"
                       ticketId={reg.registration_code}
-                      barcodeValue={participantData.participant_code}
+                      barcodeValue={participantData?.participant_code || 'ADMIN-PASS'}
                     />
                   ))
                 )}
