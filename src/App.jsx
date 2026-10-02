@@ -130,12 +130,25 @@ export default function App() {
   }, [activeEventData]);
 
   useEffect(() => {
-    // Generate a stable random fraction between 0.01 and 0.99 for verification when arriving at step
+    // Generate a stable random fraction between 0.01 and 0.49 for verification when arriving at step
     if (activeStep === formTeamSize + 2 && paymentFraction === 0) {
-       const randomCents = Math.floor(Math.random() * 99) + 1;
+       const randomCents = Math.floor(Math.random() * 49) + 1;
        setPaymentFraction(randomCents / 100);
     }
   }, [activeStep, formTeamSize, paymentFraction]);
+
+  // Auto-polling for payment verification
+  useEffect(() => {
+    let intervalId;
+    if (activeStep === formTeamSize + 2 && paymentFraction > 0 && !paymentVerified && !isVerifying) {
+      intervalId = setInterval(() => {
+        verifyPayment();
+      }, 8000); // Poll every 8 seconds
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [activeStep, formTeamSize, paymentFraction, paymentVerified, isVerifying]);
 
   const verifyPayment = async () => {
     setIsVerifying(true);
@@ -1087,15 +1100,13 @@ export default function App() {
                                       })()}
                                     </div>
 
-                                    <button 
-                                      type="button" 
-                                      onClick={verifyPayment} 
-                                      disabled={isVerifying}
-                                      style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '0.75rem 2rem', borderRadius: '8px', fontWeight: 'bold', cursor: isVerifying ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)' }}
-                                    >
-                                      {isVerifying ? 'VERIFYING...' : 'VERIFY PAYMENT'}
-                                    </button>
-                                    {paymentError && <p style={{ color: '#ef4444', fontSize: '0.85rem' }}>{paymentError}</p>}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#cbd5e1', fontFamily: 'var(--font-mono)' }}>
+                                      <div className="spinner" style={{ width: '16px', height: '16px', border: '2px solid #38bdf8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                      {isVerifying ? 'Checking payment...' : 'Waiting for payment...'}
+                                    </div>
+                                    <style>{`
+                                      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                                    `}</style>
                                   </div>
                                 )}
                               </div>
