@@ -17,29 +17,15 @@ export default function ProfilePage() {
   const [registrations, setRegistrations] = useState([]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        setStep('dashboard');
-        fetchUserData(session.user.email);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        setStep('dashboard');
-        fetchUserData(session.user.email);
-      } else {
-        setStep('email');
-        setParticipantData(null);
-        setRegistrations([]);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    // Check if there's a custom session in localStorage
+    const savedEmail = localStorage.getItem('srishti_session');
+    if (savedEmail) {
+      setSession({ user: { email: savedEmail } });
+      setStep('dashboard');
+      fetchUserData(savedEmail);
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const fetchUserData = async (userEmail) => {
@@ -83,15 +69,39 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          emailRedirectTo: window.location.origin + '/profile'
-        }
+      // Generate a 4-digit code
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      
+      // Store in local storage for verification
+      localStorage.setItem('pending_otp', code);
+      localStorage.setItem('pending_email', email);
+
+      // Send email using our custom serverless function
+      const htmlContent = `
+        <div style="font-family: sans-serif; background: #070b14; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 0 auto;">
+          <h2 style="color: #38bdf8;">SRISHTI 2.7</h2>
+          <p>Your login code is:</p>
+          <h1 style="font-size: 48px; letter-spacing: 4px; color: #fff; margin: 20px 0;">${code}</h1>
+          <p style="color: #888;">Enter this 4-digit code to access your dashboard.</p>
+        </div>
+      `;
+
+      const response = await fetch('/api/send_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: email,
+          subject: 'Srishti 2.7 - Your Login Code',
+          html: htmlContent
+        })
       });
 
-      if (error) throw error;
-      setStep('magiclink');
+      if (!response.ok) {
+        throw new Error('Failed to send email. Please try again later.');
+      }
+
+      setStep('otp');
+      setMessage('A 4-digit login code has been sent to your email.');
     } catch (error) {
       setError(error.message);
     } finally {
@@ -105,14 +115,21 @@ export default function ProfilePage() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email',
-      });
+      const savedCode = localStorage.getItem('pending_otp');
+      const savedEmail = localStorage.getItem('pending_email');
 
-      if (error) throw error;
-      // Auth state change will handle the rest
+      if (otp !== savedCode || email !== savedEmail) {
+        throw new Error('Invalid or expired 4-digit code.');
+      }
+
+      // Success! Clear pending and set session
+      localStorage.removeItem('pending_otp');
+      localStorage.removeItem('pending_email');
+      localStorage.setItem('srishti_session', email);
+      
+      setSession({ user: { email } });
+      setStep('dashboard');
+      fetchUserData(email);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -120,8 +137,12 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    localStorage.removeItem('srishti_session');
+    setSession(null);
+    setStep('email');
+    setParticipantData(null);
+    setRegistrations([]);
   };
 
   if (loading && !session && step !== 'email' && step !== 'otp') {
@@ -342,29 +363,58 @@ export default function ProfilePage() {
                     opacity: loading ? 0.7 : 1
                   }}
                 >
-                  {loading ? 'Sending...' : 'Send Magic Link'}
+                  {loading ? 'Sending...' : 'Send 4-Digit Code'}
                 </button>
               </form>
             ) : (
-              <div style={{ textAlign: 'center' }}>
-                <FiMail size={48} color="#38bdf8" style={{ marginBottom: '1.5rem' }} />
-                <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#fff' }}>Check your inbox!</h3>
-                <p style={{ color: '#888', marginBottom: '2rem', lineHeight: '1.6' }}>
-                  We've sent a magic link to <strong style={{ color: '#fff' }}>{email}</strong>.<br/>
-                  Click the link in the email to instantly sign in to your dashboard.
-                </p>
+              <form onSubmit={handleVerifyOtp}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', color: '#888', fontSize: '0.9rem', marginBottom: '0.5rem' }}>4-Digit Login Code</label>
+                  <div style={{ position: 'relative' }}>
+                    <FiKey style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
+                    <input 
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      required
+                      maxLength="4"
+                      placeholder="Enter 4-digit code"
+                      style={{ 
+                        width: '100%', padding: '1rem 1rem 1rem 2.75rem', 
+                        backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px', color: '#fff', fontSize: '1.2rem',
+                        outline: 'none', transition: 'border-color 0.2s',
+                        letterSpacing: '4px', textAlign: 'center'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
+                      onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    />
+                  </div>
+                </div>
                 <button 
-                  type="button"
-                  onClick={() => { setStep('email'); setEmail(''); setError(null); setMessage(null); }}
+                  type="submit" 
+                  disabled={loading}
                   style={{ 
-                    width: '100%', padding: '1rem', backgroundColor: 'transparent', 
-                    color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', 
-                    fontSize: '0.9rem', cursor: 'pointer'
+                    width: '100%', padding: '1rem', backgroundColor: '#38bdf8', 
+                    color: '#000', border: 'none', borderRadius: '12px', 
+                    fontSize: '1rem', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.7 : 1
                   }}
                 >
-                  Use a different email address
+                  {loading ? 'Verifying...' : 'Sign In'}
                 </button>
-              </div>
+                <button 
+                  type="button"
+                  onClick={() => { setStep('email'); setOtp(''); setError(null); setMessage(null); }}
+                  style={{ 
+                    width: '100%', padding: '1rem', backgroundColor: 'transparent', 
+                    color: '#888', border: 'none', borderRadius: '12px', 
+                    fontSize: '0.9rem', cursor: 'pointer', marginTop: '0.5rem'
+                  }}
+                >
+                  Use a different email
+                </button>
+              </form>
             )}
           </div>
         )}

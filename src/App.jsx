@@ -315,6 +315,36 @@ export default function App() {
       setQrCodeDataUrl(qrDataUrl);
       setParticipantCode(uniqueCode);
 
+      // Send the digital entry pass via email
+      const ticketHtml = `
+        <div style="font-family: sans-serif; background: #070b14; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 600px; margin: 0 auto; border: 1px solid #38bdf8;">
+          <h2 style="color: #38bdf8; font-size: 24px; letter-spacing: 2px;">SRISHTI 2.7 ENTRY PASS</h2>
+          <h1 style="font-size: 32px; margin: 20px 0;">${activeEventData.label}</h1>
+          <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0; color: #888;">Registration ID</p>
+            <p style="font-size: 24px; font-weight: bold; font-family: monospace; color: #38bdf8; margin: 5px 0;">${uniqueCode}</p>
+          </div>
+          <p style="font-size: 18px;"><strong>Lead:</strong> ${formName}</p>
+          <p style="font-size: 16px; color: #aaa;"><strong>Team Size:</strong> ${formTeamSize} Member(s)</p>
+          <br/>
+          <p style="color: #888; font-size: 14px;">Please present this Registration ID at the venue.</p>
+        </div>
+      `;
+
+      try {
+        await fetch('/api/send_email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: formEmail,
+            subject: 'Your Srishti 2.7 Entry Pass',
+            html: ticketHtml
+          })
+        });
+      } catch (emailErr) {
+        console.error('Failed to send ticket email:', emailErr);
+      }
+
       setFormStatus('done');
       setIsRegistered(true);
     } catch (error) {
