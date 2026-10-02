@@ -92,32 +92,45 @@ export default function App() {
   const [formEmail, setFormEmail] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formRoll, setFormRoll] = useState('');
-  const [formTeamSize, setFormTeamSize] = useState('Squad of 4');
+  const [formTeamSize, setFormTeamSize] = useState(1);
   const [formStatus, setFormStatus] = useState('idle');
   const [isRegistered, setIsRegistered] = useState(false);
   const [isFormMenuOpen, setIsFormMenuOpen] = useState(false);
 
   const [activeStep, setActiveStep] = useState(1);
+  
   const [teamMembers, setTeamMembers] = useState({
     2: { name: '', email: '', phone: '', roll: '' },
     3: { name: '', email: '', phone: '', roll: '' },
     4: { name: '', email: '', phone: '', roll: '' },
+    5: { name: '', email: '', phone: '', roll: '' },
   });
 
   const updateTeamMember = (id, field, value) => {
     setTeamMembers(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   };
 
+  useEffect(() => {
+    if (activeEventData) {
+      if (activeEventData.id === 'hackathon') {
+        setFormTeamSize(3);
+      } else if (activeEventData.group === 'Solo Events') {
+        setFormTeamSize(1);
+      } else {
+        setFormTeamSize(2);
+      }
+    }
+  }, [activeEventData]);
+
   const isStepValid = (step) => {
-    if (step === 1) return !!formTeamSize;
+    if (step === 1) return true;
     if (step === 2) return formName.trim() !== '' && formCollege.trim() !== '' && formEmail.trim() !== '' && formPhone.trim() !== '';
     
-    if (formTeamSize === 'Team of 2') {
-      if (step === 3) return teamMembers[2].name.trim() !== '' && teamMembers[2].email.trim() !== '' && teamMembers[2].phone.trim() !== '';
-    } else if (formTeamSize === 'Squad of 4') {
-      if (step === 3) return teamMembers[2].name.trim() !== '' && teamMembers[2].email.trim() !== '' && teamMembers[2].phone.trim() !== '';
-      if (step === 4) return teamMembers[3].name.trim() !== '' && teamMembers[3].email.trim() !== '' && teamMembers[3].phone.trim() !== '';
-      if (step === 5) return teamMembers[4].name.trim() !== '' && teamMembers[4].email.trim() !== '' && teamMembers[4].phone.trim() !== '';
+    if (step > 2 && step <= formTeamSize + 1) {
+       const memberIndex = step - 1;
+       const member = teamMembers[memberIndex];
+       if (!member) return false;
+       return member.name.trim() !== '' && member.email.trim() !== '' && member.phone.trim() !== '';
     }
     return true;
   };
@@ -802,10 +815,23 @@ export default function App() {
                             <Step>
                               <div className="form-group-item">
                                 <label className="field-caption" style={{ color: '#cbd5e1' }}>Participation Type</label>
-                                <select className="app-select" value={formTeamSize} onChange={(e) => setFormTeamSize(e.target.value)}>
-                                  <option value="Solo Delegate">Solo Delegate</option>
-                                  <option value="Team of 2">Team of 2</option>
-                                  <option value="Squad of 4">Squad of 4</option>
+                                <select className="app-select" value={formTeamSize} onChange={(e) => setFormTeamSize(Number(e.target.value))}>
+                                  {activeEventData?.id === 'hackathon' ? (
+                                    <>
+                                      <option value={3}>Team of 3</option>
+                                      <option value={4}>Team of 4</option>
+                                      <option value={5}>Team of 5</option>
+                                    </>
+                                  ) : activeEventData?.group === 'Solo Events' ? (
+                                    <option value={1}>Solo Delegate</option>
+                                  ) : (
+                                    <>
+                                      <option value={2}>Team of 2</option>
+                                      <option value={3}>Team of 3</option>
+                                      <option value={4}>Team of 4</option>
+                                      <option value={5}>Team of 5</option>
+                                    </>
+                                  )}
                                 </select>
                               </div>
                             </Step>
@@ -835,7 +861,7 @@ export default function App() {
                               </div>
                             </Step>
 
-                            {(formTeamSize === 'Team of 2' || formTeamSize === 'Squad of 4') && (
+                            {formTeamSize >= 2 && (
                               <Step>
                                 <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 2</div>
@@ -859,7 +885,7 @@ export default function App() {
                               </Step>
                             )}
 
-                            {formTeamSize === 'Squad of 4' && (
+                            {formTeamSize >= 3 && (
                               <Step>
                                 <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 3</div>
@@ -883,7 +909,7 @@ export default function App() {
                               </Step>
                             )}
 
-                            {formTeamSize === 'Squad of 4' && (
+                            {formTeamSize >= 4 && (
                               <Step>
                                 <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 4</div>
@@ -902,6 +928,30 @@ export default function App() {
                                   <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
                                     <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
                                     <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[4].roll} onChange={(e) => updateTeamMember(4, 'roll', e.target.value)} />
+                                  </div>
+                                </div>
+                              </Step>
+                            )}
+                            
+                            {formTeamSize >= 5 && (
+                              <Step>
+                                <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 5</div>
+                                  <div className="form-group-item">
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
+                                    <input type="text" required className="app-input" placeholder="Full Name" value={teamMembers[5].name} onChange={(e) => updateTeamMember(5, 'name', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
+                                    <input type="email" required className="app-input" placeholder="Email Address" value={teamMembers[5].email} onChange={(e) => updateTeamMember(5, 'email', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
+                                    <input type="tel" required className="app-input" placeholder="Phone Number" value={teamMembers[5].phone} onChange={(e) => updateTeamMember(5, 'phone', e.target.value)} />
+                                  </div>
+                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
+                                    <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[5].roll} onChange={(e) => updateTeamMember(5, 'roll', e.target.value)} />
                                   </div>
                                 </div>
                               </Step>
@@ -951,7 +1001,7 @@ export default function App() {
                       speed={isMobile ? 3 : 5} 
                       scale={1.2}
                       noiseIntensity={1.0}
-                      color="#210040"
+                      color="#0a192f"
                     />
                   </div>
                   <button 
