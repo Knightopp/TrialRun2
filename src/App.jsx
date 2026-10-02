@@ -137,7 +137,7 @@ export default function App() {
     setIsVerifying(true);
     setPaymentError(null);
     try {
-      const expectedAmount = formTeamSize * 150; // Example: 150 per person
+      const expectedAmount = formTeamSize * 10; // Example: 10 per person
       const res = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1035,7 +1035,7 @@ export default function App() {
                             <Step>
                               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                                 <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Payment Verification</h4>
-                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Please scan the QR code to send ₹{formTeamSize * 150} via FamPay, then enter your UTR number below.</p>
+                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Please scan the QR code to send ₹{formTeamSize * 10} via FamPay, then enter your UTR number below.</p>
                                 
                                 {paymentVerified ? (
                                   <div style={{ color: '#10b981', padding: '1rem', border: '1px solid #10b981', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)' }}>
@@ -1046,7 +1046,7 @@ export default function App() {
                                     
                                     <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block' }}>
                                       {(() => {
-                                        const amount = formTeamSize * 150;
+                                        const amount = formTeamSize * 10;
                                         const upiId = import.meta.env.VITE_UPI_ID || '9188811692@fam';
                                         const upiString = `upi://pay?pa=${upiId}&pn=Event Registration&am=${amount}&cu=INR`;
                                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
