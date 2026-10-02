@@ -47,6 +47,7 @@ export default function ProfilePage() {
         .from('participants')
         .select('*')
         .eq('email', userEmail)
+        .limit(1)
         .maybeSingle();
 
       if (pError) throw pError;

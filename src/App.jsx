@@ -117,7 +117,7 @@ export default function App() {
         setFormEmail(email);
         try {
           const { supabase } = await import('./supabaseClient');
-          const { data } = await supabase.from('participants').select('*').eq('email', email).maybeSingle();
+          const { data } = await supabase.from('participants').select('*').eq('email', email).limit(1).maybeSingle();
           if (data) {
             setFormName(data.name || '');
             setFormCollege(data.college || '');
