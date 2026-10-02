@@ -85,11 +85,13 @@ export default function ProfilePage() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
+        options: {
+          emailRedirectTo: window.location.origin + '/profile'
+        }
       });
 
       if (error) throw error;
-      setStep('otp');
-      setMessage('A login code has been sent to your email.');
+      setStep('magiclink');
     } catch (error) {
       setError(error.message);
     } finally {
@@ -340,57 +342,29 @@ export default function ProfilePage() {
                     opacity: loading ? 0.7 : 1
                   }}
                 >
-                  {loading ? 'Sending...' : 'Send Login Code'}
+                  {loading ? 'Sending...' : 'Send Magic Link'}
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleVerifyOtp}>
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', color: '#888', fontSize: '0.9rem', marginBottom: '0.5rem' }}>6-Digit Login Code</label>
-                  <div style={{ position: 'relative' }}>
-                    <FiKey style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                    <input 
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      required
-                      placeholder="Enter code from email"
-                      style={{ 
-                        width: '100%', padding: '1rem 1rem 1rem 2.75rem', 
-                        backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '12px', color: '#fff', fontSize: '1rem',
-                        outline: 'none', transition: 'border-color 0.2s',
-                        letterSpacing: '2px'
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                      onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                    />
-                  </div>
-                </div>
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  style={{ 
-                    width: '100%', padding: '1rem', backgroundColor: '#38bdf8', 
-                    color: '#000', border: 'none', borderRadius: '12px', 
-                    fontSize: '1rem', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer',
-                    opacity: loading ? 0.7 : 1
-                  }}
-                >
-                  {loading ? 'Verifying...' : 'Sign In'}
-                </button>
+              <div style={{ textAlign: 'center' }}>
+                <FiMail size={48} color="#38bdf8" style={{ marginBottom: '1.5rem' }} />
+                <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#fff' }}>Check your inbox!</h3>
+                <p style={{ color: '#888', marginBottom: '2rem', lineHeight: '1.6' }}>
+                  We've sent a magic link to <strong style={{ color: '#fff' }}>{email}</strong>.<br/>
+                  Click the link in the email to instantly sign in to your dashboard.
+                </p>
                 <button 
                   type="button"
-                  onClick={() => { setStep('email'); setOtp(''); setError(null); setMessage(null); }}
+                  onClick={() => { setStep('email'); setEmail(''); setError(null); setMessage(null); }}
                   style={{ 
                     width: '100%', padding: '1rem', backgroundColor: 'transparent', 
-                    color: '#888', border: 'none', borderRadius: '12px', 
-                    fontSize: '0.9rem', cursor: 'pointer', marginTop: '0.5rem'
+                    color: '#888', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', 
+                    fontSize: '0.9rem', cursor: 'pointer'
                   }}
                 >
-                  Use a different email
+                  Use a different email address
                 </button>
-              </form>
+              </div>
             )}
           </div>
         )}
