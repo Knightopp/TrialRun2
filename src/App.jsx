@@ -29,6 +29,7 @@ import GlareHover from './components/GlareHover';
 import { supabase } from './supabaseClient';
 import './App.css';
 
+// Events are temporarily hardcoded until DB migration is run by the user.
 const FEST_EVENTS = [
   { id: 'tracebot', label: 'TRACE BOT', category: 'ROBOTICS', group: 'Team Events', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', details: 'Build an autonomous line-following robot to race the tracks.', date: 'Dec 6, 2026', time: '10:00 AM' },
   { id: 'treasurehunt', label: 'TREASURE HUNT', category: 'FUN', group: 'Popular', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'Solve cryptic clues to find the hidden technical treasures.', date: 'Dec 7, 2026', time: '01:00 PM' },
@@ -1336,11 +1337,11 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(56,189,248,0.1)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.2)' }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                      <span style={{ color: '#fff', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>{selectedEventDetails.date}</span>
+                      <span style={{ color: '#0f172a', fontWeight: 'bold', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>{selectedEventDetails.date}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16,185,129,0.1)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                      <span style={{ color: '#fff', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>{selectedEventDetails.time}</span>
+                      <span style={{ color: '#0f172a', fontWeight: 'bold', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>{selectedEventDetails.time}</span>
                     </div>
                   </div>
                 )}
