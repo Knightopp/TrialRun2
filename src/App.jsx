@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import QRCode from 'qrcode';import { createPortal } from 'react-dom';
+import QRCode from 'qrcode';
+import { QRCodeSVG } from 'qrcode.react';
+import { createPortal } from 'react-dom';
 import TechText from './TechText';
 import InfiniteSpiral from './components/InfiniteSpiral';
 import FlowingMenu from './components/FlowingMenu';
@@ -1147,7 +1149,19 @@ export default function App() {
                                 stub={
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '0.5rem', background: '#fff' }}>
                                     <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '0.75rem', marginBottom: '0.5rem' }}>SCAN ME</h4>
-                                    <img src={qrCodeDataUrl} alt="Scanner QR" style={{ width: '100px', height: '100px', display: 'block' }} />
+                                    <QRCodeSVG
+                                      value={participantCode}
+                                      size={100}
+                                      bgColor="#ffffff"
+                                      fgColor="#0f172a"
+                                      level="H"
+                                      imageSettings={{
+                                        src: "/assets/logo.png",
+                                        height: 24,
+                                        width: 24,
+                                        excavate: true,
+                                      }}
+                                    />
                                     <span style={{ fontSize: '0.65rem', color: '#666', marginTop: '0.5rem', fontFamily: 'var(--font-mono)' }}>{participantCode}</span>
                                   </div>
                                 }
