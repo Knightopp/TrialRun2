@@ -1,37 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { FiMail, FiKey, FiLogOut, FiAward, FiCalendar, FiArrowLeft } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import CodeSlots from './CodeSlots';
+import Stepper, { Step } from './Stepper';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState('email'); // 'email', 'otp', 'dashboard'
+  const [step, setStep] = useState('email'); // 'email', 'otp', 'onboarding', 'dashboard'
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
 
   const [participantData, setParticipantData] = useState(null);
   const [registrations, setRegistrations] = useState([]);
 
+  // Onboarding
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [onboardingName, setOnboardingName] = useState('');
+  const [onboardingPhone, setOnboardingPhone] = useState('');
+  const [onboardingCollege, setOnboardingCollege] = useState('');
+
   useEffect(() => {
-    // Check if there's a custom session in localStorage
     const savedEmail = localStorage.getItem('srishti_session');
     if (savedEmail) {
       setSession({ user: { email: savedEmail } });
-      setStep('dashboard');
-      fetchUserData(savedEmail);
+      fetchUserData(savedEmail).then(found => {
+        if (!found) {
+          setStep('onboarding');
+        } else {
+          setStep('dashboard');
+        }
+        setLoading(false);
+      });
     } else {
       setLoading(false);
     }
   }, []);
 
   const fetchUserData = async (userEmail) => {
-    setLoading(true);
     try {
-      // 1. Fetch participant record
       const { data: participant, error: pError } = await supabase
         .from('participants')
         .select('*')
@@ -39,26 +49,22 @@ export default function ProfilePage() {
         .maybeSingle();
 
       if (pError) throw pError;
-      
       setParticipantData(participant);
 
       if (participant) {
-        // 2. Fetch their registrations + event details
         const { data: regs, error: rError } = await supabase
           .from('registrations')
-          .select(`
-            *,
-            events_metadata (*)
-          `)
+          .select('*, events_metadata (*)')
           .eq('participant_id', participant.id);
 
         if (rError) throw rError;
         setRegistrations(regs || []);
+        return true;
       }
+      return false;
     } catch (err) {
       console.error('Error fetching data:', err);
-    } finally {
-      setLoading(false);
+      return false;
     }
   };
 
@@ -69,20 +75,16 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      // Generate a 4-digit code
       const code = Math.floor(1000 + Math.random() * 9000).toString();
-      
-      // Store in local storage for verification
       localStorage.setItem('pending_otp', code);
       localStorage.setItem('pending_email', email);
 
-      // Send email using our custom serverless function
       const htmlContent = `
-        <div style="font-family: sans-serif; background: #070b14; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #38bdf8;">SRISHTI 2.7</h2>
-          <p>Your login code is:</p>
-          <h1 style="font-size: 48px; letter-spacing: 4px; color: #fff; margin: 20px 0;">${code}</h1>
-          <p style="color: #888;">Enter this 4-digit code to access your dashboard.</p>
+        <div style="font-family: sans-serif; background: #000; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 0 auto; border: 1px solid #333;">
+          <h2 style="color: #fff; letter-spacing: 2px;">SRISHTI 2.7</h2>
+          <p style="color: #888;">Your secure login code is:</p>
+          <h1 style="font-size: 56px; letter-spacing: 8px; color: #fff; margin: 30px 0;">${code}</h1>
+          <p style="color: #888; font-size: 14px;">This code is valid for your current session.</p>
         </div>
       `;
 
@@ -91,17 +93,14 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: email,
-          subject: 'Srishti 2.7 - Your Login Code',
+          subject: 'Srishti 2.7 - Login Code',
           html: htmlContent
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to send email. Please try again later.');
-      }
+      if (!response.ok) throw new Error('Failed to send email.');
 
       setStep('otp');
-      setMessage('A 4-digit login code has been sent to your email.');
     } catch (error) {
       setError(error.message);
     } finally {
@@ -109,29 +108,54 @@ export default function ProfilePage() {
     }
   };
 
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleVerifyOtp = async (code) => {
     setError(null);
-
     try {
       const savedCode = localStorage.getItem('pending_otp');
       const savedEmail = localStorage.getItem('pending_email');
 
-      if (otp !== savedCode || email !== savedEmail) {
-        throw new Error('Invalid or expired 4-digit code.');
+      if (code !== savedCode) {
+        throw new Error('Invalid code. Please try again.');
       }
 
-      // Success! Clear pending and set session
+      setLoading(true);
       localStorage.removeItem('pending_otp');
-      localStorage.removeItem('pending_email');
-      localStorage.setItem('srishti_session', email);
+      localStorage.setItem('srishti_session', savedEmail);
       
-      setSession({ user: { email } });
-      setStep('dashboard');
-      fetchUserData(email);
+      setSession({ user: { email: savedEmail } });
+      const found = await fetchUserData(savedEmail);
+      
+      if (!found) {
+        setStep('onboarding');
+      } else {
+        setStep('dashboard');
+      }
     } catch (error) {
       setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    setLoading(true);
+    try {
+      const uniqueCode = 'SR27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const { data, error } = await supabase.from('participants').insert([{
+         participant_code: uniqueCode,
+         name: onboardingName,
+         email: session.user.email,
+         phone: onboardingPhone,
+         college: onboardingCollege,
+         department: 'N/A',
+         year: 'N/A'
+      }]).select().single();
+      
+      if (error) throw error;
+      setParticipantData(data);
+      setStep('dashboard');
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -143,12 +167,20 @@ export default function ProfilePage() {
     setStep('email');
     setParticipantData(null);
     setRegistrations([]);
+    setOnboardingStep(1);
+    setEmail('');
+  };
+
+  const isNextDisabled = () => {
+    if (onboardingStep === 1 && !onboardingName.trim()) return true;
+    if (onboardingStep === 2 && (!onboardingCollege.trim() || !onboardingPhone.trim())) return true;
+    return false;
   };
 
   if (loading && !session && step !== 'email' && step !== 'otp') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#070b14', color: '#fff' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(56, 189, 248, 0.3)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#fff' }}>
+        <div style={{ width: '40px', height: '40px', border: '2px solid rgba(255, 255, 255, 0.1)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -157,17 +189,14 @@ export default function ProfilePage() {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      backgroundColor: '#070b14',
+      backgroundColor: '#000',
       color: '#fff',
       fontFamily: 'var(--font-sans)',
       padding: '2rem',
       position: 'relative',
       overflowX: 'hidden'
     }}>
-      {/* Background Effects */}
-      <div style={{ position: 'absolute', top: '-20%', left: '-10%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(56,189,248,0.15) 0%, rgba(7,11,20,0) 70%)', filter: 'blur(60px)', zIndex: 0 }} />
-      <div style={{ position: 'absolute', bottom: '-20%', right: '-10%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(7,11,20,0) 70%)', filter: 'blur(60px)', zIndex: 0 }} />
-
+      
       <div style={{ position: 'relative', zIndex: 1, maxWidth: '1000px', margin: '0 auto', paddingTop: '4rem' }}>
         
         <button 
@@ -176,32 +205,36 @@ export default function ProfilePage() {
             display: 'flex', alignItems: 'center', gap: '0.5rem', 
             background: 'none', border: 'none', color: '#888', 
             cursor: 'pointer', marginBottom: '2rem', fontSize: '1rem',
-            padding: '0'
+            padding: '0', transition: 'color 0.2s'
           }}
+          onMouseOver={e => e.currentTarget.style.color = '#fff'}
+          onMouseOut={e => e.currentTarget.style.color = '#888'}
         >
-          <FiArrowLeft /> Back to Home
+          <FiArrowLeft /> Return Home
         </button>
 
         {step === 'dashboard' ? (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h1 style={{ fontSize: '3rem', fontWeight: '800', margin: '0 0 0.5rem 0', background: 'linear-gradient(90deg, #fff, #888)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  Participant Dashboard
+                <h1 style={{ fontSize: '3.5rem', fontWeight: '800', margin: '0 0 0.5rem 0', letterSpacing: '-0.03em' }}>
+                  My Tickets
                 </h1>
                 <p style={{ color: '#888', fontSize: '1.1rem', margin: 0 }}>
-                  Welcome back, <span style={{ color: '#38bdf8' }}>{session?.user?.email}</span>
+                  Logged in as <span style={{ color: '#fff', fontWeight: '600' }}>{session?.user?.email}</span>
                 </p>
               </div>
               <button 
                 onClick={handleLogout}
                 style={{ 
                   display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  padding: '0.75rem 1.5rem', backgroundColor: 'rgba(255,50,50,0.1)',
-                  color: '#ff4444', border: '1px solid rgba(255,50,50,0.2)',
+                  padding: '0.75rem 1.5rem', backgroundColor: 'transparent',
+                  color: '#888', border: '1px solid #333',
                   borderRadius: '12px', cursor: 'pointer', fontWeight: '600',
                   transition: 'all 0.2s'
                 }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = '#fff'; e.currentTarget.style.color = '#fff'; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888'; }}
               >
                 <FiLogOut /> Sign Out
               </button>
@@ -209,212 +242,236 @@ export default function ProfilePage() {
 
             {loading ? (
               <div style={{ marginTop: '4rem', textAlign: 'center' }}>Loading your data...</div>
-            ) : !participantData ? (
-              <div style={{ marginTop: '4rem', padding: '3rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-                <FiCalendar size={48} color="#555" style={{ marginBottom: '1rem' }} />
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No Registrations Found</h2>
-                <p style={{ color: '#888' }}>You haven't registered for any events yet using this email.</p>
-                <button 
-                  onClick={() => navigate('/')}
-                  style={{ marginTop: '1.5rem', padding: '0.75rem 2rem', backgroundColor: '#38bdf8', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                  Explore Events
-                </button>
-              </div>
             ) : (
-              <div style={{ marginTop: '3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ marginTop: '4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
                 
                 {/* Profile Card */}
-                <div style={{ padding: '2rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FiAward /> Your Profile
+                <div style={{ padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222' }}>
+                  <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FiUser /> Profile Overview
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div>
-                      <p style={{ color: '#555', fontSize: '0.9rem', margin: '0 0 0.25rem 0' }}>Name</p>
-                      <p style={{ fontSize: '1.1rem', margin: 0 }}>{participantData.name}</p>
+                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Name</p>
+                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData.name}</p>
                     </div>
                     <div>
-                      <p style={{ color: '#555', fontSize: '0.9rem', margin: '0 0 0.25rem 0' }}>College</p>
-                      <p style={{ fontSize: '1.1rem', margin: 0 }}>{participantData.college}</p>
+                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>College</p>
+                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData.college}</p>
                     </div>
                     <div>
-                      <p style={{ color: '#555', fontSize: '0.9rem', margin: '0 0 0.25rem 0' }}>Phone</p>
-                      <p style={{ fontSize: '1.1rem', margin: 0 }}>{participantData.phone}</p>
+                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Phone</p>
+                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData.phone}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Events Card */}
+                {/* Events List */}
                 <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
-                  <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Your Registered Events</h3>
                   
                   {registrations.length === 0 ? (
-                    <p style={{ color: '#888' }}>You don't have any event tickets yet.</p>
+                    <div style={{ padding: '4rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', textAlign: 'center' }}>
+                      <FiCalendar size={48} color="#444" style={{ marginBottom: '1.5rem' }} />
+                      <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>No Tickets Yet</h2>
+                      <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '2rem' }}>You haven't registered for any events yet.</p>
+                      <button 
+                        onClick={() => navigate('/')}
+                        style={{ padding: '1rem 2rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}
+                      >
+                        Explore Events
+                      </button>
+                    </div>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
                       {registrations.map(reg => (
                         <div key={reg.id} style={{ 
-                          padding: '1.5rem', 
-                          background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
-                          borderRadius: '20px', 
-                          border: '1px solid rgba(255,255,255,0.05)',
+                          padding: '2rem', 
+                          backgroundColor: '#0a0a0a',
+                          borderRadius: '24px', 
+                          border: '1px solid #222',
                           position: 'relative',
                           overflow: 'hidden'
                         }}>
-                          <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.5rem 1rem', background: 'rgba(56,189,248,0.1)', color: '#38bdf8', borderBottomLeftRadius: '16px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                          <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.5rem 1.5rem', background: '#111', color: '#888', borderBottomLeftRadius: '16px', borderLeft: '1px solid #222', borderBottom: '1px solid #222', fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px' }}>
                             {reg.status.toUpperCase()}
                           </div>
                           
-                          <h4 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem 0', color: '#fff' }}>
+                          <h4 style={{ fontSize: '1.5rem', margin: '0 0 1rem 0', color: '#fff', fontWeight: 'bold' }}>
                             {reg.events_metadata?.label || reg.event_id}
                           </h4>
                           
-                          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                            <div style={{ flex: 1, padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-                              <p style={{ color: '#888', fontSize: '0.8rem', margin: '0 0 0.25rem 0' }}>Registration ID</p>
-                              <p style={{ fontSize: '0.9rem', margin: 0, fontFamily: 'monospace', color: '#38bdf8' }}>
+                          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Registration ID</p>
+                              <p style={{ fontSize: '1.2rem', margin: 0, fontFamily: 'monospace', color: '#fff', letterSpacing: '1px' }}>
                                 {reg.registration_code}
                               </p>
                             </div>
                             {reg.team_size > 1 && (
-                              <div style={{ padding: '0.75rem', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-                                <p style={{ color: '#888', fontSize: '0.8rem', margin: '0 0 0.25rem 0' }}>Team</p>
-                                <p style={{ fontSize: '0.9rem', margin: 0 }}>{reg.team_size} Members</p>
+                              <div>
+                                <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Team</p>
+                                <p style={{ fontSize: '1.2rem', margin: 0 }}>{reg.team_size} <span style={{fontSize: '0.9rem', color: '#888'}}>Pax</span></p>
                               </div>
                             )}
                           </div>
-                          
-                          {reg.status === 'confirmed' && (
-                            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-                              <button style={{ 
-                                width: '100%', padding: '0.75rem', 
-                                backgroundColor: 'transparent', border: '1px solid #38bdf8', 
-                                color: '#38bdf8', borderRadius: '8px', cursor: 'pointer',
-                                fontWeight: '600'
-                              }}>
-                                View Certificate (Locked)
-                              </button>
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-
               </div>
             )}
           </div>
+        ) : step === 'onboarding' ? (
+          <div style={{ maxWidth: '600px', margin: '0 auto', padding: '3rem', backgroundColor: '#0a0a0a', border: '1px solid #222', borderRadius: '32px' }}>
+            <Stepper
+              initialStep={1}
+              onStepChange={(s) => setOnboardingStep(s)}
+              onFinalStepCompleted={handleOnboardingComplete}
+              backButtonText="Back"
+              nextButtonText="Continue"
+              nextButtonProps={{ style: { opacity: isNextDisabled() ? 0.5 : 1, pointerEvents: isNextDisabled() ? 'none' : 'auto' } }}
+            >
+              <Step>
+                <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold', letterSpacing: '-0.02em' }}>Welcome</h2>
+                <p style={{ color: '#888', marginBottom: '3rem', fontSize: '1.1rem', lineHeight: '1.6' }}>We need a few details to generate your official Srishti 2.7 participant profile.</p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <label style={{ color: '#aaa', fontSize: '0.9rem', fontWeight: '500' }}>Full Name</label>
+                  <input 
+                    type="text" 
+                    value={onboardingName} 
+                    onChange={(e) => setOnboardingName(e.target.value)} 
+                    placeholder="John Doe"
+                    style={{ width: '100%', padding: '1.25rem', background: '#000', border: '1px solid #333', borderRadius: '16px', color: '#fff', fontSize: '1.1rem', outline: 'none' }}
+                    onFocus={e => e.target.style.borderColor = '#666'}
+                    onBlur={e => e.target.style.borderColor = '#333'}
+                  />
+                </div>
+              </Step>
+              
+              <Step>
+                <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold', letterSpacing: '-0.02em' }}>Contact Info</h2>
+                <p style={{ color: '#888', marginBottom: '3rem', fontSize: '1.1rem', lineHeight: '1.6' }}>This information is required for verifying your identity at the venues.</p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <label style={{ color: '#aaa', fontSize: '0.9rem', fontWeight: '500' }}>College Name</label>
+                    <input 
+                      type="text" 
+                      value={onboardingCollege} 
+                      onChange={(e) => setOnboardingCollege(e.target.value)} 
+                      placeholder="e.g. SRISHTI Institute"
+                      style={{ width: '100%', padding: '1.25rem', background: '#000', border: '1px solid #333', borderRadius: '16px', color: '#fff', fontSize: '1.1rem', outline: 'none' }}
+                      onFocus={e => e.target.style.borderColor = '#666'}
+                      onBlur={e => e.target.style.borderColor = '#333'}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <label style={{ color: '#aaa', fontSize: '0.9rem', fontWeight: '500' }}>Phone Number</label>
+                    <input 
+                      type="tel" 
+                      value={onboardingPhone} 
+                      onChange={(e) => setOnboardingPhone(e.target.value)} 
+                      placeholder="1234567890"
+                      style={{ width: '100%', padding: '1.25rem', background: '#000', border: '1px solid #333', borderRadius: '16px', color: '#fff', fontSize: '1.1rem', outline: 'none' }}
+                      onFocus={e => e.target.style.borderColor = '#666'}
+                      onBlur={e => e.target.style.borderColor = '#333'}
+                    />
+                  </div>
+                </div>
+              </Step>
+
+              <Step>
+                <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                  <FiInfo size={64} color="#fff" style={{ marginBottom: '2rem' }} />
+                  <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold', letterSpacing: '-0.02em' }}>All Set!</h2>
+                  <p style={{ color: '#888', marginBottom: '0', fontSize: '1.1rem', lineHeight: '1.6' }}>
+                    Your profile is ready. Click finish to access your dashboard.
+                  </p>
+                </div>
+              </Step>
+            </Stepper>
+          </div>
         ) : (
-          <div style={{ 
-            maxWidth: '400px', margin: '4rem auto', 
-            padding: '2.5rem', backgroundColor: 'rgba(255,255,255,0.02)', 
-            borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            backdropFilter: 'blur(20px)'
-          }}>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', textAlign: 'center' }}>Welcome Back</h1>
-            <p style={{ color: '#888', textAlign: 'center', marginBottom: '2rem' }}>
-              Sign in to view your tickets and certificates
+          <div style={{ maxWidth: '460px', margin: '4rem auto 0', padding: '3rem', backgroundColor: '#0a0a0a', borderRadius: '32px', border: '1px solid #222', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', letterSpacing: '-0.02em' }}>
+              {step === 'email' ? 'Welcome Back' : 'Verify Identity'}
+            </h2>
+            <p style={{ color: '#888', textAlign: 'center', marginBottom: '2.5rem', fontSize: '0.95rem' }}>
+              {step === 'email' ? 'Enter your email to access your tickets' : `We sent a code to ${email}`}
             </p>
 
-            {error && (
-              <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,50,50,0.1)', color: '#ff4444', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', border: '1px solid rgba(255,50,50,0.2)' }}>
-                {error}
-              </div>
-            )}
-            {message && (
-              <div style={{ padding: '0.75rem', backgroundColor: 'rgba(56,189,248,0.1)', color: '#38bdf8', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.9rem', border: '1px solid rgba(56,189,248,0.2)' }}>
-                {message}
-              </div>
-            )}
+            {error && <div style={{ padding: '1rem', backgroundColor: 'rgba(255, 59, 48, 0.1)', color: '#ff3b30', borderRadius: '12px', marginBottom: '2rem', fontSize: '0.9rem', textAlign: 'center', border: '1px solid rgba(255,59,48,0.2)' }}>{error}</div>}
 
             {step === 'email' ? (
               <form onSubmit={handleSendOtp}>
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', color: '#888', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Email Address</label>
+                <div style={{ marginBottom: '2rem' }}>
                   <div style={{ position: 'relative' }}>
-                    <FiMail style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
+                    <FiMail style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#666', fontSize: '1.2rem' }} />
                     <input 
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      placeholder="you@college.edu"
+                      placeholder="name@college.edu"
                       style={{ 
-                        width: '100%', padding: '1rem 1rem 1rem 2.75rem', 
-                        backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '12px', color: '#fff', fontSize: '1rem',
+                        width: '100%', padding: '1.25rem 1.25rem 1.25rem 3.5rem', 
+                        backgroundColor: '#000', border: '1px solid #333',
+                        borderRadius: '16px', color: '#fff', fontSize: '1rem',
                         outline: 'none', transition: 'border-color 0.2s'
                       }}
-                      onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                      onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                      onFocus={(e) => e.target.style.borderColor = '#666'}
+                      onBlur={(e) => e.target.style.borderColor = '#333'}
                     />
                   </div>
                 </div>
                 <button 
                   type="submit" 
-                  disabled={loading}
+                  disabled={loading || !email}
                   style={{ 
-                    width: '100%', padding: '1rem', backgroundColor: '#38bdf8', 
-                    color: '#000', border: 'none', borderRadius: '12px', 
-                    fontSize: '1rem', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer',
-                    opacity: loading ? 0.7 : 1
+                    width: '100%', padding: '1.25rem', backgroundColor: '#fff', 
+                    color: '#000', border: 'none', borderRadius: '16px', 
+                    fontSize: '1rem', fontWeight: 'bold', cursor: (loading || !email) ? 'not-allowed' : 'pointer',
+                    opacity: (loading || !email) ? 0.7 : 1, transition: 'background-color 0.2s'
                   }}
+                  onMouseOver={e => { if(!loading && email) e.currentTarget.style.backgroundColor = '#e5e5e5'; }}
+                  onMouseOut={e => { e.currentTarget.style.backgroundColor = '#fff'; }}
                 >
-                  {loading ? 'Sending...' : 'Send 4-Digit Code'}
+                  {loading ? 'Sending Code...' : 'Continue'}
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleVerifyOtp}>
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', color: '#888', fontSize: '0.9rem', marginBottom: '0.5rem' }}>4-Digit Login Code</label>
-                  <div style={{ position: 'relative' }}>
-                    <FiKey style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                    <input 
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      required
-                      maxLength="4"
-                      placeholder="Enter 4-digit code"
-                      style={{ 
-                        width: '100%', padding: '1rem 1rem 1rem 2.75rem', 
-                        backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '12px', color: '#fff', fontSize: '1.2rem',
-                        outline: 'none', transition: 'border-color 0.2s',
-                        letterSpacing: '4px', textAlign: 'center'
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                      onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                    />
-                  </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ marginBottom: '2.5rem' }}>
+                  <CodeSlots 
+                    length={4} 
+                    onComplete={(code) => handleVerifyOtp(code)} 
+                    autoFocus
+                    accentColor="#fff"
+                    inkColor="#fff"
+                    slotColor="#111"
+                    digitColor="#fff"
+                    dangerColor="#ff3b30"
+                  />
                 </div>
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  style={{ 
-                    width: '100%', padding: '1rem', backgroundColor: '#38bdf8', 
-                    color: '#000', border: 'none', borderRadius: '12px', 
-                    fontSize: '1rem', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer',
-                    opacity: loading ? 0.7 : 1
-                  }}
-                >
-                  {loading ? 'Verifying...' : 'Sign In'}
-                </button>
+                {loading && <p style={{ color: '#888', fontSize: '0.9rem' }}>Verifying...</p>}
+                
                 <button 
                   type="button"
-                  onClick={() => { setStep('email'); setOtp(''); setError(null); setMessage(null); }}
+                  onClick={() => { setStep('email'); setError(null); setMessage(null); }}
                   style={{ 
-                    width: '100%', padding: '1rem', backgroundColor: 'transparent', 
-                    color: '#888', border: 'none', borderRadius: '12px', 
-                    fontSize: '0.9rem', cursor: 'pointer', marginTop: '0.5rem'
+                    padding: '0.75rem 1.5rem', backgroundColor: 'transparent', 
+                    color: '#666', border: 'none', borderRadius: '12px', 
+                    fontSize: '0.9rem', cursor: 'pointer', marginTop: '1rem',
+                    transition: 'color 0.2s'
                   }}
+                  onMouseOver={e => e.currentTarget.style.color = '#fff'}
+                  onMouseOut={e => e.currentTarget.style.color = '#666'}
                 >
                   Use a different email
                 </button>
-              </form>
+              </div>
             )}
           </div>
         )}

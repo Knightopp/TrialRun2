@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, Children, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -57,23 +55,11 @@ export default function Stepper({
     updateStep(totalSteps + 1);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (nextButtonProps?.disabled) return;
-      if (isLastStep) {
-        handleComplete();
-      } else {
-        handleNext();
-      }
-    }
-  };
-
   return (
-    <div className="outer-container" onKeyDown={handleKeyDown} {...rest}>
+    <div className="outer-container" {...rest}>
       <div
         className={`step-circle-container ${stepCircleContainerClassName}`}
-        style={{ border: '1px solid var(--border-primary, rgba(255, 255, 255, 0.1))', background: 'rgba(255, 255, 255, 0.02)', backdropFilter: 'blur(10px)' }}
+        style={{ border: '1px solid var(--border-primary, #222)' }}
       >
         <div className={`step-indicator-row ${stepContainerClassName}`}>
           {stepsArray.map((_, index) => {
@@ -121,7 +107,6 @@ export default function Stepper({
             <div className={`footer-nav ${currentStep !== 1 ? 'spread' : 'end'}`}>
               {currentStep !== 1 && (
                 <button
-                  type="button"
                   onClick={handleBack}
                   className={`back-button ${currentStep === 1 ? 'inactive' : ''}`}
                   {...backButtonProps}
@@ -129,7 +114,7 @@ export default function Stepper({
                   {backButtonText}
                 </button>
               )}
-              <button type="button" onClick={isLastStep ? handleComplete : handleNext} className="next-button" {...nextButtonProps}>
+              <button onClick={isLastStep ? handleComplete : handleNext} className="next-button" {...nextButtonProps}>
                 {isLastStep ? 'Complete' : nextButtonText}
               </button>
             </div>
@@ -214,9 +199,9 @@ function StepIndicator({ step, currentStep, onClickStep, disableStepIndicators }
     <motion.div onClick={handleClick} className="step-indicator" style={disableStepIndicators ? { pointerEvents: 'none', opacity: 0.5 } : {}} animate={status} initial={false}>
       <motion.div
         variants={{
-          inactive: { scale: 1, backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#a3a3a3', border: '1px solid rgba(255,255,255,0.1)' },
-          active: { scale: 1, backgroundColor: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid #38bdf8' },
-          complete: { scale: 1, backgroundColor: '#38bdf8', color: '#0f172a', border: '1px solid #38bdf8' }
+          inactive: { scale: 1, backgroundColor: '#222', color: '#a3a3a3' },
+          active: { scale: 1, backgroundColor: '#fff', color: '#000' },
+          complete: { scale: 1, backgroundColor: '#fff', color: '#000' }
         }}
         transition={{ duration: 0.3 }}
         className="step-indicator-inner"
@@ -224,7 +209,7 @@ function StepIndicator({ step, currentStep, onClickStep, disableStepIndicators }
         {status === 'complete' ? (
           <CheckIcon className="check-icon" />
         ) : status === 'active' ? (
-          <div className="active-dot" />
+          <div className="active-dot" style={{backgroundColor: '#000'}} />
         ) : (
           <span className="step-number">{step}</span>
         )}
@@ -236,7 +221,7 @@ function StepIndicator({ step, currentStep, onClickStep, disableStepIndicators }
 function StepConnector({ isComplete }) {
   const lineVariants = {
     incomplete: { width: 0, backgroundColor: 'transparent' },
-    complete: { width: '100%', backgroundColor: '#38bdf8' }
+    complete: { width: '100%', backgroundColor: '#fff' }
   };
 
   return (

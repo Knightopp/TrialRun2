@@ -22,7 +22,7 @@ import GradientText from './components/GradientText';
 import SplitText from './components/SplitText';
 import Silk from './components/Silk';
 import PatternWaves from './components/PatternWaves';
-import { FiHome, FiCalendar, FiActivity, FiUserPlus } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiActivity, FiUserPlus, FiBookmark } from 'react-icons/fi';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import ColorBends from './components/ColorBends';
 import GlareHover from './components/GlareHover';
@@ -1467,6 +1467,7 @@ export default function App() {
               { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => navigateTo('main', 'events') },
               { icon: <FiActivity size={20} />, label: 'Experience', onClick: () => navigateTo('main', 'experience') },
               { icon: <FiUserPlus size={20} />, label: 'Profile', onClick: () => navigate('/profile') },
+              { icon: <FiBookmark size={20} />, label: 'Tickets', onClick: () => navigate('/profile') },
             ]}
             panelHeight={68}
             baseItemSize={50}
