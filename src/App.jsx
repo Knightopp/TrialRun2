@@ -1061,7 +1061,28 @@ export default function App() {
                                         const upiString = `upi://pay?pa=${upiId}&pn=Event Registration&tn=${transactionNote}&am=${amount}&cu=INR`;
                                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
                                         return (
-                                          <img src={qrUrl} alt="Payment QR" style={{ width: '200px', height: '200px', display: 'block' }} />
+                                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                                            <img src={qrUrl} alt="Payment QR" style={{ width: '200px', height: '200px', display: 'block' }} />
+                                            
+                                            {/* Mobile deep link button */}
+                                            <a 
+                                              href={upiString}
+                                              style={{ 
+                                                display: 'inline-block',
+                                                background: '#10b981', 
+                                                color: '#fff', 
+                                                textDecoration: 'none',
+                                                padding: '0.75rem 1.5rem', 
+                                                borderRadius: '8px', 
+                                                fontWeight: 'bold', 
+                                                fontFamily: 'var(--font-mono)',
+                                                width: '100%',
+                                                textAlign: 'center'
+                                              }}
+                                            >
+                                              PAY ON THIS DEVICE
+                                            </a>
+                                          </div>
                                         );
                                       })()}
                                     </div>
