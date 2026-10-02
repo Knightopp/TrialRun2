@@ -951,27 +951,12 @@ export default function App() {
 
               return (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#0a0a0a', overflowY: isMobile ? 'auto' : 'hidden' }}>
-                  {isMobile ? (
-                    <>
-                      <button 
-                        onClick={() => navigate('/register')}
-                        style={{ position: 'fixed', top: '1.25rem', right: '1.25rem', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '44px', height: '44px', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200000, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
-                        ✕
-                      </button>
-                      {eventContent}
-                    </>
-                  ) : (
-                    <ClickExpand
-                      src={activeEventData.image}
-                      title={activeEventData.label}
-                      clickHint="CLICK TO REGISTER"
-                      mediaZoom={1.2}
-                      overlayScrim={0.8}
-                      onClose={() => navigate('/register')}
-                    >
-                      {eventContent}
-                    </ClickExpand>
-                  )}
+                  <button 
+                    onClick={() => navigate('/register')}
+                    style={{ position: 'fixed', top: '1.25rem', right: '1.25rem', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '44px', height: '44px', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200000, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
+                    ✕
+                  </button>
+                  {eventContent}
                 </div>
               );
             })() : null
