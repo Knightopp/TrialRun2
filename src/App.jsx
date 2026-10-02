@@ -115,8 +115,6 @@ export default function App() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
   const [utrNumber, setUtrNumber] = useState('');
-  const [qrCodeData, setQrCodeData] = useState(null);
-  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
   useEffect(() => {
     if (activeEventData) {
@@ -129,31 +127,6 @@ export default function App() {
       }
     }
   }, [activeEventData]);
-
-  useEffect(() => {
-    if (activeStep === formTeamSize + 2 && !qrCodeData && !isGeneratingQr) {
-      const fetchQr = async () => {
-        setIsGeneratingQr(true);
-        try {
-          const expectedAmount = formTeamSize * 150;
-          const res = await fetch('/api/qr', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: expectedAmount, name: activeEventData?.label || 'Event Registration' })
-          });
-          const data = await res.json();
-          if (data.qr_image) {
-            setQrCodeData(data.qr_image);
-          }
-        } catch (err) {
-          console.error('Failed to load QR code', err);
-        } finally {
-          setIsGeneratingQr(false);
-        }
-      };
-      fetchQr();
-    }
-  }, [activeStep, formTeamSize, qrCodeData, isGeneratingQr, activeEventData]);
 
   const verifyPayment = async () => {
     if (!utrNumber || utrNumber.length < 12) {
@@ -1072,13 +1045,15 @@ export default function App() {
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
                                     
                                     <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block' }}>
-                                      {isGeneratingQr || !qrCodeData ? (
-                                        <div style={{ width: '200px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a' }}>
-                                          Generating QR...
-                                        </div>
-                                      ) : (
-                                        <img src={`data:image/png;base64,${qrCodeData}`} alt="Payment QR" style={{ width: '200px', height: '200px', display: 'block' }} />
-                                      )}
+                                      {(() => {
+                                        const amount = formTeamSize * 150;
+                                        const upiId = import.meta.env.VITE_UPI_ID || '9188811692@fam';
+                                        const upiString = `upi://pay?pa=${upiId}&pn=Event Registration&am=${amount}&cu=INR`;
+                                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
+                                        return (
+                                          <img src={qrUrl} alt="Payment QR" style={{ width: '200px', height: '200px', display: 'block' }} />
+                                        );
+                                      })()}
                                     </div>
 
                                     <div className="form-group-item" style={{ width: '100%', maxWidth: '300px' }}>
