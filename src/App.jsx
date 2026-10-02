@@ -109,6 +109,28 @@ export default function App() {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [participantCode, setParticipantCode] = useState('');
 
+  // Auto-fill form if user is logged in
+  useEffect(() => {
+    const fetchSessionData = async () => {
+      const email = localStorage.getItem('srishti_session');
+      if (email && !isRegistered) {
+        setFormEmail(email);
+        try {
+          const { supabase } = await import('./supabaseClient');
+          const { data } = await supabase.from('participants').select('*').eq('email', email).maybeSingle();
+          if (data) {
+            setFormName(data.name || '');
+            setFormCollege(data.college || '');
+            setFormPhone(data.phone || '');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+    fetchSessionData();
+  }, [isRegistered, isFormMenuOpen]);
+
   const [activeStep, setActiveStep] = useState(1);
   
   const [teamMembers, setTeamMembers] = useState({
@@ -1464,10 +1486,9 @@ export default function App() {
           <Dock 
             items={[
               { icon: <FiHome size={20} />, label: 'Home', onClick: () => navigateTo('main', 'home') },
-              { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => navigateTo('main', 'events') },
               { icon: <FiActivity size={20} />, label: 'Experience', onClick: () => navigateTo('main', 'experience') },
+              { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => navigateTo('main', 'events') },
               { icon: <FiUserPlus size={20} />, label: 'Profile', onClick: () => navigate('/profile') },
-              { icon: <FiBookmark size={20} />, label: 'Tickets', onClick: () => navigate('/profile') },
             ]}
             panelHeight={68}
             baseItemSize={50}
