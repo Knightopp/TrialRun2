@@ -350,7 +350,7 @@ export default function App() {
       setQrCodeDataUrl(qrDataUrl);
       setParticipantCode(uniqueCode);
 
-      // Send the digital entry pass via email
+      // Send the digital entry pass via email to the participant
       const ticketHtml = `
         <div style="font-family: sans-serif; background: #070b14; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 600px; margin: 0 auto; border: 1px solid #38bdf8;">
           <h2 style="color: #38bdf8; font-size: 24px; letter-spacing: 2px;">SRISHTI 2.7 ENTRY PASS</h2>
@@ -366,7 +366,27 @@ export default function App() {
         </div>
       `;
 
+      // Admin notification email
+      const amountPaid = ((formTeamSize * 10) + paymentFraction).toFixed(2);
+      const adminHtml = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #10b981;">New Registration Received!</h2>
+          <p><strong>Event:</strong> ${activeEventData.label}</p>
+          <p><strong>Lead Name:</strong> ${formName}</p>
+          <p><strong>College:</strong> ${formCollege}</p>
+          <p><strong>Phone:</strong> ${formPhone}</p>
+          <p><strong>Email:</strong> ${formEmail}</p>
+          <p><strong>Team Size:</strong> ${formTeamSize}</p>
+          <div style="background: #f0fdf4; border: 1px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 8px;">
+            <h3 style="margin: 0; color: #047857;">Expected Payment</h3>
+            <p style="font-size: 24px; margin: 10px 0; font-weight: bold;">₹${amountPaid}</p>
+            <p style="margin: 0; font-size: 14px;">Look for this exact fractional amount in your bank history to verify the transaction.</p>
+          </div>
+        </div>
+      `;
+
       try {
+        // Send to participant
         await fetch('/api/send_email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -376,8 +396,19 @@ export default function App() {
             html: ticketHtml
           })
         });
+        
+        // Send to Admin
+        await fetch('/api/send_email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: 'tsrknight@gmail.com',
+            subject: `New Registration: ₹${amountPaid} for ${activeEventData.label}`,
+            html: adminHtml
+          })
+        });
       } catch (emailErr) {
-        console.error('Failed to send ticket email:', emailErr);
+        console.error('Failed to send emails:', emailErr);
       }
 
       setFormStatus('done');
