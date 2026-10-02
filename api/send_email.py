@@ -5,8 +5,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from http.server import BaseHTTPRequestHandler
 
-app_password = os.environ.get("GMAIL_APP_PASSWORD")
-gmail_account = os.environ.get("GMAIL_ACCOUNT", "famgatewayin@gmail.com")
+app_password = os.environ.get("SRISHTI_GMAIL_APP_PASSWORD")
+gmail_account = os.environ.get("SRISHTI_GMAIL_ACCOUNT", "srishti2.7stc@gmail.com")
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):

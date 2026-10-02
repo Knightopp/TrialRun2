@@ -27,6 +27,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import ColorBends from './components/ColorBends';
 import GlareHover from './components/GlareHover';
 import ProfilePage from './components/ProfilePage';
+import AdminDashboard from './components/AdminDashboard';
 import { supabase } from './supabaseClient';
 import './App.css';
 
@@ -74,6 +75,7 @@ export default function App() {
 
   const isRegisterPage = location.pathname.startsWith('/register');
   const isProfilePage = location.pathname.startsWith('/profile');
+  const isAdminPage = location.pathname.startsWith('/admin');
 
   const matchEventRoute = location.pathname.match(/^\/register\/([a-zA-Z0-9-]+)$/);
   const activeEventData = matchEventRoute ? FEST_EVENTS.find(e => e.id === matchEventRoute[1]) : null;
@@ -809,6 +811,10 @@ export default function App() {
 
   if (isProfilePage) {
     return <ProfilePage />;
+  }
+
+  if (isAdminPage) {
+    return <AdminDashboard />;
   }
 
   return (
