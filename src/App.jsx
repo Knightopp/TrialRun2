@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-import { createPortal } from 'react-dom';
+import QRCode from 'qrcode';import { createPortal } from 'react-dom';
 import TechText from './TechText';
 import InfiniteSpiral from './components/InfiniteSpiral';
 import FlowingMenu from './components/FlowingMenu';
+import TearTicket from './components/TearTicket';
 import LatticeLoader from './components/LatticeLoader';
 import PixelSwap from './components/PixelSwap';
 import RippleDistortion from './components/RippleDistortion';
@@ -98,6 +98,8 @@ export default function App() {
   const [formStatus, setFormStatus] = useState('idle');
   const [isRegistered, setIsRegistered] = useState(false);
   const [isFormMenuOpen, setIsFormMenuOpen] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [participantCode, setParticipantCode] = useState('');
 
   const [activeStep, setActiveStep] = useState(1);
   
@@ -264,10 +266,26 @@ export default function App() {
     }
 
     try {
+      const uniqueCode = 'SR27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      // 1. Sync with the 'participants' table for the Flutter App and get the UUID
+      const { data: pData } = await supabase.from('participants').insert([{
+         participant_code: uniqueCode,
+         name: formName,
+         email: formEmail,
+         phone: formPhone,
+         college: formCollege,
+         department: 'N/A',
+         year: 'N/A'
+      }]).select().single();
+
+      // 2. Insert into website's registrations table using the new participant_id
       const { error } = await supabase
         .from('registrations')
         .insert([
           {
+            participant_id: pData?.id || null,
+            participant_code: uniqueCode,
             event_id: activeEventData.id,
             event_name: activeEventData.label,
             team_size: formTeamSize,
@@ -277,12 +295,20 @@ export default function App() {
             lead_phone: formPhone,
             lead_roll: formRoll,
             team_members: members,
-            payment_status: 'verified' // By Option A logic, it only hits here if paymentVerified is true
+            payment_status: 'verified'
           }
         ]);
 
       if (error) throw error;
-      
+
+      const qrDataUrl = await QRCode.toDataURL(uniqueCode, {
+         width: 256,
+         margin: 2,
+         color: { dark: '#020617', light: '#ffffff' }
+      });
+      setQrCodeDataUrl(qrDataUrl);
+      setParticipantCode(uniqueCode);
+
       setFormStatus('done');
       setIsRegistered(true);
     } catch (error) {
@@ -1113,9 +1139,72 @@ export default function App() {
                             </Step>
                           </Stepper>
                         ) : (
-                          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-                            <h4 style={{ fontFamily: 'var(--font-akira)', color: '#38bdf8', fontSize: '1.5rem', marginBottom: '1rem' }}>{isRegistered ? 'PASS ISSUED' : 'PROCESSING...'}</h4>
-                            <p style={{ color: '#94a3b8' }}>{isRegistered ? 'Check your email for your digital badge.' : 'Hold on tight.'}</p>
+                          <div style={{ textAlign: 'center', padding: '1rem 0', display: 'flex', justifyContent: 'center' }}>
+                            {isRegistered && qrCodeDataUrl ? (
+                              <TearTicket
+                                image="/assets/logo.png"
+                                imageAlt="Srishti Logo"
+                                stub={
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '0.5rem', background: '#fff' }}>
+                                    <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '0.75rem', marginBottom: '0.5rem' }}>SCAN ME</h4>
+                                    <img src={qrCodeDataUrl} alt="Scanner QR" style={{ width: '100px', height: '100px', display: 'block' }} />
+                                    <span style={{ fontSize: '0.65rem', color: '#666', marginTop: '0.5rem', fontFamily: 'var(--font-mono)' }}>{participantCode}</span>
+                                  </div>
+                                }
+                                orientation="horizontal"
+                                scrim={true}
+                                imageRadius={8}
+                                width={460}
+                                height={220}
+                                stubSize={130}
+                                radius={16}
+                                holes={10}
+                                holeSize={6}
+                                notch={4}
+                                roughness={0}
+                                tearAngle={30}
+                                stretch={30}
+                                resistance={0.45}
+                                rotate={-2}
+                                tilt={true}
+                                tiltMax={9}
+                                tiltReach={260}
+                                parallax={6}
+                                perspective={1000}
+                                background="#ffffff"
+                                color="#000000"
+                                border={true}
+                                borderColor="#e2e8f0"
+                                borderWidth={1}
+                                recenter={true}
+                              >
+                                <div style={{ padding: '1.5rem', textAlign: 'left', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                  <div>
+                                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: '#64748b', letterSpacing: '0.05em' }}>SRISHTI 2.7 ENTRY PASS</div>
+                                    <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '1.5rem', color: '#0f172a', margin: '0.5rem 0', lineHeight: 1.1 }}>
+                                      {activeEventData?.label || 'EVENT'}
+                                    </h3>
+                                    <p style={{ color: '#334155', fontWeight: 'bold', margin: '0.5rem 0' }}>{formName}</p>
+                                    <p style={{ color: '#64748b', fontSize: '0.85rem' }}>{formCollege}</p>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                    <div style={{ background: '#f1f5f9', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                      <span style={{ display: 'block', fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>STATUS</span>
+                                      <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.85rem' }}>VERIFIED</span>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                      <span style={{ display: 'block', fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>TEAM</span>
+                                      <span style={{ color: '#0f172a', fontWeight: 'bold', fontSize: '0.9rem' }}>{formTeamSize} Member(s)</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </TearTicket>
+                            ) : (
+                              <div style={{ padding: '3rem 0' }}>
+                                <h4 style={{ fontFamily: 'var(--font-akira)', color: '#38bdf8', fontSize: '1.5rem', marginBottom: '1rem' }}>PROCESSING...</h4>
+                                <p style={{ color: '#94a3b8' }}>Hold on tight.</p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
