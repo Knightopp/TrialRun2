@@ -64,6 +64,14 @@ const GALLERY_ITEMS = [
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const isRegisterPage = location.pathname.startsWith('/register');
 
   const matchEventRoute = location.pathname.match(/^\/register\/([a-zA-Z0-9-]+)$/);
@@ -762,19 +770,11 @@ export default function App() {
             </>
           } />
           <Route path="/register/:eventId" element={
-            activeEventData ? (
-              <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#0a0a0a' }}>
-                <ClickExpand
-                  src={activeEventData.image}
-                  title={activeEventData.label}
-                  clickHint="CLICK TO REGISTER"
-                  mediaZoom={1.2}
-                  overlayScrim={0.8}
-                  onClose={() => navigate('/register')}
-                >
-                  <div style={{ display: 'flex', width: '100%', height: '100%', padding: '4rem 6rem', gap: '4rem', boxSizing: 'border-box', overflow: 'hidden' }}>
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div className="form-inner-pad" style={{ width: '100%', maxWidth: '520px', background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(24px)', borderRadius: '24px', padding: '2rem 1rem', border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+            activeEventData ? (() => {
+              const eventContent = (
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', width: '100%', height: isMobile ? 'auto' : '100%', minHeight: '100%', padding: isMobile ? '4.5rem 1.25rem 2rem' : '4rem 6rem', gap: isMobile ? '2.5rem' : '4rem', boxSizing: 'border-box', overflowY: isMobile ? 'visible' : 'hidden', overflowX: 'hidden' }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center' }}>
+                    <div className="form-inner-pad" style={{ width: '100%', maxWidth: '520px', background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(24px)', borderRadius: '24px', padding: '2rem 1.25rem', border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem', padding: '0 1rem' }}>
                           <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', letterSpacing: '0.15em', color: '#38bdf8' }}>REGISTRATION</div>
                           <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '1.25rem', color: '#ffffff', lineHeight: 1.2 }}>
@@ -816,7 +816,7 @@ export default function App() {
                             </Step>
 
                             <Step>
-                              <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                              <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
                                 <div className="form-group-item">
                                   <label className="field-caption" style={{ color: '#cbd5e1' }}>Primary Contact (Team Lead)</label>
                                   <input type="text" required className="app-input" placeholder="e.g. Alex Morgan" value={formName} onChange={(e) => setFormName(e.target.value)} />
@@ -842,7 +842,7 @@ export default function App() {
 
                             {(formTeamSize === 'Team of 2' || formTeamSize === 'Squad of 4') && (
                               <Step>
-                                <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 2</div>
                                   <div className="form-group-item">
                                     <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
@@ -866,7 +866,7 @@ export default function App() {
 
                             {formTeamSize === 'Squad of 4' && (
                               <Step>
-                                <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 3</div>
                                   <div className="form-group-item">
                                     <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
@@ -890,7 +890,7 @@ export default function App() {
 
                             {formTeamSize === 'Squad of 4' && (
                               <Step>
-                                <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 4</div>
                                   <div className="form-group-item">
                                     <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
@@ -933,8 +933,8 @@ export default function App() {
                       </div>
                     </div>
                     
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: '100%', maxWidth: '750px', height: '85vh', maxHeight: '850px', position: 'relative' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? '280px' : 'auto' }}>
+                      <div style={{ width: '100%', maxWidth: '750px', height: isMobile ? '100%' : '85vh', maxHeight: '850px', position: 'relative' }}>
                         <MorphSlider
                           items={sliderItems}
                           transition="melt"
@@ -946,9 +946,34 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                </ClickExpand>
-              </div>
-            ) : null
+              );
+
+              return (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#0a0a0a', overflowY: isMobile ? 'auto' : 'hidden' }}>
+                  {isMobile ? (
+                    <>
+                      <button 
+                        onClick={() => navigate('/register')}
+                        style={{ position: 'fixed', top: '1.25rem', right: '1.25rem', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '44px', height: '44px', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200000, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
+                        ✕
+                      </button>
+                      {eventContent}
+                    </>
+                  ) : (
+                    <ClickExpand
+                      src={activeEventData.image}
+                      title={activeEventData.label}
+                      clickHint="CLICK TO REGISTER"
+                      mediaZoom={1.2}
+                      overlayScrim={0.8}
+                      onClose={() => navigate('/register')}
+                    >
+                      {eventContent}
+                    </ClickExpand>
+                  )}
+                </div>
+              );
+            })() : null
           } />
         </Routes>
       </div>
