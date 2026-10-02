@@ -30,17 +30,17 @@ import { supabase } from './supabaseClient';
 import './App.css';
 
 const FEST_EVENTS = [
-  { id: 'tracebot', label: 'TRACE BOT', category: 'ROBOTICS', group: 'Team Events', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', details: 'Build an autonomous line-following robot to race the tracks.' },
-  { id: 'treasurehunt', label: 'TREASURE HUNT', category: 'FUN', group: 'Popular', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'Solve cryptic clues to find the hidden technical treasures.' },
-  { id: 'codingdebugging', label: 'CODING & DEBUGGING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Test your algorithmic logic and debugging skills against time.' },
-  { id: 'aiwebsitemaking', label: 'AI WEBSITE MAKING', category: 'DEV', group: 'Popular', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Use AI tools to rapidly prototype and design stunning websites.' },
-  { id: 'blindcoding', label: 'BLIND CODING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'Code with your monitor off! Test your syntax muscle memory.' },
-  { id: 'ideathon', label: 'IDEATHON', category: 'INNOVATION', group: 'Team Events', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'Pitch your groundbreaking tech startup ideas to the jury.' },
-  { id: 'waltz', label: 'WALTZ (DANCE)', category: 'CULTURE', group: 'Team Events', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'A spectacular dance competition combining grace and rhythm.' },
-  { id: 'mindgame', label: 'MINDGAME', category: 'PUZZLE', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'A series of logic puzzles and lateral thinking challenges.' },
-  { id: 'itquiz', label: 'IT QUIZ', category: 'KNOWLEDGE', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Test your knowledge of the latest in tech, IT history, and trivia.' },
-  { id: 'facepainting', label: 'FACE PAINTING', category: 'ART', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Express your creativity on a human canvas with vibrant colors.' },
-  { id: 'hackathon', label: 'HACKATHON', category: 'DEV', group: 'Popular', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'A 48-hour coding marathon to build innovative solutions.' }
+  { id: 'tracebot', label: 'TRACE BOT', category: 'ROBOTICS', group: 'Team Events', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', details: 'Build an autonomous line-following robot to race the tracks.', date: 'Dec 6, 2026', time: '10:00 AM' },
+  { id: 'treasurehunt', label: 'TREASURE HUNT', category: 'FUN', group: 'Popular', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'Solve cryptic clues to find the hidden technical treasures.', date: 'Dec 7, 2026', time: '01:00 PM' },
+  { id: 'codingdebugging', label: 'CODING & DEBUGGING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Test your algorithmic logic and debugging skills against time.', date: 'Dec 6, 2026', time: '11:00 AM' },
+  { id: 'aiwebsitemaking', label: 'AI WEBSITE MAKING', category: 'DEV', group: 'Popular', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Use AI tools to rapidly prototype and design stunning websites.', date: 'Dec 7, 2026', time: '09:30 AM' },
+  { id: 'blindcoding', label: 'BLIND CODING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'Code with your monitor off! Test your syntax muscle memory.', date: 'Dec 6, 2026', time: '02:00 PM' },
+  { id: 'ideathon', label: 'IDEATHON', category: 'INNOVATION', group: 'Team Events', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'Pitch your groundbreaking tech startup ideas to the jury.', date: 'Dec 7, 2026', time: '10:30 AM' },
+  { id: 'waltz', label: 'WALTZ (DANCE)', category: 'CULTURE', group: 'Team Events', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'A spectacular dance competition combining grace and rhythm.', date: 'Dec 7, 2026', time: '04:00 PM' },
+  { id: 'mindgame', label: 'MINDGAME', category: 'PUZZLE', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'A series of logic puzzles and lateral thinking challenges.', date: 'Dec 6, 2026', time: '03:00 PM' },
+  { id: 'itquiz', label: 'IT QUIZ', category: 'KNOWLEDGE', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Test your knowledge of the latest in tech, IT history, and trivia.', date: 'Dec 7, 2026', time: '11:30 AM' },
+  { id: 'facepainting', label: 'FACE PAINTING', category: 'ART', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Express your creativity on a human canvas with vibrant colors.', date: 'Dec 6, 2026', time: '12:00 PM' },
+  { id: 'hackathon', label: 'HACKATHON', category: 'DEV', group: 'Popular', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'A 48-hour coding marathon to build innovative solutions.', date: 'Dec 6, 2026', time: '05:00 PM' }
 ];
 
 const SPIRAL_MOMENTS = [
@@ -437,11 +437,11 @@ export default function App() {
             <span className="hero-tagline-edition">2.7</span>
           </div>
 
-          {/* Date & Venue matching reference: JAN 2027 | ST THOMAS COLLEGE THRISSUR */}
+          {/* Date & Venue matching reference: DEC 6 & 7 | ST THOMAS COLLEGE THRISSUR */}
           <div className="hero-date-venue">
             <div className="date-box">
-              <span className="date-month">JAN</span>
-              <span className="date-year">2027</span>
+              <span className="date-month" style={{ fontSize: '1.2rem', color: '#38bdf8' }}>DEC</span>
+              <span className="date-year" style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>6 & 7</span>
             </div>
             <div className="date-venue-divider"></div>
             <div className="venue-box">
@@ -688,7 +688,7 @@ export default function App() {
           </p>
         </div>
         <div className="footer-meta-side">
-          <span className="footer-edition">EDITION 2.7 • JAN 2027</span>
+          <span className="footer-edition">EDITION 2.7 • DEC 6 & 7</span>
           <span className="footer-copy">© 2027 SRISHTI. ALL RIGHTS RESERVED.</span>
         </div>
       </footer>
@@ -1331,6 +1331,20 @@ export default function App() {
                     {selectedEventDetails.label}
                   </span>
                 </GradientText>
+                
+                {selectedEventDetails.date && selectedEventDetails.time && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(56,189,248,0.1)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.2)' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                      <span style={{ color: '#fff', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>{selectedEventDetails.date}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(16,185,129,0.1)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      <span style={{ color: '#fff', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}>{selectedEventDetails.time}</span>
+                    </div>
+                  </div>
+                )}
+                
               </div>
             )
           },
