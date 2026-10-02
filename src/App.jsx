@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from './supabaseClient';
+
 import { createPortal } from 'react-dom';
 import TechText from './TechText';
 import InfiniteSpiral from './components/InfiniteSpiral';
