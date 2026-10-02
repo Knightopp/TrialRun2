@@ -37,14 +37,14 @@ class ErrorBoundary extends Component {
   }
 }
 
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <HashRouter>
+      <BrowserRouter>
         <App />
-      </HashRouter>
+      </BrowserRouter>
     </ErrorBoundary>
   </StrictMode>,
 )

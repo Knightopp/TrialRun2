@@ -803,6 +803,7 @@ export default function App() {
                             backButtonText="Previous"
                             nextButtonText="Continue"
                             nextButtonProps={{ disabled: !isStepValid(activeStep) }}
+                            disableStepIndicators={true}
                           >
                             <Step>
                               <div className="form-group-item">
