@@ -386,19 +386,8 @@ export default function App() {
     window.scrollTo(0, 0);
     document.body.style.overflow = 'hidden';
 
-    // Fetch dynamic event details from Supabase
-    const fetchEventData = async () => {
-      try {
-        const { data, error } = await supabase.from('events').select('*');
-        if (data && data.length > 0) {
-          FEST_EVENTS = data.map(d => ({ ...d, label: d.name, date: d.date, time: d.start_time }));
-          setEventsLoaded(true);
-        }
-      } catch (err) {
-        console.error("DB connection error:", err);
-      }
-    };
-    fetchEventData();
+    // Use hardcoded FEST_EVENTS for the carousel since the DB lacks image and group columns
+    setEventsLoaded(true);
 
     // Initial artificial loading sequence
     const loaderTimer = setTimeout(() => {

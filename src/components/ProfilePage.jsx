@@ -292,30 +292,60 @@ export default function ProfilePage() {
                   {registrations.length === 0 ? (
                     <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
                       <TearTicket 
-                        eventName="Srishti 2.7 Entry Pass"
-                        participantName={participantData?.name || 'Admin'}
-                        college={participantData?.college || '-'}
-                        teamSize="-"
-                        eventDate="TBD"
-                        eventTime="-"
-                        eventLocation="Register to unlock"
-                        ticketId="LOCKED"
-                        barcodeValue={participantData?.participant_code || 'LOCKED'}
-                      />
+                        stub={
+                          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Admit One</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', transform: 'rotate(-90deg)', margin: '2rem 0', whiteSpace: 'nowrap' }}>LOCKED</div>
+                          </div>
+                        }
+                      >
+                        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1px' }}>Srishti 2.7 Entry Pass</div>
+                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: '0.5rem 0' }}>Register to unlock</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '2rem', marginTop: 'auto' }}>
+                            <div>
+                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Participant</div>
+                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>{participantData?.name || 'Admin'}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>College</div>
+                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>{participantData?.college || '-'}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </TearTicket>
                     </div>
                   ) : (
                     <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}>
                       <TearTicket 
-                        eventName="Srishti 2.7 Entry Pass"
-                        participantName={participantData?.name || 'Admin'}
-                        college={participantData?.college || '-'}
-                        teamSize="-"
-                        eventDate="OCT 2026"
-                        eventTime="9:00 AM"
-                        eventLocation="Main Campus"
-                        ticketId={registrations[0]?.registration_code || "PASS"}
-                        barcodeValue={participantData?.participant_code || 'ADMIN-PASS'}
-                      />
+                        stub={
+                          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Pass ID</div>
+                            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', transform: 'rotate(-90deg)', margin: '3rem 0', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                              {registrations[0]?.registration_code || "PASS"}
+                            </div>
+                          </div>
+                        }
+                      >
+                        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1px' }}>Srishti 2.7 Entry Pass</div>
+                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: '0.5rem 0' }}>Main Campus</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '2rem', marginTop: 'auto' }}>
+                            <div>
+                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Participant</div>
+                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>{participantData?.name || 'Admin'}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>College</div>
+                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>{participantData?.college || '-'}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </TearTicket>
                     </div>
                   )}
                 </div>
