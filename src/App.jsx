@@ -17,7 +17,7 @@ import Masonry from './components/Masonry';
 import BorderGlow from './components/BorderGlow';
 import GradientText from './components/GradientText';
 import SplitText from './components/SplitText';
-import DarkVeil from './components/DarkVeil';
+import Silk from './components/Silk';
 import PatternWaves from './components/PatternWaves';
 import { FiHome, FiCalendar, FiActivity, FiUserPlus } from 'react-icons/fi';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
@@ -946,12 +946,12 @@ export default function App() {
               return (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#0a0a0a', overflowY: isMobile ? 'auto' : 'hidden' }}>
                   <div style={{ position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
-                    <DarkVeil 
-                      resolutionScale={isMobile ? 0.3 : 0.8} 
-                      speed={isMobile ? 0.2 : 0.4} 
-                      noiseIntensity={0.8} 
-                      scanlineIntensity={0.6}
-                      warpAmount={0.3}
+                    <Silk 
+                      dpr={isMobile ? [1, 1] : [1, 2]} 
+                      speed={isMobile ? 3 : 5} 
+                      scale={1.2}
+                      noiseIntensity={1.0}
+                      color="#210040"
                     />
                   </div>
                   <button 
