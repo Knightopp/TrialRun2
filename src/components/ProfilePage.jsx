@@ -308,7 +308,7 @@ export default function ProfilePage() {
             )}
           </div>
         ) : step === 'onboarding' ? (
-          <div style={{ maxWidth: '600px', margin: '0 auto', padding: '3rem', backgroundColor: '#0a0a0a', border: '1px solid #222', borderRadius: '32px' }}>
+          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
             <Stepper
               initialStep={1}
               onStepChange={(s) => setOnboardingStep(s)}
