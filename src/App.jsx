@@ -29,8 +29,8 @@ import GlareHover from './components/GlareHover';
 import { supabase } from './supabaseClient';
 import './App.css';
 
-// Events are temporarily hardcoded until DB migration is run by the user.
-const FEST_EVENTS = [
+// Events fallback - dynamically overwritten from Supabase DB on load
+let FEST_EVENTS = [
   { id: 'tracebot', label: 'TRACE BOT', category: 'ROBOTICS', group: 'Team Events', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', details: 'Build an autonomous line-following robot to race the tracks.', date: 'Dec 6, 2026', time: '10:00 AM' },
   { id: 'treasurehunt', label: 'TREASURE HUNT', category: 'FUN', group: 'Popular', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'Solve cryptic clues to find the hidden technical treasures.', date: 'Dec 7, 2026', time: '01:00 PM' },
   { id: 'codingdebugging', label: 'CODING & DEBUGGING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Test your algorithmic logic and debugging skills against time.', date: 'Dec 6, 2026', time: '11:00 AM' },
@@ -90,6 +90,7 @@ export default function App() {
 
   // Initial loader states
   const [isAppLoading, setIsAppLoading] = useState(true);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
 
   // Registration form states
   const [formName, setFormName] = useState('');
@@ -328,6 +329,20 @@ export default function App() {
     }
     window.scrollTo(0, 0);
     document.body.style.overflow = 'hidden';
+
+    // Fetch dynamic event details from Supabase
+    const fetchEventData = async () => {
+      try {
+        const { data, error } = await supabase.from('events_metadata').select('*');
+        if (data && data.length > 0) {
+          FEST_EVENTS = data.map(d => ({ ...d, date: d.event_date, time: d.event_time }));
+          setEventsLoaded(true);
+        }
+      } catch (err) {
+        console.error("DB connection error:", err);
+      }
+    };
+    fetchEventData();
 
     // Initial artificial loading sequence
     const loaderTimer = setTimeout(() => {
