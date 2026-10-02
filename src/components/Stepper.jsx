@@ -60,6 +60,7 @@ export default function Stepper({
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (nextButtonProps?.disabled) return;
       if (isLastStep) {
         handleComplete();
       } else {
