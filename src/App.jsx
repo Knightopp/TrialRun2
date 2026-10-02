@@ -302,7 +302,7 @@ export default function App() {
       const { data: pData } = await supabase.from('participants').insert([{
          participant_code: uniqueCode,
          name: formName,
-         email: formEmail,
+         email: formEmail.trim().toLowerCase(),
          phone: formPhone,
          college: formCollege,
          department: 'N/A',
@@ -1149,7 +1149,12 @@ export default function App() {
                             <Step>
                               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                                 <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Payment Verification</h4>
-                                <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>Please scan the QR code to send exactly ₹{((formTeamSize * 10) + paymentFraction).toFixed(2)} via FamPay. The random fraction ensures instant automatic verification.</p>
+                                <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>Scan the QR code to pay the exact verification amount below:</p>
+                                
+                                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'var(--font-mono)', marginBottom: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', padding: '0.5rem 1.5rem', borderRadius: '12px', display: 'inline-block' }}>
+                                  ₹{((formTeamSize * 10) + paymentFraction).toFixed(2)}
+                                </div>
+                                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>The random fraction ensures instant automatic verification.</p>
                                 
                                 {paymentVerified ? (
                                   <div style={{ color: '#10b981', padding: '1rem', border: '1px solid #10b981', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)' }}>

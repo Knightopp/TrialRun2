@@ -49,7 +49,7 @@ export default function ProfilePage() {
       const { data: participant, error: pError } = await supabase
         .from('participants')
         .select('*')
-        .eq('email', userEmail)
+        .ilike('email', userEmail.trim())
         .limit(1)
         .maybeSingle();
 
@@ -290,8 +290,9 @@ export default function ProfilePage() {
                     <FiCalendar /> Digital Entry Pass
                   </h3>
                   {registrations.length === 0 ? (
-                    <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                    <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)', transformOrigin: 'top center', display: 'flex', justifyContent: 'center' }}>
                       <TearTicket 
+                        width={360}
                         stub={
                           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Admit One</div>
@@ -318,8 +319,9 @@ export default function ProfilePage() {
                       </TearTicket>
                     </div>
                   ) : (
-                    <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                    <div style={{ transformOrigin: 'top center', display: 'flex', justifyContent: 'center' }}>
                       <TearTicket 
+                        width={360}
                         stub={
                           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Pass ID</div>
@@ -358,7 +360,7 @@ export default function ProfilePage() {
                       <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>No Tickets Yet</h2>
                       <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '2rem' }}>You haven't registered for any events yet.</p>
                       <button 
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/register')}
                         style={{ padding: '1rem 2rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}
                       >
                         Explore Events
