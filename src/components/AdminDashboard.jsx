@@ -52,7 +52,7 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async (role, eventId) => {
     try {
-      let query = supabase.from('registrations').select('*, events_metadata(label)');
+      let query = supabase.from('registrations').select('*, events(name)');
       if (role === 'coordinator' && eventId) {
         query = query.eq('event_id', eventId);
       }
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
                     <div>{reg.lead_name}</div>
                     <div style={{ fontSize: '0.8rem', color: '#888' }}>{reg.lead_email}</div>
                   </td>
-                  <td style={{ padding: '1rem' }}>{reg.events_metadata?.label || reg.event_id}</td>
+                  <td style={{ padding: '1rem' }}>{reg.events?.name || reg.event_name || reg.event_id}</td>
                   <td style={{ padding: '1rem' }}>{reg.team_size}</td>
                   <td style={{ padding: '1rem' }}>
                     <span style={{ padding: '0.25rem 0.5rem', backgroundColor: reg.payment_status === 'verified' ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.1)', color: reg.payment_status === 'verified' ? '#10b981' : '#fff', borderRadius: '4px', fontSize: '0.8rem', textTransform: 'uppercase' }}>

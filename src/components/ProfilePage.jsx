@@ -59,7 +59,7 @@ export default function ProfilePage() {
       if (participant) {
         const { data: regs, error: rError } = await supabase
           .from('registrations')
-          .select('*, events_metadata (*)')
+          .select('*, events (*)')
           .eq('participant_id', participant.id);
 
         if (rError) throw rError;
@@ -299,7 +299,7 @@ export default function ProfilePage() {
                   registrations.map(reg => (
                     <TearTicket 
                       key={reg.id}
-                      eventName={reg.events_metadata?.label || reg.event_id}
+                      eventName={reg.events?.name || reg.event_name || reg.event_id}
                       participantName={participantData?.name || 'Admin'}
                       college={participantData?.college || '-'}
                       teamSize={reg.team_size.toString()}

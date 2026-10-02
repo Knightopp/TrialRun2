@@ -389,9 +389,9 @@ export default function App() {
     // Fetch dynamic event details from Supabase
     const fetchEventData = async () => {
       try {
-        const { data, error } = await supabase.from('events_metadata').select('*');
+        const { data, error } = await supabase.from('events').select('*');
         if (data && data.length > 0) {
-          FEST_EVENTS = data.map(d => ({ ...d, date: d.event_date, time: d.event_time }));
+          FEST_EVENTS = data.map(d => ({ ...d, label: d.name, date: d.date, time: d.start_time }));
           setEventsLoaded(true);
         }
       } catch (err) {
