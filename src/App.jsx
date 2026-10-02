@@ -17,6 +17,7 @@ import Masonry from './components/Masonry';
 import BorderGlow from './components/BorderGlow';
 import GradientText from './components/GradientText';
 import SplitText from './components/SplitText';
+import DarkVeil from './components/DarkVeil';
 import PatternWaves from './components/PatternWaves';
 import { FiHome, FiCalendar, FiActivity, FiUserPlus } from 'react-icons/fi';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
@@ -944,6 +945,15 @@ export default function App() {
 
               return (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#0a0a0a', overflowY: isMobile ? 'auto' : 'hidden' }}>
+                  <div style={{ position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
+                    <DarkVeil 
+                      resolutionScale={isMobile ? 0.3 : 0.8} 
+                      speed={isMobile ? 0.2 : 0.4} 
+                      noiseIntensity={0.8} 
+                      scanlineIntensity={0.6}
+                      warpAmount={0.3}
+                    />
+                  </div>
                   <button 
                     onClick={() => navigate('/register')}
                     style={{ position: 'fixed', top: '1.25rem', right: '1.25rem', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '44px', height: '44px', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200000, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
