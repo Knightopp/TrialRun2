@@ -228,27 +228,19 @@ export default function ProfilePage() {
                 <h1 style={{ fontSize: '3.5rem', fontWeight: '800', margin: '0 0 0.5rem 0', letterSpacing: '-0.03em' }}>
                   My Tickets
                 </h1>
-                <p style={{ color: '#888', fontSize: '1.1rem', margin: 0 }}>
-                  Logged in as <span style={{ color: '#fff', fontWeight: '600' }}>{session?.user?.email}</span>
+                <p style={{ color: '#888', fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span>Logged in as <span style={{ color: '#fff', fontWeight: '600' }}>{session?.user?.email}</span></span>
+                  {session?.user?.email === 'tsrknight@gmail.com' && (
+                    <span 
+                      onClick={() => navigate('/admin')}
+                      style={{ color: '#38bdf8', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '600', padding: '0.2rem 0.5rem', background: 'rgba(56,189,248,0.1)', borderRadius: '4px' }}
+                    >
+                      Admin Panel →
+                    </span>
+                  )}
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                {session?.user?.email === 'tsrknight@gmail.com' && (
-                  <button 
-                    onClick={() => navigate('/admin')}
-                    style={{ 
-                      display: 'flex', alignItems: 'center', gap: '0.5rem',
-                      padding: '0.75rem 1.5rem', backgroundColor: '#fff',
-                      color: '#000', border: 'none',
-                      borderRadius: '12px', cursor: 'pointer', fontWeight: '600',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseOver={e => { e.currentTarget.style.backgroundColor = '#e5e5e5'; }}
-                    onMouseOut={e => { e.currentTarget.style.backgroundColor = '#fff'; }}
-                  >
-                    Admin Panel
-                  </button>
-                )}
                 <button 
                   onClick={handleLogout}
                   style={{ 
@@ -269,10 +261,36 @@ export default function ProfilePage() {
             {loading ? (
               <div style={{ marginTop: '4rem', textAlign: 'center' }}>Loading your data...</div>
             ) : (
-              <div style={{ marginTop: '4rem', display: 'flex', flexDirection: 'column', gap: '3rem', alignItems: 'center' }}>
-                {registrations.length === 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
-                    <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)' }}>
+              <div style={{ marginTop: '4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+                
+                {/* Profile Card */}
+                <div style={{ padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222' }}>
+                  <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FiUser /> Profile Overview
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div>
+                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Name</p>
+                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData?.name || 'Admin'}</p>
+                    </div>
+                    <div>
+                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>College</p>
+                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData?.college || '-'}</p>
+                    </div>
+                    <div>
+                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Phone</p>
+                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData?.phone || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Srishti Entry Pass */}
+                <div style={{ padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FiCalendar /> Digital Entry Pass
+                  </h3>
+                  {registrations.length === 0 ? (
+                    <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
                       <TearTicket 
                         eventName="Srishti 2.7 Entry Pass"
                         participantName={participantData?.name || 'Admin'}
@@ -285,8 +303,30 @@ export default function ProfilePage() {
                         barcodeValue={participantData?.participant_code || 'LOCKED'}
                       />
                     </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '1.5rem' }}>You haven't registered for any events yet. Register to unlock your entry pass!</p>
+                  ) : (
+                    <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                      <TearTicket 
+                        eventName="Srishti 2.7 Entry Pass"
+                        participantName={participantData?.name || 'Admin'}
+                        college={participantData?.college || '-'}
+                        teamSize="-"
+                        eventDate="OCT 2026"
+                        eventTime="9:00 AM"
+                        eventLocation="Main Campus"
+                        ticketId={registrations[0]?.registration_code || "PASS"}
+                        barcodeValue={participantData?.participant_code || 'ADMIN-PASS'}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Events List */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                  {registrations.length === 0 ? (
+                    <div style={{ padding: '4rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', textAlign: 'center' }}>
+                      <FiCalendar size={48} color="#444" style={{ marginBottom: '1.5rem' }} />
+                      <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>No Tickets Yet</h2>
+                      <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '2rem' }}>You haven't registered for any events yet.</p>
                       <button 
                         onClick={() => navigate('/')}
                         style={{ padding: '1rem 2rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}
@@ -294,24 +334,44 @@ export default function ProfilePage() {
                         Explore Events
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  registrations.map(reg => (
-                    <TearTicket 
-                      key={reg.id}
-                      eventName={reg.events?.name || reg.event_name || reg.event_id}
-                      participantName={participantData?.name || 'Admin'}
-                      college={participantData?.college || '-'}
-                      teamSize={reg.team_size.toString()}
-                      eventDate="OCT 2026"
-                      eventTime="9:00 AM"
-                      eventLocation="Main Campus"
-                      ticketId={reg.registration_code}
-                      barcodeValue={participantData?.participant_code || 'ADMIN-PASS'}
-                    />
-                  ))
-                )}
-              </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                      {registrations.map(reg => (
+                        <div key={reg.id} style={{ 
+                          padding: '2rem', 
+                          backgroundColor: '#0a0a0a',
+                          borderRadius: '24px', 
+                          border: '1px solid #222',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.5rem 1.5rem', background: '#111', color: '#888', borderBottomLeftRadius: '16px', borderLeft: '1px solid #222', borderBottom: '1px solid #222', fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px' }}>
+                            {reg.status.toUpperCase()}
+                          </div>
+                          
+                          <h4 style={{ fontSize: '1.5rem', margin: '0 0 1rem 0', color: '#fff', fontWeight: 'bold' }}>
+                            {reg.events?.name || reg.event_name || reg.event_id}
+                          </h4>
+                          
+                          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Registration ID</p>
+                              <p style={{ fontSize: '1.2rem', margin: 0, fontFamily: 'monospace', color: '#fff', letterSpacing: '1px' }}>
+                                {reg.registration_code}
+                              </p>
+                            </div>
+                            {reg.team_size > 1 && (
+                              <div>
+                                <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Team</p>
+                                <p style={{ fontSize: '1.2rem', margin: 0 }}>{reg.team_size} <span style={{fontSize: '0.9rem', color: '#888'}}>Pax</span></p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
             )}
           </div>
         ) : step === 'onboarding' ? (
