@@ -132,14 +132,21 @@ function StepContentWrapper({ isCompleted, currentStep, direction, children, cla
     <motion.div
       className={className}
       style={{ position: 'relative', overflow: 'hidden' }}
-      animate={{ height: isCompleted ? 0 : parentHeight }}
+      animate={{ height: isCompleted ? 'auto' : parentHeight }}
       transition={{ type: 'spring', duration: 0.4 }}
     >
       <AnimatePresence initial={false} mode="sync" custom={direction}>
-        {!isCompleted && (
+        {!isCompleted ? (
           <SlideTransition key={currentStep} direction={direction} onHeightReady={h => setParentHeight(h)}>
             {children}
           </SlideTransition>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#94a3b8' }}>
+            <div style={{ width: '32px', height: '32px', border: '3px solid rgba(255,255,255,0.15)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1.25rem' }} />
+            <p style={{ margin: 0, fontSize: '1.05rem', color: '#fff', fontWeight: '600' }}>Setting up your Dashboard...</p>
+            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Generating your official SRI27 pass</p>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
         )}
       </AnimatePresence>
     </motion.div>
