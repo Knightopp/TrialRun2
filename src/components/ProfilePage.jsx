@@ -73,7 +73,7 @@ export default function ProfilePage() {
         const { data: regs, error: rError } = await supabase
           .from('registrations')
           .select('*')
-          .eq('participant_id', participant.id);
+          .or(`participant_id.eq.${participant.id},lead_email.ilike.${userEmail.trim()}`);
 
         if (rError) throw rError;
         setRegistrations(regs || []);
@@ -443,8 +443,21 @@ export default function ProfilePage() {
                           position: 'relative',
                           overflow: 'hidden'
                         }}>
-                          <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.5rem 1.5rem', background: '#111', color: '#888', borderBottomLeftRadius: '16px', borderLeft: '1px solid #222', borderBottom: '1px solid #222', fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px' }}>
-                            {reg.status.toUpperCase()}
+                          <div style={{ 
+                            position: 'absolute', 
+                            top: 0, 
+                            right: 0, 
+                            padding: '0.5rem 1.5rem', 
+                            background: '#111', 
+                            color: (reg.payment_status === 'verified' || reg.status === 'verified') ? '#34d399' : '#fbbf24', 
+                            borderBottomLeftRadius: '16px', 
+                            borderLeft: '1px solid #222', 
+                            borderBottom: '1px solid #222', 
+                            fontSize: '0.8rem', 
+                            fontWeight: 'bold', 
+                            letterSpacing: '1px' 
+                          }}>
+                            {String(reg.payment_status || reg.status || 'VERIFIED').toUpperCase()}
                           </div>
                           
                           <h4 style={{ fontSize: '1.5rem', margin: '0 0 1rem 0', color: '#fff', fontWeight: 'bold' }}>
@@ -455,7 +468,7 @@ export default function ProfilePage() {
                             <div style={{ flex: 1 }}>
                               <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Registration ID</p>
                               <p style={{ fontSize: '1.2rem', margin: 0, fontFamily: 'monospace', color: '#fff', letterSpacing: '1px' }}>
-                                {reg.registration_code}
+                                {reg.participant_code || reg.registration_code || reg.id?.substring(0, 8) || 'PASS'}
                               </p>
                             </div>
                             {reg.team_size > 1 && (
