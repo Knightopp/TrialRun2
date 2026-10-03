@@ -25,9 +25,7 @@ interface WebRegisterPayload {
   event_code?: string;
   team_members?: TeamMember[];
   payment_method?: string;
-  payment_amount?: number;
   payment_reference?: string;
-  is_payment_verified?: boolean;
 }
 
 serve(async (req: Request) => {
@@ -83,27 +81,31 @@ serve(async (req: Request) => {
       event_code,
       team_members = [],
       payment_method = "upi",
-      payment_amount = 0,
-      payment_reference,
-      is_payment_verified = false
+      payment_reference
     } = body;
 
-    // 5. Input Validation Rules
-    if (!name || typeof name !== "string" || name.trim().length < 2) {
+    // 5. Strict Input Validation & Sanitization
+    if (!name || typeof name !== "string" || name.trim().length < 2 || name.trim().length > 100) {
       return new Response(
-        JSON.stringify({ success: false, error: "Valid participant name (minimum 2 characters) is required." }),
+        JSON.stringify({ success: false, error: "Valid participant name (2 to 100 characters) is required." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const cleanEmail = email?.trim().toLowerCase();
-    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+    if (!cleanEmail || cleanEmail.length > 120 || !emailRegex.test(cleanEmail)) {
       return new Response(
         JSON.stringify({ success: false, error: "A valid email address is required." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const cleanPhone = phone ? String(phone).trim().replace(/[^\d+ -]/g, "").slice(0, 20) : null;
+    const cleanCollege = college ? String(college).trim().slice(0, 150) : "N/A";
+    const cleanDept = department ? String(department).trim().slice(0, 100) : "N/A";
+    const cleanYear = year ? String(year).trim().slice(0, 50) : "N/A";
+    const cleanPaymentRef = payment_reference ? String(payment_reference).trim().slice(0, 64) : null;
 
     if (!event_id && !event_code) {
       return new Response(
@@ -129,8 +131,9 @@ serve(async (req: Request) => {
       );
     }
 
-    // Event status validation: must be 'upcoming' or 'ongoing'
-    if (event.status === "cancelled" || event.status === "completed") {
+    // Event status validation: must be 'upcoming' or 'ongoing' (or 'scheduled'/'active')
+    const openStatuses = ["upcoming", "ongoing", "scheduled", "active"];
+    if (event.status && !openStatuses.includes(event.status.toLowerCase())) {
       return new Response(
         JSON.stringify({ success: false, error: `Registration is closed. Event is currently marked as ${event.status}.` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -175,14 +178,7 @@ serve(async (req: Request) => {
     if (existingParticipant) {
       participantId = existingParticipant.id;
       participantCode = existingParticipant.participant_code;
-
-      // Update phone or college if missing
-      const updates: Record<string, string> = {};
-      if (!existingParticipant.phone && phone) updates.phone = phone.trim();
-      if (!existingParticipant.college && college) updates.college = college.trim();
-      if (Object.keys(updates).length > 0) {
-        await supabase.from("participants").update(updates).eq("id", participantId);
-      }
+      // Note: We do NOT arbitrarily overwrite existing participant details from unauthenticated web requests.
     } else {
       // Generate unique participant code (e.g. SRI27-XXXXXX)
       let uniqueFound = false;
@@ -211,10 +207,10 @@ serve(async (req: Request) => {
           participant_code: participantCode,
           name: name.trim(),
           email: cleanEmail,
-          phone: phone ? phone.trim() : null,
-          college: college ? college.trim() : "N/A",
-          department: department ? department.trim() : "N/A",
-          year: year ? year.trim() : "N/A"
+          phone: cleanPhone,
+          college: cleanCollege,
+          department: cleanDept,
+          year: cleanYear
         }])
         .select("id, participant_code")
         .single();
@@ -256,18 +252,13 @@ serve(async (req: Request) => {
       }
     }
 
-    // 9. Payment Status Determination
-    // Rule: Default to 'pending' unless verified by gateway, or fee is 0
-    let finalPaymentStatus = "pending";
+    // 9. Payment Status Determination (Enforced strictly server-side)
+    // Security Rule:
+    // If event registration_fee is 0 -> 'verified' (Free event)
+    // If event registration_fee > 0 -> ALWAYS 'pending' for self-service web registrations.
+    // Client cannot override payment_status.
     const expectedFee = Number(event.registration_fee || 0);
-
-    if (expectedFee === 0) {
-      finalPaymentStatus = "verified"; // Free event
-    } else if (is_payment_verified === true) {
-      finalPaymentStatus = "verified";
-    } else {
-      finalPaymentStatus = "pending"; // Requires coordinator/admin check
-    }
+    const finalPaymentStatus = expectedFee === 0 ? "verified" : "pending";
 
     // 10. Insert Registration
     const registrationPayload = {
@@ -278,8 +269,8 @@ serve(async (req: Request) => {
       registered_by: null, // Null for self-service web registration
       payment_status: finalPaymentStatus,
       payment_method: payment_method || "upi",
-      payment_amount: payment_amount || expectedFee,
-      payment_reference: payment_reference ? payment_reference.trim() : null,
+      payment_amount: expectedFee, // Strictly enforced from server database
+      payment_reference: cleanPaymentRef,
       team_members: teamArray
     };
 

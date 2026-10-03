@@ -359,7 +359,6 @@ export default function App() {
       } catch (evErr) {
         console.warn('Could not resolve event UUID:', evErr);
       }
-
       // 2. Invoke the official web-register Supabase Edge Function
       let edgeInvokedSuccessfully = false;
       try {
@@ -374,9 +373,7 @@ export default function App() {
           event_code: activeEventData.id.startsWith('SRI27-') ? activeEventData.id : `SRI27-${activeEventData.id.toUpperCase()}`,
           team_members: members,
           payment_method: 'upi',
-          payment_amount: amountPaid,
-          payment_reference: txnId || null,
-          is_payment_verified: false
+          payment_reference: txnId || null
         };
 
         const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('web-register', {
@@ -387,56 +384,15 @@ export default function App() {
           edgeInvokedSuccessfully = true;
           pData = edgeData.data.participant;
           participantPassCode = edgeData.data.participant.participant_code;
-        } else if (edgeErr) {
-          console.warn('web-register Edge Function not yet deployed or error, attempting relational fallback:', edgeErr);
+        } else {
+          const errMsg = edgeErr?.message || edgeData?.error || 'Registration failed.';
+          console.warn('web-register notice:', errMsg);
+          if (edgeData?.data?.participant_code) {
+            participantPassCode = edgeData.data.participant_code;
+          }
         }
       } catch (err) {
-        console.warn('Edge Function network error:', err);
-      }
-
-      // 3. Fallback to direct relational write if Edge Function is not yet deployed
-      if (!edgeInvokedSuccessfully) {
-        const { data: existingParticipant } = await supabase
-          .from('participants')
-          .select('*')
-          .ilike('email', formEmail.trim())
-          .maybeSingle();
-
-        if (existingParticipant) {
-          pData = existingParticipant;
-          participantPassCode = existingParticipant.participant_code || uniqueCode;
-        } else {
-          try {
-            const { data: newParticipant } = await supabase.from('participants').insert([{
-               participant_code: uniqueCode,
-               name: formName,
-               email: formEmail.trim().toLowerCase(),
-               phone: formPhone,
-               college: formCollege,
-               department: 'N/A',
-               year: 'N/A'
-            }]).select().single();
-            if (newParticipant) {
-              pData = newParticipant;
-              participantPassCode = uniqueCode;
-            }
-          } catch (_) {}
-        }
-
-        if (pData?.id && resolvedEventId) {
-          try {
-            await supabase.from('registrations').insert([{
-              participant_id: pData.id,
-              event_id: resolvedEventId,
-              status: 'registered',
-              registration_source: 'web',
-              payment_status: 'pending',
-              payment_method: 'upi',
-              payment_amount: amountPaid,
-              team_members: members
-            }]);
-          } catch (_) {}
-        }
+        console.warn('Edge Function network notice:', err);
       }
 
       // Fetch all registered events for this attendee so the card reflects all enrolled events
