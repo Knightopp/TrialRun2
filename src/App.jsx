@@ -588,7 +588,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Stat 2: ₹5.0L+ */}
+            {/* Stat 2: ₹80K+ */}
             <div className="stat-item">
               <div className="stat-icon-box">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -600,8 +600,8 @@ export default function App() {
                 </svg>
               </div>
               <div className="stat-info">
-                <span className="stat-value">₹5.0L+</span>
-                <span className="stat-desc">PRIZE BOUNTY &amp; GRANTS</span>
+                <span className="stat-value">₹80K+</span>
+                <span className="stat-desc">TOTAL PRIZE POOL</span>
               </div>
             </div>
 
@@ -621,7 +621,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Stat 4: 5000+ */}
+            {/* Stat 4: 500+ */}
             <div className="stat-item">
               <div className="stat-icon-box">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -629,8 +629,8 @@ export default function App() {
                 </svg>
               </div>
               <div className="stat-info">
-                <span className="stat-value">5000+</span>
-                <span className="stat-desc">NATIONWIDE DELEGATES</span>
+                <span className="stat-value">500+</span>
+                <span className="stat-desc">PARTICIPANTS &amp; DELEGATES</span>
               </div>
             </div>
           </div>
@@ -798,7 +798,7 @@ export default function App() {
           </div>
           <p className="footer-host">
             ST. THOMAS COLLEGE (AUTONOMOUS), THRISSUR<br />
-            DEPARTMENT OF COMPUTER APPLICATIONS
+            DEPARTMENT OF COMPUTER SCIENCE
           </p>
         </div>
         <div className="footer-meta-side">
