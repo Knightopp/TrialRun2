@@ -79,8 +79,51 @@ export default function App() {
   const isProfilePage = location.pathname.startsWith('/profile');
   const isAdminPage = location.pathname.startsWith('/admin');
 
+  // Dynamic event loading directly from Supabase events table
+  const [liveEvents, setLiveEvents] = useState(FEST_EVENTS);
+
+  useEffect(() => {
+    const fetchLiveEvents = async () => {
+      try {
+        const { supabase } = await import('./supabaseClient');
+        const { data: dbEvents, error } = await supabase
+          .from('events')
+          .select('*')
+          .in('status', ['upcoming', 'ongoing']);
+
+        if (!error && dbEvents && dbEvents.length > 0) {
+          const merged = dbEvents.map(ev => {
+            const fallback = FEST_EVENTS.find(d => 
+              d.id.toLowerCase() === ev.event_code?.toLowerCase() ||
+              `sri27-${d.id.toLowerCase()}` === ev.event_code?.toLowerCase() ||
+              d.id === ev.id
+            );
+            return {
+              id: ev.event_code || ev.id,
+              dbId: ev.id,
+              label: ev.name,
+              category: ev.category || fallback?.category || 'DEV',
+              group: fallback?.group || 'Popular',
+              image: fallback?.image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop',
+              details: ev.venue ? `Venue: ${ev.venue}. Fee: ₹${ev.registration_fee || 0}` : (fallback?.details || 'Festival event'),
+              date: ev.date || fallback?.date || 'Dec 6-7, 2026',
+              time: ev.start_time || fallback?.time || '10:00 AM',
+              fee: ev.registration_fee || 0,
+              type: ev.registration_type || 'individual',
+              maxTeamSize: ev.max_team_size || 1
+            };
+          });
+          setLiveEvents(merged);
+        }
+      } catch (err) {
+        console.warn('Could not sync dynamic events from Supabase:', err);
+      }
+    };
+    fetchLiveEvents();
+  }, []);
+
   const matchEventRoute = location.pathname.match(/^\/register\/([a-zA-Z0-9-]+)$/);
-  const activeEventData = matchEventRoute ? FEST_EVENTS.find(e => e.id === matchEventRoute[1]) : null;
+  const activeEventData = matchEventRoute ? liveEvents.find(e => e.id === matchEventRoute[1] || e.id.toLowerCase() === matchEventRoute[1].toLowerCase() || `sri27-${e.id.toLowerCase()}` === matchEventRoute[1].toLowerCase()) : null;
 
   const sliderItems = React.useMemo(() => {
     if (!activeEventData) return [];
@@ -298,65 +341,119 @@ export default function App() {
     }
 
     try {
-      const uniqueCode = 'SR27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const uniqueCode = 'SRI27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
       let participantPassCode = uniqueCode;
-
       let pData = null;
-      const { data: existingParticipant } = await supabase
-        .from('participants')
-        .select('*')
-        .ilike('email', formEmail.trim())
-        .maybeSingle();
 
-      if (existingParticipant) {
-        pData = existingParticipant;
-        // Reuse permanent delegate pass code so their QR code is identical across all events!
-        participantPassCode = existingParticipant.participant_code || uniqueCode;
-      } else {
-        const { data: newParticipant } = await supabase.from('participants').insert([{
-           participant_code: uniqueCode,
-           name: formName,
-           email: formEmail.trim().toLowerCase(),
-           phone: formPhone,
-           college: formCollege,
-           department: 'N/A',
-           year: 'N/A'
-        }]).select().single();
-        pData = newParticipant;
-        participantPassCode = uniqueCode;
+      // 1. Resolve event UUID from events table if available
+      let resolvedEventId = null;
+      try {
+        const { data: dbEv } = await supabase
+          .from('events')
+          .select('id, event_code, name')
+          .or(`event_code.eq.${activeEventData.id},event_code.eq.SRI27-${activeEventData.id.toUpperCase()},name.ilike.${activeEventData.label}`)
+          .maybeSingle();
+        if (dbEv?.id) {
+          resolvedEventId = dbEv.id;
+        }
+      } catch (evErr) {
+        console.warn('Could not resolve event UUID:', evErr);
       }
 
-      // 2. Insert into website's registrations table using the permanent participant_code
-      const { error } = await supabase
-        .from('registrations')
-        .insert([
-          {
-            participant_id: pData?.id || null,
-            participant_code: participantPassCode,
-            event_id: activeEventData.id,
-            event_name: activeEventData.label,
-            team_size: formTeamSize,
-            lead_name: formName,
-            lead_college: formCollege,
-            lead_email: formEmail,
-            lead_phone: formPhone,
-            lead_roll: formRoll,
-            team_members: members,
-            payment_status: 'verified'
-          }
-        ]);
+      // 2. Invoke the official web-register Supabase Edge Function
+      let edgeInvokedSuccessfully = false;
+      try {
+        const edgePayload = {
+          name: formName.trim(),
+          email: formEmail.trim().toLowerCase(),
+          phone: formPhone.trim(),
+          college: formCollege.trim(),
+          department: 'N/A',
+          year: 'N/A',
+          event_id: resolvedEventId || undefined,
+          event_code: activeEventData.id.startsWith('SRI27-') ? activeEventData.id : `SRI27-${activeEventData.id.toUpperCase()}`,
+          team_members: members,
+          payment_method: 'upi',
+          payment_amount: amountPaid,
+          payment_reference: txnId || null,
+          is_payment_verified: false
+        };
 
-      if (error) throw error;
+        const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('web-register', {
+          body: edgePayload
+        });
+
+        if (!edgeErr && edgeData?.success && edgeData.data?.participant) {
+          edgeInvokedSuccessfully = true;
+          pData = edgeData.data.participant;
+          participantPassCode = edgeData.data.participant.participant_code;
+        } else if (edgeErr) {
+          console.warn('web-register Edge Function not yet deployed or error, attempting relational fallback:', edgeErr);
+        }
+      } catch (err) {
+        console.warn('Edge Function network error:', err);
+      }
+
+      // 3. Fallback to direct relational write if Edge Function is not yet deployed
+      if (!edgeInvokedSuccessfully) {
+        const { data: existingParticipant } = await supabase
+          .from('participants')
+          .select('*')
+          .ilike('email', formEmail.trim())
+          .maybeSingle();
+
+        if (existingParticipant) {
+          pData = existingParticipant;
+          participantPassCode = existingParticipant.participant_code || uniqueCode;
+        } else {
+          try {
+            const { data: newParticipant } = await supabase.from('participants').insert([{
+               participant_code: uniqueCode,
+               name: formName,
+               email: formEmail.trim().toLowerCase(),
+               phone: formPhone,
+               college: formCollege,
+               department: 'N/A',
+               year: 'N/A'
+            }]).select().single();
+            if (newParticipant) {
+              pData = newParticipant;
+              participantPassCode = uniqueCode;
+            }
+          } catch (_) {}
+        }
+
+        if (pData?.id && resolvedEventId) {
+          try {
+            await supabase.from('registrations').insert([{
+              participant_id: pData.id,
+              event_id: resolvedEventId,
+              status: 'registered',
+              registration_source: 'web',
+              payment_status: 'pending',
+              payment_method: 'upi',
+              payment_amount: amountPaid,
+              team_members: members
+            }]);
+          } catch (_) {}
+        }
+      }
 
       // Fetch all registered events for this attendee so the card reflects all enrolled events
-      const { data: userAllRegs } = await supabase
-        .from('registrations')
-        .select('event_name')
-        .or(`participant_id.eq.${pData?.id},lead_email.ilike.${formEmail.trim()}`);
+      let allEventsList = [activeEventData.label];
+      if (pData?.id) {
+        const { data: userAllRegs } = await supabase
+          .from('registrations')
+          .select('*, events(*)')
+          .eq('participant_id', pData.id);
 
-      const allEventsList = userAllRegs && userAllRegs.length > 0
-        ? [...new Set(userAllRegs.map(r => r.event_name).filter(Boolean))]
-        : [activeEventData.label];
+        if (userAllRegs && userAllRegs.length > 0) {
+          const mapped = userAllRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
+          if (mapped.length > 0) {
+            allEventsList = [...new Set(mapped)];
+          }
+        }
+      }
 
       const qrDataUrl = await QRCode.toDataURL(participantPassCode, {
          width: 320,
@@ -664,7 +761,7 @@ export default function App() {
       {/* 2. EVENTS SECTION — FlowingMenu */}
       <section id="events" className="events-flowing-section">
         <FlowingMenu
-          items={FEST_EVENTS.map(ev => ({
+          items={liveEvents.map(ev => ({
             link: '#',
             text: ev.label,
             image: ev.image,
@@ -677,7 +774,7 @@ export default function App() {
           marqueeTextColor="#0a0a0a"
           borderColor="rgba(255, 255, 255, 0.08)"
           onSelect={(tabId) => {
-            const ev = FEST_EVENTS.find(e => e.id === tabId);
+            const ev = liveEvents.find(e => e.id === tabId);
             if (ev) setSelectedEventDetails(ev);
           }}
         />
@@ -848,7 +945,7 @@ export default function App() {
             {groupName.toUpperCase()}
           </h3>
           <div className="reg-events-carousel">
-            {FEST_EVENTS.filter(ev => ev.group === groupName).map((ev) => (
+            {liveEvents.filter(ev => ev.group === groupName).map((ev) => (
               <div 
                 key={ev.id} 
                 className={`reg-event-card ${selectedEventTrack === ev.label ? 'active' : ''}`}

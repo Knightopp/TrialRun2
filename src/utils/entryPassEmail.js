@@ -7,7 +7,7 @@
 export function generateEntryPassEmailHtml({
   attendeeName = 'Participant',
   college = 'St Thomas College Thrissur',
-  passCode = 'SR27-PASS',
+  passCode = 'SRI27-PASS',
   eventName = 'FEST PASS',
   status = 'VERIFIED'
 }) {

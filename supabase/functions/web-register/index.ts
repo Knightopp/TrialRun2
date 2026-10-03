@@ -1,0 +1,337 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+interface TeamMember {
+  name: string;
+  email?: string;
+  phone?: string;
+  college?: string;
+}
+
+interface WebRegisterPayload {
+  name: string;
+  email: string;
+  phone?: string;
+  college?: string;
+  department?: string;
+  year?: string;
+  event_id?: string;
+  event_code?: string;
+  team_members?: TeamMember[];
+  payment_method?: string;
+  payment_amount?: number;
+  payment_reference?: string;
+  is_payment_verified?: boolean;
+}
+
+serve(async (req: Request) => {
+  // 1. Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    // 2. Only allow POST
+    if (req.method !== "POST") {
+      return new Response(
+        JSON.stringify({ success: false, error: "Method not allowed. Use POST." }),
+        { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 3. Initialize Supabase Admin Client using server-side service role key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in Edge Function environment.");
+      return new Response(
+        JSON.stringify({ success: false, error: "Server configuration error." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+
+    // 4. Parse request body
+    let body: WebRegisterPayload;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid JSON body." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const {
+      name,
+      email,
+      phone,
+      college,
+      department = "N/A",
+      year = "N/A",
+      event_id,
+      event_code,
+      team_members = [],
+      payment_method = "upi",
+      payment_amount = 0,
+      payment_reference,
+      is_payment_verified = false
+    } = body;
+
+    // 5. Input Validation Rules
+    if (!name || typeof name !== "string" || name.trim().length < 2) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Valid participant name (minimum 2 characters) is required." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanEmail = email?.trim().toLowerCase();
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "A valid email address is required." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!event_id && !event_code) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Either event_id or event_code is required." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 6. Verify Event Exists and is Open for Registration
+    let eventQuery = supabase.from("events").select("*");
+    if (event_id) {
+      eventQuery = eventQuery.eq("id", event_id);
+    } else {
+      eventQuery = eventQuery.eq("event_code", event_code!.trim());
+    }
+
+    const { data: event, error: eventErr } = await eventQuery.maybeSingle();
+
+    if (eventErr || !event) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Event not found. Please verify the event code." }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Event status validation: must be 'upcoming' or 'ongoing'
+    if (event.status === "cancelled" || event.status === "completed") {
+      return new Response(
+        JSON.stringify({ success: false, error: `Registration is closed. Event is currently marked as ${event.status}.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Team validation
+    const teamArray = Array.isArray(team_members) ? team_members : [];
+    const totalTeamSize = 1 + teamArray.length;
+
+    if (event.registration_type === "individual" && teamArray.length > 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: "This is an individual event. Team members cannot be registered." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (event.max_team_size && totalTeamSize > event.max_team_size) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Team size (${totalTeamSize}) exceeds the maximum allowed size of ${event.max_team_size} for this event.`
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 7. Find or Create Participant Record
+    let participantId: string;
+    let participantCode: string;
+
+    const { data: existingParticipant, error: pFindErr } = await supabase
+      .from("participants")
+      .select("id, participant_code, name, email, phone, college")
+      .ilike("email", cleanEmail)
+      .maybeSingle();
+
+    if (pFindErr) {
+      console.warn("Participant lookup notice:", pFindErr);
+    }
+
+    if (existingParticipant) {
+      participantId = existingParticipant.id;
+      participantCode = existingParticipant.participant_code;
+
+      // Update phone or college if missing
+      const updates: Record<string, string> = {};
+      if (!existingParticipant.phone && phone) updates.phone = phone.trim();
+      if (!existingParticipant.college && college) updates.college = college.trim();
+      if (Object.keys(updates).length > 0) {
+        await supabase.from("participants").update(updates).eq("id", participantId);
+      }
+    } else {
+      // Generate unique participant code (e.g. SRI27-XXXXXX)
+      let uniqueFound = false;
+      let candidateCode = "";
+      let attempts = 0;
+
+      while (!uniqueFound && attempts < 5) {
+        attempts++;
+        const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+        candidateCode = `SRI27-${rand}`;
+
+        const { data: codeCheck } = await supabase
+          .from("participants")
+          .select("id")
+          .eq("participant_code", candidateCode)
+          .maybeSingle();
+
+        if (!codeCheck) uniqueFound = true;
+      }
+
+      participantCode = candidateCode;
+
+      const { data: newParticipant, error: pInsertErr } = await supabase
+        .from("participants")
+        .insert([{
+          participant_code: participantCode,
+          name: name.trim(),
+          email: cleanEmail,
+          phone: phone ? phone.trim() : null,
+          college: college ? college.trim() : "N/A",
+          department: department ? department.trim() : "N/A",
+          year: year ? year.trim() : "N/A"
+        }])
+        .select("id, participant_code")
+        .single();
+
+      if (pInsertErr || !newParticipant) {
+        console.error("Failed to create participant:", pInsertErr);
+        return new Response(
+          JSON.stringify({ success: false, error: "Failed to create participant profile.", details: pInsertErr?.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      participantId = newParticipant.id;
+    }
+
+    // 8. Duplicate Registration Check
+    const { data: existingReg, error: regCheckErr } = await supabase
+      .from("registrations")
+      .select("id, status, payment_status")
+      .eq("participant_id", participantId)
+      .eq("event_id", event.id)
+      .maybeSingle();
+
+    if (existingReg) {
+      if (existingReg.status === "registered") {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            code: "DUPLICATE_REGISTRATION",
+            error: `Participant is already registered for ${event.name}.`,
+            data: {
+              participant_code: participantCode,
+              registration_id: existingReg.id,
+              payment_status: existingReg.payment_status
+            }
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // 9. Payment Status Determination
+    // Rule: Default to 'pending' unless verified by gateway, or fee is 0
+    let finalPaymentStatus = "pending";
+    const expectedFee = Number(event.registration_fee || 0);
+
+    if (expectedFee === 0) {
+      finalPaymentStatus = "verified"; // Free event
+    } else if (is_payment_verified === true) {
+      finalPaymentStatus = "verified";
+    } else {
+      finalPaymentStatus = "pending"; // Requires coordinator/admin check
+    }
+
+    // 10. Insert Registration
+    const registrationPayload = {
+      participant_id: participantId,
+      event_id: event.id,
+      status: "registered",
+      registration_source: "web",
+      registered_by: null, // Null for self-service web registration
+      payment_status: finalPaymentStatus,
+      payment_method: payment_method || "upi",
+      payment_amount: payment_amount || expectedFee,
+      payment_reference: payment_reference ? payment_reference.trim() : null,
+      team_members: teamArray
+    };
+
+    const { data: createdReg, error: regInsertErr } = await supabase
+      .from("registrations")
+      .insert([registrationPayload])
+      .select("*")
+      .single();
+
+    if (regInsertErr || !createdReg) {
+      console.error("Failed to insert registration:", regInsertErr);
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to record event registration.", details: regInsertErr?.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 11. Return Clean Success Response
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Registration completed successfully.",
+        data: {
+          registration_id: createdReg.id,
+          status: createdReg.status,
+          payment_status: createdReg.payment_status,
+          participant: {
+            id: participantId,
+            participant_code: participantCode,
+            name: name.trim(),
+            email: cleanEmail
+          },
+          event: {
+            id: event.id,
+            event_code: event.event_code,
+            name: event.name,
+            category: event.category,
+            venue: event.venue,
+            date: event.date,
+            start_time: event.start_time
+          }
+        }
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    console.error("Unexpected error in web-register:", err);
+    return new Response(
+      JSON.stringify({ success: false, error: message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

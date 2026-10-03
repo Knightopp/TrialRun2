@@ -38,16 +38,23 @@ export default function ProfilePage() {
   const [downloadingPass, setDownloadingPass] = useState(false);
   const [emailPassMsg, setEmailPassMsg] = useState(null);
 
+  const isSuperAdmin = (session?.user?.email || localStorage.getItem('srishti_session') || '').trim().toLowerCase() === 'tsrknight@gmail.com';
+
   useEffect(() => {
-    const savedEmail = localStorage.getItem('srishti_session');
-    if (savedEmail) {
+    const rawEmail = localStorage.getItem('srishti_session');
+    if (rawEmail) {
+      const savedEmail = rawEmail.trim().toLowerCase();
       setSession({ user: { email: savedEmail } });
+      const isAdmin = savedEmail === 'tsrknight@gmail.com';
+      if (isAdmin) {
+        localStorage.setItem('srishti_admin_session', savedEmail);
+      }
       fetchUserData(savedEmail).then(found => {
-        if (!found && savedEmail !== 'tsrknight@gmail.com') {
+        if (!found && !isAdmin) {
           setStep('onboarding');
         } else {
-          if (!found && savedEmail === 'tsrknight@gmail.com') {
-            setParticipantData({ name: 'Admin', college: '-', participant_code: 'ADMIN-PASS' });
+          if (!found && isAdmin) {
+            setParticipantData({ name: 'Master Superadmin', college: 'Srishti 2.7 HQ', participant_code: 'ADMIN-PASS', email: savedEmail });
           }
           setStep('dashboard');
         }
@@ -60,33 +67,56 @@ export default function ProfilePage() {
 
   const fetchUserData = async (userEmail) => {
     try {
+      const clean = (userEmail || '').trim().toLowerCase();
       const { data: participant, error: pError } = await supabase
         .from('participants')
         .select('*')
-        .ilike('email', userEmail.trim())
+        .ilike('email', clean)
         .limit(1)
         .maybeSingle();
 
-      if (pError) throw pError;
-      setParticipantData(participant);
+      if (pError) console.warn('Participant lookup error:', pError);
+
+      let currentParticipant = participant;
+      if (!currentParticipant && clean === 'tsrknight@gmail.com') {
+        currentParticipant = {
+          name: 'Master Superadmin',
+          college: 'Srishti 2.7 HQ',
+          participant_code: 'ADMIN-PASS',
+          email: clean
+        };
+      }
+
+      setParticipantData(currentParticipant);
       
-      if (participant) {
-        setEditName(participant.name || '');
-        setEditCollege(participant.college || '');
-        setEditPhone(participant.phone || '');
+      if (currentParticipant) {
+        setEditName(currentParticipant.name || '');
+        setEditCollege(currentParticipant.college || '');
+        setEditPhone(currentParticipant.phone || '');
       }
 
-      if (participant) {
-        const { data: regs, error: rError } = await supabase
+      let regs = [];
+      if (currentParticipant?.id) {
+        const { data: rData, error: rError } = await supabase
           .from('registrations')
-          .select('*')
-          .or(`participant_id.eq.${participant.id},lead_email.ilike.${userEmail.trim()}`);
-
-        if (rError) throw rError;
-        setRegistrations(regs || []);
-        return true;
+          .select('*, events(*)')
+          .eq('participant_id', currentParticipant.id);
+        if (!rError && rData) regs = rData;
       }
-      return false;
+
+      // Also fallback search registrations by lead_email
+      if (regs.length === 0) {
+        try {
+          const { data: leadRegs } = await supabase
+            .from('registrations')
+            .select('*, events(*)')
+            .ilike('lead_email', clean);
+          if (leadRegs && leadRegs.length > 0) regs = leadRegs;
+        } catch (_) {}
+      }
+
+      setRegistrations(regs);
+      return !!currentParticipant || regs.length > 0;
     } catch (err) {
       console.error('Error fetching data:', err);
       return false;
@@ -99,10 +129,17 @@ export default function ProfilePage() {
     setError(null);
     setMessage(null);
 
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Please enter a valid email address.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       localStorage.setItem('pending_otp', code);
-      localStorage.setItem('pending_email', email);
+      localStorage.setItem('pending_email', cleanEmail);
 
       const htmlContent = `
         <div style="font-family: sans-serif; background: #000; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 0 auto; border: 1px solid #333;">
@@ -117,13 +154,13 @@ export default function ProfilePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: email,
+          to: cleanEmail,
           subject: 'Srishti 2.7 - Login Code',
           html: htmlContent
         })
       });
 
-      if (!response.ok) throw new Error('Failed to send email.');
+      if (!response.ok) throw new Error('Failed to send email. Please verify your email and try again.');
 
       setStep('otp');
     } catch (error) {
@@ -137,7 +174,7 @@ export default function ProfilePage() {
     setError(null);
     try {
       const savedCode = localStorage.getItem('pending_otp');
-      const savedEmail = localStorage.getItem('pending_email');
+      const savedEmail = (localStorage.getItem('pending_email') || '').trim().toLowerCase();
 
       if (code !== savedCode) {
         throw new Error('Invalid code. Please try again.');
@@ -148,13 +185,18 @@ export default function ProfilePage() {
       localStorage.setItem('srishti_session', savedEmail);
       
       setSession({ user: { email: savedEmail } });
+      const isAdmin = savedEmail === 'tsrknight@gmail.com';
+      if (isAdmin) {
+        localStorage.setItem('srishti_admin_session', savedEmail);
+      }
+
       const found = await fetchUserData(savedEmail);
       
-      if (!found && savedEmail !== 'tsrknight@gmail.com') {
+      if (!found && !isAdmin) {
         setStep('onboarding');
       } else {
-        if (!found && savedEmail === 'tsrknight@gmail.com') {
-          setParticipantData({ name: 'Admin', college: '-', participant_code: 'ADMIN-PASS' });
+        if (!found && isAdmin) {
+          setParticipantData({ name: 'Master Superadmin', college: 'Srishti 2.7 HQ', participant_code: 'ADMIN-PASS', email: savedEmail });
         }
         setStep('dashboard');
       }
@@ -167,23 +209,51 @@ export default function ProfilePage() {
 
   const handleOnboardingComplete = async () => {
     setLoading(true);
+    setError(null);
+    const userEmail = (session?.user?.email || localStorage.getItem('srishti_session') || '').trim().toLowerCase();
+
+    if (!onboardingName.trim() || !onboardingPhone.trim() || !onboardingCollege.trim()) {
+      setError('Please fill in your Name, College, and Phone number before completing registration.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const uniqueCode = 'SR27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      const { data, error } = await supabase.from('participants').insert([{
+      const uniqueCode = 'SRI27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const payload = {
          participant_code: uniqueCode,
-         name: onboardingName,
-         email: session.user.email,
-         phone: onboardingPhone,
-         college: onboardingCollege,
+         name: onboardingName.trim(),
+         email: userEmail,
+         phone: onboardingPhone.trim(),
+         college: onboardingCollege.trim(),
          department: 'N/A',
          year: 'N/A'
-      }]).select().single();
+      };
+
+      const { data, error: insertError } = await supabase
+        .from('participants')
+        .insert([payload])
+        .select()
+        .single();
       
-      if (error) throw error;
+      if (insertError) {
+        console.error('Participant creation error:', insertError);
+        if (userEmail === 'tsrknight@gmail.com') {
+          setParticipantData({ ...payload, participant_code: 'ADMIN-PASS' });
+          setStep('dashboard');
+          return;
+        }
+        if (insertError.code === '42501' || insertError.message?.includes('row-level security')) {
+          throw new Error('Supabase Security Policy Notice: Row-Level Security (RLS) blocked registration. Please run the updated supabase_setup.sql in your Supabase SQL Editor.');
+        }
+        throw new Error(insertError.message || 'Database error completing profile.');
+      }
+
       setParticipantData(data);
       setStep('dashboard');
     } catch (err) {
-      setError(err.message);
+      console.error('Onboarding exception:', err);
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -197,6 +267,7 @@ export default function ProfilePage() {
     setRegistrations([]);
     setOnboardingStep(1);
     setEmail('');
+    setError(null);
   };
 
   const handleSaveProfile = async () => {
@@ -220,17 +291,19 @@ export default function ProfilePage() {
   };
 
   const getPassData = () => {
-    const attendeeName = participantData?.name || 'Participant';
-    const college = participantData?.college || 'St Thomas College Thrissur';
-    const passCode = participantData?.participant_code || registrations[0]?.participant_code || 'SR27-PASS';
-    const events = registrations.map(r => r.events?.name || r.event_name).filter(Boolean);
-    const isVerified = registrations.some(r => r.payment_status === 'verified' || r.status === 'verified') || !!participantData?.id;
-    const statusText = isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING');
+    const attendeeName = participantData?.name || (isSuperAdmin ? 'Master Superadmin' : 'Participant');
+    const college = participantData?.college || (isSuperAdmin ? 'Srishti 2.7 HQ' : 'St Thomas College Thrissur');
+    const passCode = participantData?.participant_code || registrations[0]?.participant_code || (isSuperAdmin ? 'ADMIN-PASS' : 'SRI27-PASS');
+    const events = isSuperAdmin 
+      ? ['FULL ALL-ACCESS PASS', 'ADMIN COMMAND CENTER']
+      : registrations.map(r => r.events?.name || r.event_name).filter(Boolean);
+    const isVerified = isSuperAdmin || registrations.some(r => r.payment_status === 'verified' || r.status === 'verified') || !!participantData?.id;
+    const statusText = isSuperAdmin ? 'SUPERADMIN' : (isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING'));
     return { attendeeName, college, passCode, events, isVerified, statusText };
   };
 
   const handleEmailPassToUser = async () => {
-    const hasRegistered = (registrations && registrations.length > 0) || session?.user?.email === 'tsrknight@gmail.com';
+    const hasRegistered = (registrations && registrations.length > 0) || isSuperAdmin;
     if (!hasRegistered) {
       alert('Your delegate pass is locked. Please register for at least one festival event to unlock your pass.');
       return;
@@ -289,7 +362,7 @@ export default function ProfilePage() {
   };
 
   const handleDownloadPassPng = async () => {
-    const hasRegistered = (registrations && registrations.length > 0) || session?.user?.email === 'tsrknight@gmail.com';
+    const hasRegistered = (registrations && registrations.length > 0) || isSuperAdmin;
     if (!hasRegistered) {
       alert('Your delegate pass is locked. Please register for at least one event first.');
       return;
@@ -367,15 +440,26 @@ export default function ProfilePage() {
                 <h1 style={{ fontSize: '3.5rem', fontWeight: '800', margin: '0 0 0.5rem 0', letterSpacing: '-0.03em' }}>
                   My Tickets
                 </h1>
-                <p style={{ color: '#888', fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <p style={{ color: '#888', fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                   <span>Logged in as <span style={{ color: '#fff', fontWeight: '600' }}>{session?.user?.email}</span></span>
-                  {session?.user?.email === 'tsrknight@gmail.com' && (
-                    <span 
-                      onClick={() => navigate('/admin')}
-                      style={{ color: '#38bdf8', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '600', padding: '0.2rem 0.5rem', background: 'rgba(56,189,248,0.1)', borderRadius: '4px' }}
+                  {isSuperAdmin && (
+                    <button 
+                      onClick={() => {
+                        localStorage.setItem('srishti_admin_session', 'tsrknight@gmail.com');
+                        navigate('/admin');
+                      }}
+                      style={{ 
+                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                        color: '#38bdf8', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '700', 
+                        padding: '0.35rem 0.85rem', background: 'rgba(56,189,248,0.15)', 
+                        borderRadius: '8px', border: '1px solid rgba(56,189,248,0.3)',
+                        transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.5px'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = 'rgba(56,189,248,0.25)'}
+                      onMouseOut={e => e.currentTarget.style.background = 'rgba(56,189,248,0.15)'}
                     >
-                      Admin Panel →
-                    </span>
+                      <FiLock size={13} /> Admin Command Center →
+                    </button>
                   )}
                 </p>
               </div>
@@ -473,7 +557,7 @@ export default function ProfilePage() {
                     const statusText = passData.statusText;
                     const eventsList = passData.events;
 
-                    const hasRegistered = (registrations && registrations.length > 0) || session?.user?.email === 'tsrknight@gmail.com';
+                    const hasRegistered = (registrations && registrations.length > 0) || isSuperAdmin;
 
                     return (
                       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -882,6 +966,27 @@ export default function ProfilePage() {
           </div>
         ) : step === 'onboarding' ? (
           <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+            {error && (
+              <div style={{ 
+                padding: '1.25rem', 
+                backgroundColor: 'rgba(255, 59, 48, 0.15)', 
+                color: '#ff453a', 
+                borderRadius: '16px', 
+                marginBottom: '2rem', 
+                fontSize: '0.95rem', 
+                lineHeight: '1.5',
+                border: '1px solid rgba(255,59,48,0.35)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.75rem'
+              }}>
+                <FiInfo style={{ flexShrink: 0, fontSize: '1.3rem', marginTop: '0.1rem' }} />
+                <div>
+                  <div style={{ fontWeight: '700', marginBottom: '0.25rem' }}>Registration Notice</div>
+                  <div>{error}</div>
+                </div>
+              </div>
+            )}
             <Stepper
               initialStep={1}
               onStepChange={(s) => setOnboardingStep(s)}

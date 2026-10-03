@@ -7,7 +7,7 @@ import QRCode from 'qrcode';
 export async function generateCardImagePng({
   attendeeName = 'Participant',
   college = 'St Thomas College Thrissur',
-  passCode = 'SR27-PASS',
+  passCode = 'SRI27-PASS',
   events = [],
   isVerified = true,
   statusText = 'VERIFIED'

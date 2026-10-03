@@ -48,6 +48,8 @@ export default function AdminDashboard() {
   const [participants, setParticipants] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [adminsList, setAdminsList] = useState([]);
+  const [arrivalCheckins, setArrivalCheckins] = useState([]);
+  const [eventAttendance, setEventAttendance] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(false);
 
   // Search & filter states
@@ -120,23 +122,48 @@ export default function AdminDashboard() {
       // 3. Fetch Registrations
       let regQuery = supabase
         .from('registrations')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*, events(*)');
 
       if (role === 'coordinator' && scopedEventId) {
         regQuery = regQuery.eq('event_id', scopedEventId);
       }
 
-      const { data: rData, error: rErr } = await regQuery;
-      if (!rErr && rData) {
-        setRegistrations(rData);
+      // Try ordering by registered_at (standard schema)
+      try {
+        const { data: rData, error: rErr } = await regQuery.order('registered_at', { ascending: false });
+        if (!rErr && rData) {
+          setRegistrations(rData);
+        } else {
+          const { data: fallbackData } = await regQuery;
+          if (fallbackData) setRegistrations(fallbackData);
+        }
+      } catch (_) {
+        const { data: fallbackData } = await regQuery;
+        if (fallbackData) setRegistrations(fallbackData);
       }
 
-      // 4. Fetch Event Admins (if superadmin)
-      if (role === 'superadmin') {
-        const { data: admData } = await supabase.from('event_admins').select('*');
-        if (admData) setAdminsList(admData);
-      }
+      // 4. Fetch Volunteers / Admins
+      try {
+        const { data: volData, error: volErr } = await supabase.from('volunteers').select('*');
+        if (!volErr && volData && volData.length > 0) {
+          setAdminsList(volData);
+        } else {
+          const { data: admData } = await supabase.from('event_admins').select('*');
+          if (admData) setAdminsList(admData);
+        }
+      } catch (_) {}
+
+      // 5. Fetch Arrival Check-ins
+      try {
+        const { data: arrData } = await supabase.from('arrival_checkins').select('*, participants(name, participant_code, college)');
+        if (arrData) setArrivalCheckins(arrData);
+      } catch (_) {}
+
+      // 6. Fetch Event Attendance
+      try {
+        const { data: attData } = await supabase.from('event_attendance').select('*, participants(name, participant_code), events(name, event_code)');
+        if (attData) setEventAttendance(attData);
+      } catch (_) {}
     } catch (err) {
       console.error('Error fetching admin data:', err);
       showToast('Error syncing with database', 'error');
@@ -162,13 +189,42 @@ export default function AdminDashboard() {
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const { data: adminData, error: adminErr } = await supabase
-        .from('event_admins')
-        .select('*')
-        .eq('email', adminEmail)
-        .maybeSingle();
+      let adminData = null;
 
-      if (adminErr || !adminData) {
+      // Try volunteers table first (new schema)
+      try {
+        const { data: volData, error: volErr } = await supabase
+          .from('volunteers')
+          .select('*')
+          .eq('email', adminEmail)
+          .maybeSingle();
+
+        if (!volErr && volData) {
+          adminData = {
+            ...volData,
+            role: volData.role === 'admin' ? 'superadmin' : volData.role
+          };
+        }
+      } catch (_) {}
+
+      // Fallback to legacy event_admins
+      if (!adminData) {
+        try {
+          const { data: legacyData } = await supabase
+            .from('event_admins')
+            .select('*')
+            .eq('email', adminEmail)
+            .maybeSingle();
+          if (legacyData) adminData = legacyData;
+        } catch (_) {}
+      }
+
+      // Master admin fallback
+      if (!adminData && (adminEmail || '').trim().toLowerCase() === 'tsrknight@gmail.com') {
+        adminData = { email: 'tsrknight@gmail.com', name: 'Master Superadmin', role: 'superadmin' };
+      }
+
+      if (!adminData) {
         handleLogout();
         throw new Error('Access denied. No admin record with this email.');
       }
@@ -199,13 +255,36 @@ export default function AdminDashboard() {
 
     const cleanEmail = email.trim().toLowerCase();
     try {
-      const { data: adminData, error: adminErr } = await supabase
-        .from('event_admins')
-        .select('*')
-        .eq('email', cleanEmail)
-        .maybeSingle();
+      let adminData = null;
 
-      if (adminErr || !adminData) {
+      // Check volunteers table
+      try {
+        const { data: volData } = await supabase
+          .from('volunteers')
+          .select('*')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+        if (volData) adminData = volData;
+      } catch (_) {}
+
+      // Check legacy event_admins table
+      if (!adminData) {
+        try {
+          const { data: legData } = await supabase
+            .from('event_admins')
+            .select('*')
+            .eq('email', cleanEmail)
+            .maybeSingle();
+          if (legData) adminData = legData;
+        } catch (_) {}
+      }
+
+      // Master Superadmin fallback
+      if (!adminData && cleanEmail === 'tsrknight@gmail.com') {
+        adminData = { email: cleanEmail, role: 'superadmin' };
+      }
+
+      if (!adminData) {
         throw new Error('Access Denied: This email is not registered as an Admin.');
       }
 
@@ -430,7 +509,7 @@ export default function AdminDashboard() {
     try {
       const participant = activeItem;
       const targetEvent = events.find(ev => ev.id === assignFormData.eventId) || events[0];
-      const uniqueCode = participant.participant_code || `SR27-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const uniqueCode = participant.participant_code || `SRI27-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
       let membersArray = [];
       if (assignFormData.teamMembers.trim()) {
@@ -838,10 +917,13 @@ export default function AdminDashboard() {
       case 'participants': return participants;
       case 'registrations': return registrations;
       case 'events': return events;
+      case 'volunteers': return adminsList;
+      case 'arrival_checkins': return arrivalCheckins;
+      case 'event_attendance': return eventAttendance;
       case 'event_admins': return adminsList;
       default: return [];
     }
-  }, [selectedDbTable, participants, registrations, events, adminsList]);
+  }, [selectedDbTable, participants, registrations, events, adminsList, arrivalCheckins, eventAttendance]);
 
   const filteredDbRows = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -1705,7 +1787,7 @@ export default function AdminDashboard() {
 
             {/* Table Selector Pills */}
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-              {['participants', 'registrations', 'events', 'event_admins'].map(tableName => (
+              {['participants', 'registrations', 'events', 'volunteers', 'arrival_checkins', 'event_attendance'].map(tableName => (
                 <button
                   key={tableName}
                   onClick={() => { setSelectedDbTable(tableName); setSearchQuery(''); }}
@@ -1732,7 +1814,9 @@ export default function AdminDashboard() {
                   }}>
                     {tableName === 'participants' ? participants.length : 
                      tableName === 'registrations' ? registrations.length :
-                     tableName === 'events' ? events.length : adminsList.length}
+                     tableName === 'events' ? events.length :
+                     tableName === 'volunteers' ? adminsList.length :
+                     tableName === 'arrival_checkins' ? arrivalCheckins.length : eventAttendance.length}
                   </span>
                 </button>
               ))}
