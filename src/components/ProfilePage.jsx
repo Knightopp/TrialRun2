@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
 import TearTicket from './TearTicket';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -358,64 +359,170 @@ export default function ProfilePage() {
                   <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <FiCalendar /> Digital Entry Pass
                   </h3>
-                  {registrations.length === 0 ? (
-                    <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)', transformOrigin: 'top center', display: 'flex', justifyContent: 'center', width: '100%' }}>
-                      <TearTicket 
-                        width={460}
-                        tilt={false}
-                        rotate={0}
-                        stub={
-                          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Admit One</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', transform: 'rotate(-90deg)', margin: '2rem 0', whiteSpace: 'nowrap' }}>LOCKED</div>
-                          </div>
-                        }
-                      >
-                        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
-                          <div>
-                            <div style={{ fontSize: '0.8rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1px' }}>Srishti 2.7 Entry Pass</div>
-                            <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#fff', margin: '0.25rem 0', lineHeight: 1.1, textTransform: 'lowercase' }}>{participantData?.name || 'Participant'}</div>
-                            <div style={{ fontSize: '1rem', color: '#888' }}>{participantData?.college || '-'}</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '2rem', marginTop: 'auto' }}>
-                            <div>
-                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Status</div>
-                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>Register to unlock</div>
+                  {(() => {
+                    const passCode = participantData?.participant_code || registrations[0]?.participant_code || registrations[0]?.registration_code || 'SR27-PASS';
+
+                    if (registrations.length === 0) {
+                      return (
+                        <div style={{ opacity: 0.6, display: 'flex', justifyContent: 'center', width: '100%' }}>
+                          <TearTicket 
+                            width={500}
+                            height={240}
+                            stubSize={145}
+                            tilt={false}
+                            rotate={0}
+                            border={true}
+                            borderColor="rgba(255,255,255,0.1)"
+                            background="#070b14"
+                            stubBackground="#0d1527"
+                            stub={
+                              <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', gap: '0.4rem' }}>
+                                <div style={{ background: '#ffffff', padding: '6px', borderRadius: '8px', opacity: 0.7 }}>
+                                  <QRCodeSVG value={passCode} size={70} bgColor="#ffffff" fgColor="#070a13" level="M" />
+                                </div>
+                                <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>ENTRY CODE</div>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#94a3b8', fontFamily: 'monospace' }}>
+                                  {passCode}
+                                </div>
+                              </div>
+                            }
+                          >
+                            <div style={{ padding: '1.75rem 2rem', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+                              <div>
+                                <div style={{ fontSize: '0.75rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: '700' }}>SRISHTI 2.7 ENTRY PASS</div>
+                                <div style={{ fontSize: '2rem', fontWeight: '800', color: '#fff', margin: '0.2rem 0', lineHeight: 1.1, textTransform: 'capitalize' }}>
+                                  {participantData?.name || 'Participant'}
+                                </div>
+                                <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{participantData?.college || 'St Thomas College'}</div>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' }}>
+                                <div>
+                                  <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>ENROLLED EVENTS</div>
+                                  <div style={{ fontSize: '0.9rem', color: '#fbbf24', fontWeight: '600', marginTop: '0.2rem' }}>No events registered yet</div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>STATUS</div>
+                                  <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '700', marginTop: '0.2rem' }}>Register to activate</div>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          </TearTicket>
                         </div>
-                      </TearTicket>
-                    </div>
-                  ) : (
-                    <div style={{ transformOrigin: 'top center', display: 'flex', justifyContent: 'center', width: '100%' }}>
-                      <TearTicket 
-                        width={460}
-                        tilt={false}
-                        stub={
-                          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Pass ID</div>
-                            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', transform: 'rotate(-90deg)', margin: '3rem 0', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
-                              {registrations[0]?.registration_code || "PASS"}
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                        <TearTicket 
+                          width={500}
+                          height={240}
+                          stubSize={145}
+                          tilt={false}
+                          rotate={0}
+                          border={true}
+                          borderColor="rgba(56,189,248,0.3)"
+                          background="#070b14"
+                          stubBackground="#0d1527"
+                          stub={
+                            <div style={{ 
+                              padding: '1rem', 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              justifyContent: 'center', 
+                              alignItems: 'center', 
+                              height: '100%',
+                              gap: '0.4rem',
+                              boxSizing: 'border-box'
+                            }}>
+                              <div style={{ 
+                                background: '#ffffff', 
+                                padding: '6px', 
+                                borderRadius: '8px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                boxShadow: '0 4px 14px rgba(0,0,0,0.5)'
+                              }}>
+                                <QRCodeSVG 
+                                  value={passCode} 
+                                  size={72} 
+                                  level="M" 
+                                  bgColor="#ffffff"
+                                  fgColor="#070a13"
+                                />
+                              </div>
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>ENTRY PASS</div>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#38bdf8', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+                                  {passCode}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        }
-                      >
-                        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
-                          <div>
-                            <div style={{ fontSize: '0.8rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1px' }}>Srishti 2.7 Entry Pass</div>
-                            <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#fff', margin: '0.25rem 0', lineHeight: 1.1, textTransform: 'lowercase' }}>{participantData?.name || 'Participant'}</div>
-                            <div style={{ fontSize: '1rem', color: '#888' }}>{participantData?.college || '-'}</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '2rem', marginTop: 'auto' }}>
+                          }
+                        >
+                          <div style={{ padding: '1.75rem 2rem', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
                             <div>
-                              <div style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Pass Level</div>
-                              <div style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '600' }}>Main Campus</div>
+                              <div style={{ fontSize: '0.75rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: '700' }}>SRISHTI 2.7 ENTRY PASS</div>
+                              <div style={{ fontSize: '2rem', fontWeight: '800', color: '#fff', margin: '0.2rem 0', lineHeight: 1.1, textTransform: 'capitalize' }}>
+                                {participantData?.name || 'Participant'}
+                              </div>
+                              <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{participantData?.college || 'St Thomas College'}</div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', gap: '1rem' }}>
+                              <div style={{ flex: 1, overflow: 'hidden' }}>
+                                <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600', marginBottom: '0.35rem' }}>
+                                  REGISTERED EVENTS ({registrations.length})
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                                  {registrations.slice(0, 3).map(r => (
+                                    <span 
+                                      key={r.id} 
+                                      style={{ 
+                                        background: 'rgba(56, 189, 248, 0.12)', 
+                                        color: '#38bdf8', 
+                                        padding: '0.2rem 0.55rem', 
+                                        borderRadius: '6px', 
+                                        fontSize: '0.72rem', 
+                                        fontWeight: '700',
+                                        border: '1px solid rgba(56, 189, 248, 0.25)',
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                    >
+                                      {r.events?.name || r.event_name || r.event_id}
+                                    </span>
+                                  ))}
+                                  {registrations.length > 3 && (
+                                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '0.2rem 0.3rem' }}>
+                                      +{registrations.length - 3} more
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>
+                                  STATUS
+                                </div>
+                                <div style={{ 
+                                  fontSize: '0.82rem', 
+                                  fontWeight: '800', 
+                                  color: '#34d399', 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.35rem',
+                                  marginTop: '0.2rem'
+                                }}>
+                                  <span style={{ width: '7px', height: '7px', background: '#34d399', borderRadius: '50%', boxShadow: '0 0 8px #34d399' }}></span>
+                                  VERIFIED
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </TearTicket>
-                    </div>
-                  )}
+                        </TearTicket>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Events List */}
