@@ -6,6 +6,7 @@ import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
 import TearTicket from './TearTicket';
 import { QRCodeSVG } from 'qrcode.react';
+import { generateEntryPassEmailHtml } from '../utils/entryPassEmail';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -32,6 +33,8 @@ export default function ProfilePage() {
   const [editCollege, setEditCollege] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [emailingPass, setEmailingPass] = useState(false);
+  const [emailPassMsg, setEmailPassMsg] = useState(null);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('srishti_session');
@@ -211,6 +214,52 @@ export default function ProfilePage() {
       alert('Failed to update profile.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleEmailPassToUser = async () => {
+    const targetEmail = session?.user?.email || participantData?.email;
+    if (!targetEmail) {
+      alert('No email found to send pass.');
+      return;
+    }
+    const activeReg = registrations[selectedRegIndex] || registrations[0] || null;
+    const passCode = activeReg?.participant_code || participantData?.participant_code || activeReg?.registration_code || 'SR27-PASS';
+    const eventTitle = activeReg ? (activeReg.events?.name || activeReg.event_name || activeReg.event_id || 'EVENT PASS') : 'SRISHTI 2.7 FEST PASS';
+    const teamSize = activeReg ? (Number(activeReg.team_size) || 1) : 1;
+    const isVerified = activeReg ? (activeReg.payment_status === 'verified' || activeReg.status === 'verified') : false;
+
+    setEmailingPass(true);
+    setEmailPassMsg(null);
+    try {
+      const ticketHtml = generateEntryPassEmailHtml({
+        eventName: eventTitle,
+        attendeeName: participantData?.name || 'Participant',
+        college: participantData?.college || 'College',
+        passCode,
+        teamSize,
+        status: isVerified ? 'VERIFIED' : 'PENDING'
+      });
+
+      const response = await fetch('/api/send_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: targetEmail,
+          subject: `Your Srishti 2.7 Entry Pass — ${eventTitle}`,
+          html: ticketHtml
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to send pass email.');
+      setEmailPassMsg({ type: 'success', text: `Pass sent to ${targetEmail}!` });
+      setTimeout(() => setEmailPassMsg(null), 5000);
+    } catch (err) {
+      console.error(err);
+      setEmailPassMsg({ type: 'error', text: 'Could not send email. Please try again.' });
+      setTimeout(() => setEmailPassMsg(null), 5000);
+    } finally {
+      setEmailingPass(false);
     }
   };
 
@@ -529,6 +578,40 @@ export default function ProfilePage() {
                               </div>
                             </div>
                           </TearTicket>
+                        </div>
+
+                        {/* Send Pass Action */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1.25rem', gap: '0.5rem' }}>
+                          <button
+                            onClick={handleEmailPassToUser}
+                            disabled={emailingPass}
+                            style={{
+                              padding: '0.65rem 1.4rem',
+                              backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                              color: '#38bdf8',
+                              border: '1px solid rgba(56, 189, 248, 0.3)',
+                              borderRadius: '12px',
+                              fontWeight: '600',
+                              fontSize: '0.88rem',
+                              cursor: emailingPass ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              transition: 'all 0.2s',
+                              backdropFilter: 'blur(8px)'
+                            }}
+                          >
+                            <FiMail /> {emailingPass ? 'Sending Pass to Email...' : 'Send Entry Pass to My Email'}
+                          </button>
+                          {emailPassMsg && (
+                            <span style={{ 
+                              fontSize: '0.85rem', 
+                              color: emailPassMsg.type === 'success' ? '#10b981' : '#ef4444', 
+                              fontWeight: '500' 
+                            }}>
+                              {emailPassMsg.text}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );

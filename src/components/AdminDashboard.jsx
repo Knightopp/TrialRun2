@@ -9,6 +9,7 @@ import {
   FiAlertCircle, FiLayers
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { generateEntryPassEmailHtml } from '../utils/entryPassEmail';
 import './AdminDashboard.css';
 
 // Fest Event Catalog (aligned with client App.jsx)
@@ -468,32 +469,14 @@ export default function AdminDashboard() {
             color: { dark: '#020617', light: '#ffffff' }
           });
 
-          const ticketHtml = `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #070b14; color: white; padding: 40px; border-radius: 16px; text-align: center; max-width: 600px; margin: 0 auto; border: 1px solid #38bdf8;">
-              <h3 style="color: #38bdf8; font-size: 14px; letter-spacing: 3px; margin: 0 0 10px 0; text-transform: uppercase;">SRISHTI 2.7 OFFICIAL ENTRY PASS</h3>
-              <h1 style="font-size: 32px; margin: 0 0 20px 0; font-weight: 800; color: #fff;">${targetEvent.label || targetEvent.name}</h1>
-              
-              <div style="background: rgba(255,255,255,0.04); padding: 25px; border-radius: 12px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.1);">
-                <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 13px; text-transform: uppercase;">Pass / Registration Code</p>
-                <div style="font-size: 28px; font-weight: 800; font-family: monospace; color: #38bdf8; letter-spacing: 2px;">${uniqueCode}</div>
-              </div>
-
-              <div style="text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 10px; margin-bottom: 25px;">
-                <p style="margin: 6px 0; font-size: 15px;"><strong>Participant:</strong> ${participant.name}</p>
-                <p style="margin: 6px 0; font-size: 15px;"><strong>College:</strong> ${participant.college || 'St Thomas College'}</p>
-                <p style="margin: 6px 0; font-size: 15px;"><strong>Date & Time:</strong> ${targetEvent.date || 'Dec 6-7, 2026'} at ${targetEvent.time || '10:00 AM'}</p>
-                <p style="margin: 6px 0; font-size: 15px;"><strong>Venue:</strong> ${targetEvent.venue || 'Campus Main Stage'}</p>
-                <p style="margin: 6px 0; font-size: 15px;"><strong>Team Size:</strong> ${assignFormData.teamSize} Member(s)</p>
-                <p style="margin: 6px 0; font-size: 15px;"><strong>Status:</strong> <span style="color: #10b981; font-weight: bold;">VERIFIED</span></p>
-              </div>
-
-              <div style="margin: 25px 0;">
-                <img src="${qrDataUrl}" alt="QR Entry Code" style="width: 180px; height: 180px; border-radius: 12px; border: 4px solid #fff; display: inline-block;" />
-              </div>
-
-              <p style="color: #64748b; font-size: 13px; margin: 0;">Please present this digital pass or QR code at the registration desk for instant entry.</p>
-            </div>
-          `;
+          const ticketHtml = generateEntryPassEmailHtml({
+            eventName: targetEvent.label || targetEvent.name,
+            attendeeName: participant.name,
+            college: participant.college || 'St Thomas College',
+            passCode: uniqueCode,
+            teamSize: assignFormData.teamSize,
+            status: 'VERIFIED'
+          });
 
           await fetch('/api/send_email', {
             method: 'POST',
@@ -575,18 +558,14 @@ export default function AdminDashboard() {
         color: { dark: '#020617', light: '#ffffff' }
       });
 
-      const ticketHtml = `
-        <div style="font-family: sans-serif; background: #070b14; color: white; padding: 40px; border-radius: 16px; text-align: center; max-width: 600px; margin: 0 auto; border: 1px solid #38bdf8;">
-          <h3 style="color: #38bdf8; font-size: 14px; letter-spacing: 2px;">SRISHTI 2.7 ENTRY PASS (RE-SENT)</h3>
-          <h1 style="font-size: 30px; margin: 15px 0;">${reg.event_name || 'Event'}</h1>
-          <p style="font-family: monospace; font-size: 26px; color: #38bdf8; font-weight: bold;">${uniqueCode}</p>
-          <p><strong>Participant:</strong> ${reg.lead_name}</p>
-          <div style="margin: 25px 0;">
-            <img src="${qrDataUrl}" alt="QR Entry Code" style="width: 180px; height: 180px; border-radius: 12px; border: 4px solid #fff; display: inline-block;" />
-          </div>
-          <p style="color: #94a3b8; font-size: 13px;">Present this pass at the venue entrance.</p>
-        </div>
-      `;
+      const ticketHtml = generateEntryPassEmailHtml({
+        eventName: reg.event_name || reg.events?.name || 'FEST PASS',
+        attendeeName: reg.lead_name || 'Participant',
+        college: reg.lead_college || 'St Thomas College',
+        passCode: uniqueCode,
+        teamSize: Number(reg.team_size) || 1,
+        status: reg.payment_status || reg.status || 'VERIFIED'
+      });
 
       await fetch('/api/send_email', {
         method: 'POST',
