@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
 import TearTicket from './TearTicket';
 import { QRCodeSVG } from 'qrcode.react';
 import { generateEntryPassEmailHtml } from '../utils/entryPassEmail';
+import { generateCardImagePng } from '../utils/cardImageGenerator';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ export default function ProfilePage() {
   const [editPhone, setEditPhone] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [emailingPass, setEmailingPass] = useState(false);
+  const [downloadingPass, setDownloadingPass] = useState(false);
   const [emailPassMsg, setEmailPassMsg] = useState(null);
 
   useEffect(() => {
@@ -217,28 +219,44 @@ export default function ProfilePage() {
     }
   };
 
+  const getPassData = () => {
+    const attendeeName = participantData?.name || 'Participant';
+    const college = participantData?.college || 'St Thomas College Thrissur';
+    const passCode = participantData?.participant_code || registrations[0]?.participant_code || 'SR27-PASS';
+    const events = registrations.map(r => r.events?.name || r.event_name).filter(Boolean);
+    const isVerified = registrations.some(r => r.payment_status === 'verified' || r.status === 'verified') || !!participantData?.id;
+    const statusText = isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING');
+    return { attendeeName, college, passCode, events, isVerified, statusText };
+  };
+
   const handleEmailPassToUser = async () => {
     const targetEmail = session?.user?.email || participantData?.email;
     if (!targetEmail) {
       alert('No email found to send pass.');
       return;
     }
-    const activeReg = registrations[selectedRegIndex] || registrations[0] || null;
-    const passCode = activeReg?.participant_code || participantData?.participant_code || activeReg?.registration_code || 'SR27-PASS';
-    const eventTitle = activeReg ? (activeReg.events?.name || activeReg.event_name || activeReg.event_id || 'EVENT PASS') : 'SRISHTI 2.7 FEST PASS';
-    const teamSize = activeReg ? (Number(activeReg.team_size) || 1) : 1;
-    const isVerified = activeReg ? (activeReg.payment_status === 'verified' || activeReg.status === 'verified') : false;
-
+    const data = getPassData();
     setEmailingPass(true);
     setEmailPassMsg(null);
+
     try {
+      // 1. Generate exact 1:1 high-resolution PNG image of the card
+      const cardPng = await generateCardImagePng({
+        attendeeName: data.attendeeName,
+        college: data.college,
+        passCode: data.passCode,
+        events: data.events,
+        isVerified: data.isVerified,
+        statusText: data.statusText
+      });
+
+      // 2. Generate email HTML containing the embedded CID image
       const ticketHtml = generateEntryPassEmailHtml({
-        eventName: eventTitle,
-        attendeeName: participantData?.name || 'Participant',
-        college: participantData?.college || 'College',
-        passCode,
-        teamSize,
-        status: isVerified ? 'VERIFIED' : 'PENDING'
+        attendeeName: data.attendeeName,
+        college: data.college,
+        passCode: data.passCode,
+        eventName: data.events[0] || 'DELEGATE PASS',
+        status: data.statusText
       });
 
       const response = await fetch('/api/send_email', {
@@ -246,13 +264,14 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: targetEmail,
-          subject: `Your Srishti 2.7 Entry Pass — ${eventTitle}`,
-          html: ticketHtml
+          subject: `Your Srishti 2.7 Digital Entry Pass — ${data.attendeeName}`,
+          html: ticketHtml,
+          image: cardPng // Attached as inline image and PNG file!
         })
       });
 
       if (!response.ok) throw new Error('Failed to send pass email.');
-      setEmailPassMsg({ type: 'success', text: `Pass sent to ${targetEmail}!` });
+      setEmailPassMsg({ type: 'success', text: `Pass sent to ${targetEmail} with full-res card!` });
       setTimeout(() => setEmailPassMsg(null), 5000);
     } catch (err) {
       console.error(err);
@@ -260,6 +279,35 @@ export default function ProfilePage() {
       setTimeout(() => setEmailPassMsg(null), 5000);
     } finally {
       setEmailingPass(false);
+    }
+  };
+
+  const handleDownloadPassPng = async () => {
+    const data = getPassData();
+    setDownloadingPass(true);
+    try {
+      const cardPng = await generateCardImagePng({
+        attendeeName: data.attendeeName,
+        college: data.college,
+        passCode: data.passCode,
+        events: data.events,
+        isVerified: data.isVerified,
+        statusText: data.statusText
+      });
+
+      if (cardPng) {
+        const link = document.createElement('a');
+        link.download = `srishti_pass_${data.passCode}.png`;
+        link.href = cardPng;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error('Error downloading pass:', err);
+      alert('Could not download pass image.');
+    } finally {
+      setDownloadingPass(false);
     }
   };
 
@@ -410,43 +458,16 @@ export default function ProfilePage() {
                     <FiCalendar /> Digital Entry Pass
                   </h3>
                   {(() => {
-                    const activeReg = registrations[selectedRegIndex] || registrations[0] || null;
-                    const passCode = activeReg?.participant_code || participantData?.participant_code || activeReg?.registration_code || 'SR27-PASS';
-                    const eventTitle = activeReg ? (activeReg.events?.name || activeReg.event_name || activeReg.event_id || 'EVENT PASS') : 'SRISHTI 2.7 FEST PASS';
-                    const teamSize = activeReg ? (Number(activeReg.team_size) || 1) : 1;
-                    const isVerified = activeReg ? (activeReg.payment_status === 'verified' || activeReg.status === 'verified') : false;
+                    const passData = getPassData();
+                    const attendeeName = passData.attendeeName;
+                    const college = passData.college;
+                    const passCode = passData.passCode;
+                    const isVerified = passData.isVerified;
+                    const statusText = passData.statusText;
+                    const eventsList = passData.events;
 
                     return (
                       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        {registrations.length > 1 && (
-                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                            {registrations.map((reg, idx) => {
-                              const title = reg.events?.name || reg.event_name || `Event ${idx + 1}`;
-                              const isSelected = selectedRegIndex === idx;
-                              return (
-                                <button
-                                  key={reg.id}
-                                  onClick={() => setSelectedRegIndex(idx)}
-                                  style={{
-                                    padding: '0.45rem 1rem',
-                                    borderRadius: '999px',
-                                    fontSize: '0.8rem',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    border: '1px solid',
-                                    transition: 'all 0.2s',
-                                    background: isSelected ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                                    color: isSelected ? '#38bdf8' : '#94a3b8',
-                                    borderColor: isSelected ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'
-                                  }}
-                                >
-                                  {title}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-
                         <div style={{ display: 'flex', justifyContent: 'center', width: '100%', overflowX: 'auto', padding: '0.5rem 0' }}>
                           <TearTicket
                             orientation="horizontal"
@@ -523,17 +544,17 @@ export default function ProfilePage() {
                               </div>
 
                               <div style={{ position: 'relative', zIndex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.65rem' }}>
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: '#e2e8f0', letterSpacing: '0.2em', lineHeight: 1.4 }}>
-                                    SRISHTI 2.7<br/><span style={{ color: '#38bdf8' }}>ENTRY PASS</span>
+                                    SRISHTI 2.7<br/><span style={{ color: '#38bdf8' }}>DELEGATE PASS</span>
                                   </div>
                                   <div style={{ height: '2px', width: '60px', background: 'linear-gradient(90deg, #38bdf8, transparent)' }}></div>
                                 </div>
                                 
                                 <h3 style={{ 
                                   fontFamily: 'var(--font-akira)', 
-                                  fontSize: eventTitle.length > 20 ? '1.65rem' : eventTitle.length > 14 ? '1.9rem' : '2.2rem', 
-                                  margin: '0 0 0.85rem 0', 
+                                  fontSize: attendeeName.length > 20 ? '1.5rem' : attendeeName.length > 14 ? '1.85rem' : '2.2rem', 
+                                  margin: '0 0 0.45rem 0', 
                                   lineHeight: 1.05, 
                                   textTransform: 'uppercase', 
                                   letterSpacing: '-0.02em',
@@ -542,23 +563,56 @@ export default function ProfilePage() {
                                   WebkitTextFillColor: 'transparent',
                                   filter: 'drop-shadow(0 0 20px rgba(56,189,248,0.5))'
                                 }}>
-                                  {eventTitle}
+                                  {attendeeName}
                                 </h3>
                                 
-                                <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
-                                  <div style={{ width: '4px', height: '34px', background: '#38bdf8', borderRadius: '2px', boxShadow: '0 0 10px #38bdf8' }}></div>
-                                  <div>
-                                    <p style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem', margin: '0', textTransform: 'capitalize', letterSpacing: '0.02em', lineHeight: 1.2 }}>
-                                      {participantData?.name || 'Participant'}
-                                    </p>
-                                    <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0.2rem 0 0 0' }}>
-                                      {participantData?.college || 'College Name'}
-                                    </p>
-                                  </div>
+                                <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', marginBottom: '0.65rem' }}>
+                                  <div style={{ width: '4px', height: '22px', background: '#38bdf8', borderRadius: '2px', boxShadow: '0 0 10px #38bdf8' }}></div>
+                                  <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>
+                                    {college}
+                                  </p>
+                                </div>
+
+                                {/* Registered Events Badges */}
+                                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', maxWidth: '380px' }}>
+                                  {eventsList.length > 0 ? (
+                                    eventsList.slice(0, 3).map((evt, idx) => (
+                                      <span key={idx} style={{
+                                        fontSize: '0.68rem',
+                                        fontWeight: '700',
+                                        padding: '0.2rem 0.55rem',
+                                        borderRadius: '6px',
+                                        background: 'rgba(56, 189, 248, 0.12)',
+                                        border: '1px solid rgba(56, 189, 248, 0.35)',
+                                        color: '#38bdf8',
+                                        letterSpacing: '0.04em',
+                                        textTransform: 'uppercase',
+                                        whiteSpace: 'nowrap'
+                                      }}>
+                                        {evt}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span style={{
+                                      fontSize: '0.7rem',
+                                      padding: '0.2rem 0.55rem',
+                                      borderRadius: '6px',
+                                      background: 'rgba(255, 255, 255, 0.05)',
+                                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                                      color: '#94a3b8'
+                                    }}>
+                                      FEST ALL-ACCESS DELEGATE
+                                    </span>
+                                  )}
+                                  {eventsList.length > 3 && (
+                                    <span style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem', borderRadius: '6px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontWeight: 'bold' }}>
+                                      +{eventsList.length - 3} more
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               
-                              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingTop: '0.4rem' }}>
                                 <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', padding: '0.55rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(56,189,248,0.3)', display: 'inline-flex', flexDirection: 'column', gap: '0.2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
                                   <span style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.1em' }}>STATUS</span>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -566,48 +620,73 @@ export default function ProfilePage() {
                                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     </div>
                                     <span style={{ color: isVerified ? '#10b981' : '#f59e0b', fontWeight: 'bold', fontSize: '1.05rem', letterSpacing: '0.05em' }}>
-                                      {isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING')}
+                                      {statusText}
                                     </span>
                                   </div>
                                 </div>
                                 
                                 <div style={{ textAlign: 'right' }}>
-                                  <span style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>TEAM</span>
-                                  <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.25rem' }}>{teamSize} Member(s)</span>
+                                  <span style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>EVENTS ENROLLED</span>
+                                  <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.25rem' }}>{eventsList.length || 1} Event(s)</span>
                                 </div>
                               </div>
                             </div>
                           </TearTicket>
                         </div>
 
-                        {/* Send Pass Action */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1.25rem', gap: '0.5rem' }}>
-                          <button
-                            onClick={handleEmailPassToUser}
-                            disabled={emailingPass}
-                            style={{
-                              padding: '0.65rem 1.4rem',
-                              backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                              color: '#38bdf8',
-                              border: '1px solid rgba(56, 189, 248, 0.3)',
-                              borderRadius: '12px',
-                              fontWeight: '600',
-                              fontSize: '0.88rem',
-                              cursor: emailingPass ? 'not-allowed' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem',
-                              transition: 'all 0.2s',
-                              backdropFilter: 'blur(8px)'
-                            }}
-                          >
-                            <FiMail /> {emailingPass ? 'Sending Pass to Email...' : 'Send Entry Pass to My Email'}
-                          </button>
+                        {/* Send Pass & Download Actions */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1.25rem', gap: '0.75rem' }}>
+                          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            <button
+                              onClick={handleEmailPassToUser}
+                              disabled={emailingPass}
+                              style={{
+                                padding: '0.7rem 1.4rem',
+                                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                                color: '#38bdf8',
+                                border: '1px solid rgba(56, 189, 248, 0.35)',
+                                borderRadius: '12px',
+                                fontWeight: '600',
+                                fontSize: '0.88rem',
+                                cursor: emailingPass ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                transition: 'all 0.2s',
+                                backdropFilter: 'blur(8px)'
+                              }}
+                            >
+                              <FiMail /> {emailingPass ? 'Generating & Sending...' : 'Send Entry Pass to My Email'}
+                            </button>
+
+                            <button
+                              onClick={handleDownloadPassPng}
+                              disabled={downloadingPass}
+                              style={{
+                                padding: '0.7rem 1.4rem',
+                                backgroundColor: '#fff',
+                                color: '#000',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontWeight: '700',
+                                fontSize: '0.88rem',
+                                cursor: downloadingPass ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                transition: 'all 0.2s',
+                                boxShadow: '0 4px 14px rgba(255,255,255,0.2)'
+                              }}
+                            >
+                              <FiDownload /> {downloadingPass ? 'Exporting PNG...' : 'Download Pass (PNG)'}
+                            </button>
+                          </div>
+
                           {emailPassMsg && (
                             <span style={{ 
                               fontSize: '0.85rem', 
                               color: emailPassMsg.type === 'success' ? '#10b981' : '#ef4444', 
-                              fontWeight: '500' 
+                              fontWeight: '600' 
                             }}>
                               {emailPassMsg.text}
                             </span>

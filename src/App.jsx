@@ -29,6 +29,7 @@ import GlareHover from './components/GlareHover';
 import ProfilePage from './components/ProfilePage';
 import AdminDashboard from './components/AdminDashboard';
 import { generateEntryPassEmailHtml } from './utils/entryPassEmail';
+import { generateCardImagePng } from './utils/cardImageGenerator';
 import { supabase } from './supabaseClient';
 import './App.css';
 
@@ -351,13 +352,27 @@ export default function App() {
       setQrCodeDataUrl(qrDataUrl);
       setParticipantCode(uniqueCode);
 
+      // Generate exact 1:1 high-resolution PNG image of the card
+      let cardPng = null;
+      try {
+        cardPng = await generateCardImagePng({
+          attendeeName: formName,
+          college: formCollege,
+          passCode: uniqueCode,
+          events: [activeEventData.label],
+          isVerified: true,
+          statusText: 'VERIFIED'
+        });
+      } catch (pngErr) {
+        console.warn('PNG card generation notice:', pngErr);
+      }
+
       // Send the exact cybernetic digital entry pass via email to the participant
       const ticketHtml = generateEntryPassEmailHtml({
-        eventName: activeEventData.label,
         attendeeName: formName,
         college: formCollege,
         passCode: uniqueCode,
-        teamSize: formTeamSize,
+        eventName: activeEventData.label,
         status: 'VERIFIED'
       });
 
@@ -381,14 +396,15 @@ export default function App() {
       `;
 
       try {
-        // Send to participant
+        // Send to participant with inline high-res card image
         await fetch('/api/send_email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: formEmail,
-            subject: 'Your Srishti 2.7 Entry Pass',
-            html: ticketHtml
+            subject: `Your Srishti 2.7 Digital Entry Pass — ${formName}`,
+            html: ticketHtml,
+            image: cardPng
           })
         });
         

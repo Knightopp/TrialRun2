@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { generateEntryPassEmailHtml } from '../utils/entryPassEmail';
+import { generateCardImagePng } from '../utils/cardImageGenerator';
 import './AdminDashboard.css';
 
 // Fest Event Catalog (aligned with client App.jsx)
@@ -469,12 +470,25 @@ export default function AdminDashboard() {
             color: { dark: '#020617', light: '#ffffff' }
           });
 
+          let cardPng = null;
+          try {
+            cardPng = await generateCardImagePng({
+              attendeeName: participant.name,
+              college: participant.college || 'St Thomas College',
+              passCode: uniqueCode,
+              events: [targetEvent.label || targetEvent.name],
+              isVerified: true,
+              statusText: 'VERIFIED'
+            });
+          } catch (pngErr) {
+            console.warn('PNG card generation notice:', pngErr);
+          }
+
           const ticketHtml = generateEntryPassEmailHtml({
-            eventName: targetEvent.label || targetEvent.name,
             attendeeName: participant.name,
             college: participant.college || 'St Thomas College',
             passCode: uniqueCode,
-            teamSize: assignFormData.teamSize,
+            eventName: targetEvent.label || targetEvent.name,
             status: 'VERIFIED'
           });
 
@@ -484,7 +498,8 @@ export default function AdminDashboard() {
             body: JSON.stringify({
               to: participant.email,
               subject: `Entry Pass: ${targetEvent.label || targetEvent.name} — Srishti 2.7`,
-              html: ticketHtml
+              html: ticketHtml,
+              image: cardPng
             })
           });
         } catch (mailErr) {
@@ -558,12 +573,25 @@ export default function AdminDashboard() {
         color: { dark: '#020617', light: '#ffffff' }
       });
 
+      let cardPng = null;
+      try {
+        cardPng = await generateCardImagePng({
+          attendeeName: reg.lead_name || 'Participant',
+          college: reg.lead_college || 'St Thomas College',
+          passCode: uniqueCode,
+          events: [reg.event_name || 'FEST PASS'],
+          isVerified: reg.payment_status === 'verified' || reg.status === 'verified',
+          statusText: (reg.payment_status || reg.status || 'VERIFIED').toUpperCase()
+        });
+      } catch (pngErr) {
+        console.warn('PNG card generation notice:', pngErr);
+      }
+
       const ticketHtml = generateEntryPassEmailHtml({
-        eventName: reg.event_name || reg.events?.name || 'FEST PASS',
         attendeeName: reg.lead_name || 'Participant',
         college: reg.lead_college || 'St Thomas College',
         passCode: uniqueCode,
-        teamSize: Number(reg.team_size) || 1,
+        eventName: reg.event_name || reg.events?.name || 'FEST PASS',
         status: reg.payment_status || reg.status || 'VERIFIED'
       });
 
@@ -573,7 +601,8 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           to: reg.lead_email,
           subject: `Entry Pass: ${reg.event_name} — Srishti 2.7`,
-          html: ticketHtml
+          html: ticketHtml,
+          image: cardPng
         })
       });
 

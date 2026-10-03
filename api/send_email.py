@@ -1,7 +1,9 @@
 import os
 import json
 import smtplib
+import base64
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from http.server import BaseHTTPRequestHandler
 
@@ -18,6 +20,7 @@ class handler(BaseHTTPRequestHandler):
             to_email = body.get("to")
             subject = body.get("subject")
             html_content = body.get("html")
+            image_base64 = body.get("image")
             
             if not to_email or not subject or not html_content:
                 self.send_response(400)
@@ -26,12 +29,33 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": "Missing parameters"}).encode())
                 return
                 
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"Srishti Registration <{gmail_account}>"
-            msg["To"] = to_email
-            
-            msg.attach(MIMEText(html_content, "html"))
+            if image_base64:
+                msg = MIMEMultipart("related")
+                msg["Subject"] = subject
+                msg["From"] = f"Srishti Registration <{gmail_account}>"
+                msg["To"] = to_email
+
+                msg_alt = MIMEMultipart("alternative")
+                msg.attach(msg_alt)
+                msg_alt.attach(MIMEText(html_content, "html"))
+
+                try:
+                    raw_b64 = image_base64
+                    if "," in raw_b64:
+                        raw_b64 = raw_b64.split(",", 1)[1]
+                    img_data = base64.b64decode(raw_b64)
+                    img_part = MIMEImage(img_data, 'png')
+                    img_part.add_header('Content-ID', '<srishti_entry_pass>')
+                    img_part.add_header('Content-Disposition', 'inline', filename='srishti_2.7_entry_pass.png')
+                    msg.attach(img_part)
+                except Exception as img_err:
+                    print("Error attaching image:", img_err)
+            else:
+                msg = MIMEMultipart("alternative")
+                msg["Subject"] = subject
+                msg["From"] = f"Srishti Registration <{gmail_account}>"
+                msg["To"] = to_email
+                msg.attach(MIMEText(html_content, "html"))
             
             with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
                 server.login(gmail_account, app_password)
