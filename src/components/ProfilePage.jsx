@@ -396,13 +396,15 @@ export default function ProfilePage() {
                               );
                             })}
                           </div>
-                        )}                        <div style={{ display: 'flex', justifyContent: 'center', width: '100%', overflowX: 'auto', padding: '1rem 0' }}>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'center', width: '100%', overflowX: 'auto', padding: '0.5rem 0' }}>
                           <TearTicket
                             orientation="horizontal"
                             scrim={false}
-                            width={650}
-                            height={300}
-                            stubSize={180}
+                            width={660}
+                            height={320}
+                            stubSize={185}
                             radius={16}
                             holes={12}
                             holeSize={7}
@@ -410,12 +412,8 @@ export default function ProfilePage() {
                             tearAngle={25}
                             stretch={30}
                             resistance={0.5}
-                            rotate={-1.5}
-                            tilt={true}
-                            tiltMax={12}
-                            tiltReach={300}
-                            parallax={8}
-                            perspective={1000}
+                            rotate={0}
+                            tilt={false}
                             background="#070a13"
                             stubBackground="#ffffff"
                             color="#ffffff"
@@ -424,7 +422,7 @@ export default function ProfilePage() {
                             borderWidth={1}
                             recenter={true}
                             stub={
-                              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1.25rem', background: '#fff', overflow: 'hidden', boxSizing: 'border-box' }}>
+                              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1rem', background: '#fff', overflow: 'hidden', boxSizing: 'border-box' }}>
                                 <div style={{ position: 'absolute', top: '-25px', right: '-25px', width: '110px', height: '110px', background: 'linear-gradient(225deg, rgba(56,189,248,0.7) 0%, rgba(165,243,252,0.8) 35%, transparent 36%)', zIndex: 0 }}></div>
                                 <div style={{ position: 'absolute', bottom: '-20px', right: '-20px', width: '120px', height: '120px', background: 'linear-gradient(135deg, transparent 40%, #38bdf8 40%, #38bdf8 60%, #1d4ed8 60%, #1d4ed8 100%)', zIndex: 0 }}></div>
                                 
@@ -436,37 +434,37 @@ export default function ProfilePage() {
                                 </div>
 
                                 <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                  <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '1.1rem', margin: '0 0 1.25rem 0', letterSpacing: '0.05em' }}>SCAN ME</h4>
+                                  <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '1.05rem', margin: '0 0 0.85rem 0', letterSpacing: '0.05em' }}>SCAN ME</h4>
                                   
-                                  <div style={{ position: 'relative', padding: '12px' }}>
-                                    <div style={{ position: 'absolute', top: 0, left: 0, width: '18px', height: '18px', borderTop: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '4px 0 0 0' }}></div>
-                                    <div style={{ position: 'absolute', top: 0, right: 0, width: '18px', height: '18px', borderTop: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 4px 0 0' }}></div>
-                                    <div style={{ position: 'absolute', bottom: 0, left: 0, width: '18px', height: '18px', borderBottom: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '0 0 0 4px' }}></div>
-                                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: '18px', height: '18px', borderBottom: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 0 4px 0' }}></div>
+                                  <div style={{ position: 'relative', padding: '10px' }}>
+                                    <div style={{ position: 'absolute', top: 0, left: 0, width: '16px', height: '16px', borderTop: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '4px 0 0 0' }}></div>
+                                    <div style={{ position: 'absolute', top: 0, right: 0, width: '16px', height: '16px', borderTop: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 4px 0 0' }}></div>
+                                    <div style={{ position: 'absolute', bottom: 0, left: 0, width: '16px', height: '16px', borderBottom: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '0 0 0 4px' }}></div>
+                                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', borderBottom: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 0 4px 0' }}></div>
                                     
                                     <QRCodeSVG
                                       value={passCode}
-                                      size={120}
+                                      size={115}
                                       bgColor="#ffffff"
                                       fgColor="#000000"
                                       level="H"
                                       imageSettings={{
                                         src: "/assets/logo.png",
-                                        height: 28,
-                                        width: 28,
+                                        height: 26,
+                                        width: 26,
                                         excavate: true,
                                       }}
                                     />
                                   </div>
                                   
-                                  <span style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '1.25rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold', letterSpacing: '0.05em' }}>{passCode}</span>
+                                  <span style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.85rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold', letterSpacing: '0.05em' }}>{passCode}</span>
                                 </div>
                               </div>
                             }
                           >
-                            <div style={{ position: 'relative', width: '100%', height: '100%', padding: '2.5rem', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box' }}>
+                            <div style={{ position: 'relative', width: '100%', height: '100%', padding: '1.75rem 2.25rem', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box' }}>
                               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, background: 'radial-gradient(circle at 30% 50%, rgba(14,165,233,0.2) 0%, transparent 60%)' }}></div>
-                              <div style={{ position: 'absolute', top: '-10%', left: '20%', width: '150%', height: '120%', zIndex: 0, background: 'repeating-linear-gradient(90deg, rgba(14,165,233,0) 0px, rgba(14,165,233,0) 40px, rgba(14,165,233,0.3) 40px, rgba(14,165,233,0.6) 60px, rgba(14,165,233,0.6) 60px, rgba(14,165,233,0) 80px)', transform: 'skewX(-15deg)', opacity: 0.6 }}></div>
+                              <div style={{ position: 'absolute', top: '-10%', left: '20%', width: '150%', height: '120%', zIndex: 0, background: 'repeating-linear-gradient(90deg, rgba(14,165,233,0) 0px, rgba(14,165,233,0) 40px, rgba(14,165,233,0.3) 40px, rgba(14,165,233,0.6) 60px, rgba(14,165,233,0.6) 60px, rgba(14,165,233,0.8) 80px)', transform: 'skewX(-15deg)', opacity: 0.6 }}></div>
 
                               {/* Decorative dot matrix on ticket body */}
                               <div style={{ position: 'absolute', top: '50%', right: '25px', transform: 'translateY(-50%)', display: 'grid', gridTemplateColumns: 'repeat(2, 4px)', gap: '6px', opacity: 0.35, zIndex: 1 }}>
@@ -476,7 +474,7 @@ export default function ProfilePage() {
                               </div>
 
                               <div style={{ position: 'relative', zIndex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: '#e2e8f0', letterSpacing: '0.2em', lineHeight: 1.4 }}>
                                     SRISHTI 2.7<br/><span style={{ color: '#38bdf8' }}>ENTRY PASS</span>
                                   </div>
@@ -485,9 +483,9 @@ export default function ProfilePage() {
                                 
                                 <h3 style={{ 
                                   fontFamily: 'var(--font-akira)', 
-                                  fontSize: eventTitle.length > 20 ? '1.8rem' : eventTitle.length > 14 ? '2.1rem' : '2.5rem', 
-                                  margin: '0 0 1.5rem 0', 
-                                  lineHeight: 1, 
+                                  fontSize: eventTitle.length > 20 ? '1.65rem' : eventTitle.length > 14 ? '1.9rem' : '2.2rem', 
+                                  margin: '0 0 0.85rem 0', 
+                                  lineHeight: 1.05, 
                                   textTransform: 'uppercase', 
                                   letterSpacing: '-0.02em',
                                   background: 'linear-gradient(180deg, #ffffff 40%, #38bdf8 100%)',
@@ -498,27 +496,27 @@ export default function ProfilePage() {
                                   {eventTitle}
                                 </h3>
                                 
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                  <div style={{ width: '4px', height: '40px', background: '#38bdf8', borderRadius: '2px', boxShadow: '0 0 10px #38bdf8' }}></div>
+                                <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+                                  <div style={{ width: '4px', height: '34px', background: '#38bdf8', borderRadius: '2px', boxShadow: '0 0 10px #38bdf8' }}></div>
                                   <div>
-                                    <p style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.3rem', margin: '0', textTransform: 'capitalize' }}>
+                                    <p style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem', margin: '0', textTransform: 'capitalize', letterSpacing: '0.02em', lineHeight: 1.2 }}>
                                       {participantData?.name || 'Participant'}
                                     </p>
-                                    <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0' }}>
+                                    <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0.2rem 0 0 0' }}>
                                       {participantData?.college || 'College Name'}
                                     </p>
                                   </div>
                                 </div>
                               </div>
                               
-                              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '1.25rem' }}>
-                                <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', padding: '0.75rem 1.25rem', borderRadius: '12px', border: '1px solid rgba(56,189,248,0.3)', display: 'inline-flex', flexDirection: 'column', gap: '0.25rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+                              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingTop: '0.5rem' }}>
+                                <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', padding: '0.55rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(56,189,248,0.3)', display: 'inline-flex', flexDirection: 'column', gap: '0.2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
                                   <span style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.1em' }}>STATUS</span>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <div style={{ width: '18px', height: '18px', background: isVerified ? '#10b981' : '#f59e0b', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: isVerified ? '0 0 10px #10b981' : '0 0 10px #f59e0b' }}>
                                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     </div>
-                                    <span style={{ color: isVerified ? '#10b981' : '#f59e0b', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '0.05em' }}>
+                                    <span style={{ color: isVerified ? '#10b981' : '#f59e0b', fontWeight: 'bold', fontSize: '1.05rem', letterSpacing: '0.05em' }}>
                                       {isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING')}
                                     </span>
                                   </div>
@@ -526,7 +524,7 @@ export default function ProfilePage() {
                                 
                                 <div style={{ textAlign: 'right' }}>
                                   <span style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '0.25rem' }}>TEAM</span>
-                                  <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.3rem' }}>{teamSize} Member(s)</span>
+                                  <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.25rem' }}>{teamSize} Member(s)</span>
                                 </div>
                               </div>
                             </div>
