@@ -32,6 +32,7 @@ export function generateEntryPassEmailHtml({
         <table cellpadding="0" cellspacing="0" border="0" style="max-width: 660px; width: 100%; margin-bottom: 22px; text-align: center;">
           <tr>
             <td align="center">
+              <img src="https://srishti2-7.vercel.app/assets/logo.png" width="60" height="60" alt="Srishti 2.7 Logo" style="display: block; margin: 0 auto 12px auto; width: 60px; height: 60px; object-fit: contain; border: 0;" />
               <p style="color: #38bdf8; font-size: 13px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase; margin: 0 0 6px 0;">Official Srishti 2.7 Pass</p>
               <h2 style="color: #ffffff; font-size: 24px; margin: 0; font-weight: 800; letter-spacing: -0.5px;">YOUR DIGITAL ENTRY DELEGATE PASS</h2>
             </td>
@@ -85,7 +86,7 @@ export function generateEntryPassEmailHtml({
                 </a>
               </div>
               <p style="color: #64748b; font-size: 12px; margin-top: 28px;">
-                Srishti 2.7 • National Tech-Cultural Festival • St Thomas College Thrissur
+                Srishti 2.7 • National Tech-Cultural Festival • Department of Computer Science • St Thomas College Thrissur
               </p>
             </td>
           </tr>

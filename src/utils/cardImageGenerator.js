@@ -287,10 +287,11 @@ export async function generateCardImagePng({
   const stubCenterX = bodyW + stubW / 2;
   ctx.fillText('SCAN ME', stubCenterX, 95);
 
-  // Generate & Draw QR Code
+  // Generate & Draw QR Code (level H matches QRCodeSVG exactly)
   const qrDataUrl = await QRCode.toDataURL(passCode, {
-    width: 320,
+    width: 360,
     margin: 2,
+    errorCorrectionLevel: 'H',
     color: { dark: '#000000', light: '#ffffff' }
   });
 
@@ -348,12 +349,43 @@ export async function generateCardImagePng({
   // Draw QR Image
   ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
-  // Logo in center of QR
+  // Logo in center of QR (excavated white badge matching website QRCodeSVG)
+  const badgeSize = 58;
+  const badgeRadius = 10;
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(stubCenterX - 24, qrY + qrSize / 2 - 24, 48, 48);
-  ctx.fillStyle = '#0284c7';
-  ctx.font = 'bold 20px -apple-system, sans-serif';
-  ctx.fillText('SR', stubCenterX, qrY + qrSize / 2 + 7);
+  drawRoundedRect(stubCenterX - badgeSize / 2, qrY + qrSize / 2 - badgeSize / 2, badgeSize, badgeSize, badgeRadius);
+  ctx.fill();
+
+  try {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    await new Promise((resolve) => {
+      logoImg.onload = resolve;
+      logoImg.onerror = resolve;
+      const origin = typeof window !== 'undefined' && window.location ? window.location.origin : '';
+      logoImg.src = origin ? `${origin}/assets/logo.png` : '/assets/logo.png';
+    });
+
+    if (logoImg.complete && logoImg.naturalWidth > 0) {
+      const logoDrawSize = 44;
+      ctx.drawImage(
+        logoImg,
+        stubCenterX - logoDrawSize / 2,
+        qrY + qrSize / 2 - logoDrawSize / 2,
+        logoDrawSize,
+        logoDrawSize
+      );
+    } else {
+      ctx.fillStyle = '#0284c7';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText('SR', stubCenterX, qrY + qrSize / 2 + 8);
+    }
+  } catch (logoErr) {
+    console.warn('Center logo draw notice:', logoErr);
+    ctx.fillStyle = '#0284c7';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('SR', stubCenterX, qrY + qrSize / 2 + 8);
+  }
 
   // Participant Code below QR
   ctx.font = 'bold 24px "Courier New", monospace';
@@ -396,4 +428,48 @@ export async function generateCardImagePng({
   ctx.stroke();
 
   return canvas.toDataURL('image/png');
+}
+
+/**
+ * Universal rock-solid PNG downloader using Blob Object URL
+ * Guarantees .png format and compatibility across desktop & mobile browsers
+ */
+export function downloadPngFromDataUrl(dataUrl, filename = 'srishti_entry_pass.png') {
+  try {
+    const arr = dataUrl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    const blob = new Blob([u8arr], { type: mime });
+    const blobUrl = URL.createObjectURL(blob);
+
+    const safeFilename = filename.toLowerCase().endsWith('.png') ? filename : `${filename}.png`;
+    const link = document.createElement('a');
+    link.style.display = 'none';
+    link.href = blobUrl;
+    link.download = safeFilename;
+    document.body.appendChild(link);
+    link.click();
+
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }, 1200);
+    return true;
+  } catch (err) {
+    console.warn('Fallback download link:', err);
+    const safeFilename = filename.toLowerCase().endsWith('.png') ? filename : `${filename}.png`;
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = safeFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return true;
+  }
 }

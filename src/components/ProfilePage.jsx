@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
 import TearTicket from './TearTicket';
 import { QRCodeSVG } from 'qrcode.react';
 import { generateEntryPassEmailHtml } from '../utils/entryPassEmail';
-import { generateCardImagePng } from '../utils/cardImageGenerator';
+import { generateCardImagePng, downloadPngFromDataUrl } from '../utils/cardImageGenerator';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -230,6 +230,12 @@ export default function ProfilePage() {
   };
 
   const handleEmailPassToUser = async () => {
+    const hasRegistered = (registrations && registrations.length > 0) || session?.user?.email === 'tsrknight@gmail.com';
+    if (!hasRegistered) {
+      alert('Your delegate pass is locked. Please register for at least one festival event to unlock your pass.');
+      return;
+    }
+
     const targetEmail = session?.user?.email || participantData?.email;
     if (!targetEmail) {
       alert('No email found to send pass.');
@@ -283,6 +289,12 @@ export default function ProfilePage() {
   };
 
   const handleDownloadPassPng = async () => {
+    const hasRegistered = (registrations && registrations.length > 0) || session?.user?.email === 'tsrknight@gmail.com';
+    if (!hasRegistered) {
+      alert('Your delegate pass is locked. Please register for at least one event first.');
+      return;
+    }
+
     const data = getPassData();
     setDownloadingPass(true);
     try {
@@ -296,12 +308,7 @@ export default function ProfilePage() {
       });
 
       if (cardPng) {
-        const link = document.createElement('a');
-        link.download = `srishti_pass_${data.passCode}.png`;
-        link.href = cardPng;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        downloadPngFromDataUrl(cardPng, `srishti_pass_${data.passCode}.png`);
       }
     } catch (err) {
       console.error('Error downloading pass:', err);
@@ -466,9 +473,17 @@ export default function ProfilePage() {
                     const statusText = passData.statusText;
                     const eventsList = passData.events;
 
+                    const hasRegistered = (registrations && registrations.length > 0) || session?.user?.email === 'tsrknight@gmail.com';
+
                     return (
                       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', width: '100%', overflowX: 'auto', padding: '0.5rem 0' }}>
+                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', width: '100%', overflowX: 'auto', padding: '0.5rem 0' }}>
+                          <div style={{
+                            filter: !hasRegistered ? 'blur(4px) grayscale(0.85) opacity(0.35)' : 'none',
+                            pointerEvents: !hasRegistered ? 'none' : 'auto',
+                            userSelect: !hasRegistered ? 'none' : 'auto',
+                            transition: 'all 0.3s ease'
+                          }}>
                           <TearTicket
                             orientation="horizontal"
                             scrim={false}
@@ -632,6 +647,96 @@ export default function ProfilePage() {
                               </div>
                             </div>
                           </TearTicket>
+                          </div>
+
+                          {!hasRegistered && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '0.5rem',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              width: '100%',
+                              maxWidth: '660px',
+                              height: '320px',
+                              background: 'rgba(5, 8, 16, 0.88)',
+                              backdropFilter: 'blur(10px)',
+                              WebkitBackdropFilter: 'blur(10px)',
+                              borderRadius: '16px',
+                              border: '1px dashed rgba(239, 68, 68, 0.45)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '1.5rem',
+                              textAlign: 'center',
+                              zIndex: 10,
+                              boxSizing: 'border-box',
+                              boxShadow: '0 0 35px rgba(239, 68, 68, 0.2)'
+                            }}>
+                              <div style={{
+                                width: '52px',
+                                height: '52px',
+                                borderRadius: '50%',
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                border: '1px solid rgba(239, 68, 68, 0.5)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginBottom: '0.85rem',
+                                boxShadow: '0 0 20px rgba(239, 68, 68, 0.3)'
+                              }}>
+                                <FiLock size={26} color="#ef4444" />
+                              </div>
+
+                              <div style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: '0.78rem',
+                                color: '#ef4444',
+                                letterSpacing: '0.18em',
+                                fontWeight: 'bold',
+                                marginBottom: '0.35rem'
+                              }}>
+                                ACCESS RESTRICTED // PASS LOCKED
+                              </div>
+
+                              <h4 style={{
+                                fontFamily: 'var(--font-akira)',
+                                fontSize: '1.15rem',
+                                color: '#ffffff',
+                                margin: '0 0 0.45rem 0',
+                                letterSpacing: '0.04em'
+                              }}>
+                                EVENT REGISTRATION REQUIRED
+                              </h4>
+
+                              <p style={{
+                                color: '#94a3b8',
+                                fontSize: '0.86rem',
+                                maxWidth: '420px',
+                                lineHeight: 1.45,
+                                margin: '0 0 1.15rem 0'
+                              }}>
+                                You haven't registered for any events yet. Register for an event to unlock your official Delegate Pass, QR entry badge, and card download.
+                              </p>
+
+                              <button
+                                onClick={() => navigate('/register')}
+                                style={{
+                                  padding: '0.7rem 1.6rem',
+                                  background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '10px',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.88rem',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 4px 16px rgba(14, 165, 233, 0.4)'
+                                }}
+                              >
+                                Browse Events &amp; Register Now →
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Send Pass & Download Actions */}
@@ -639,16 +744,18 @@ export default function ProfilePage() {
                           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                             <button
                               onClick={handleEmailPassToUser}
-                              disabled={emailingPass}
+                              disabled={!hasRegistered || emailingPass}
+                              title={!hasRegistered ? 'Pass is locked. Register for an event first.' : 'Send Entry Pass to My Email'}
                               style={{
                                 padding: '0.7rem 1.4rem',
-                                backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                                color: '#38bdf8',
-                                border: '1px solid rgba(56, 189, 248, 0.35)',
+                                backgroundColor: !hasRegistered ? 'rgba(56, 189, 248, 0.04)' : 'rgba(56, 189, 248, 0.1)',
+                                color: !hasRegistered ? '#64748b' : '#38bdf8',
+                                border: !hasRegistered ? '1px solid #334155' : '1px solid rgba(56, 189, 248, 0.35)',
                                 borderRadius: '12px',
                                 fontWeight: '600',
                                 fontSize: '0.88rem',
-                                cursor: emailingPass ? 'not-allowed' : 'pointer',
+                                opacity: !hasRegistered ? 0.45 : 1,
+                                cursor: !hasRegistered ? 'not-allowed' : emailingPass ? 'wait' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
@@ -661,26 +768,34 @@ export default function ProfilePage() {
 
                             <button
                               onClick={handleDownloadPassPng}
-                              disabled={downloadingPass}
+                              disabled={!hasRegistered || downloadingPass}
+                              title={!hasRegistered ? 'Pass is locked. Register for an event first.' : 'Download Pass (PNG)'}
                               style={{
                                 padding: '0.7rem 1.4rem',
-                                backgroundColor: '#fff',
-                                color: '#000',
+                                backgroundColor: !hasRegistered ? '#334155' : '#fff',
+                                color: !hasRegistered ? '#94a3b8' : '#000',
                                 border: 'none',
                                 borderRadius: '12px',
                                 fontWeight: '700',
                                 fontSize: '0.88rem',
-                                cursor: downloadingPass ? 'not-allowed' : 'pointer',
+                                opacity: !hasRegistered ? 0.45 : 1,
+                                cursor: !hasRegistered ? 'not-allowed' : downloadingPass ? 'wait' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
                                 transition: 'all 0.2s',
-                                boxShadow: '0 4px 14px rgba(255,255,255,0.2)'
+                                boxShadow: !hasRegistered ? 'none' : '0 4px 14px rgba(255,255,255,0.2)'
                               }}
                             >
                               <FiDownload /> {downloadingPass ? 'Exporting PNG...' : 'Download Pass (PNG)'}
                             </button>
                           </div>
+
+                          {!hasRegistered && (
+                            <span style={{ fontSize: '0.82rem', color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+                              <FiLock size={13} /> Pass locked — Register for an event to unlock email &amp; PNG download.
+                            </span>
+                          )}
 
                           {emailPassMsg && (
                             <span style={{ 

@@ -299,6 +299,7 @@ export default function App() {
 
     try {
       const uniqueCode = 'SR27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      let participantPassCode = uniqueCode;
 
       let pData = null;
       const { data: existingParticipant } = await supabase
@@ -309,6 +310,8 @@ export default function App() {
 
       if (existingParticipant) {
         pData = existingParticipant;
+        // Reuse permanent delegate pass code so their QR code is identical across all events!
+        participantPassCode = existingParticipant.participant_code || uniqueCode;
       } else {
         const { data: newParticipant } = await supabase.from('participants').insert([{
            participant_code: uniqueCode,
@@ -320,15 +323,16 @@ export default function App() {
            year: 'N/A'
         }]).select().single();
         pData = newParticipant;
+        participantPassCode = uniqueCode;
       }
 
-      // 2. Insert into website's registrations table using the new participant_id
+      // 2. Insert into website's registrations table using the permanent participant_code
       const { error } = await supabase
         .from('registrations')
         .insert([
           {
             participant_id: pData?.id || null,
-            participant_code: uniqueCode,
+            participant_code: participantPassCode,
             event_id: activeEventData.id,
             event_name: activeEventData.label,
             team_size: formTeamSize,
@@ -344,13 +348,24 @@ export default function App() {
 
       if (error) throw error;
 
-      const qrDataUrl = await QRCode.toDataURL(uniqueCode, {
-         width: 256,
+      // Fetch all registered events for this attendee so the card reflects all enrolled events
+      const { data: userAllRegs } = await supabase
+        .from('registrations')
+        .select('event_name')
+        .or(`participant_id.eq.${pData?.id},lead_email.ilike.${formEmail.trim()}`);
+
+      const allEventsList = userAllRegs && userAllRegs.length > 0
+        ? [...new Set(userAllRegs.map(r => r.event_name).filter(Boolean))]
+        : [activeEventData.label];
+
+      const qrDataUrl = await QRCode.toDataURL(participantPassCode, {
+         width: 320,
          margin: 2,
+         errorCorrectionLevel: 'H',
          color: { dark: '#020617', light: '#ffffff' }
       });
       setQrCodeDataUrl(qrDataUrl);
-      setParticipantCode(uniqueCode);
+      setParticipantCode(participantPassCode);
 
       // Generate exact 1:1 high-resolution PNG image of the card
       let cardPng = null;
@@ -358,8 +373,8 @@ export default function App() {
         cardPng = await generateCardImagePng({
           attendeeName: formName,
           college: formCollege,
-          passCode: uniqueCode,
-          events: [activeEventData.label],
+          passCode: participantPassCode,
+          events: allEventsList,
           isVerified: true,
           statusText: 'VERIFIED'
         });
@@ -371,7 +386,7 @@ export default function App() {
       const ticketHtml = generateEntryPassEmailHtml({
         attendeeName: formName,
         college: formCollege,
-        passCode: uniqueCode,
+        passCode: participantPassCode,
         eventName: activeEventData.label,
         status: 'VERIFIED'
       });
