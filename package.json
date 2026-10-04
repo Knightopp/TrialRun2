@@ -16,6 +16,7 @@
     "@react-three/fiber": "^9.8.1",
     "@supabase/supabase-js": "^2.117.2",
     "gsap": "^3.15.0",
+    "lucide-react": "^1.52.0",
     "motion": "^13.5.1",
     "ogl": "^1.0.11",
     "qrcode": "^1.5.4",
@@ -24,6 +25,7 @@
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
     "react-router-dom": "^7.18.4",
+    "recharts": "^3.10.1",
     "three": "^0.186.1"
   },
   "devDependencies": {
