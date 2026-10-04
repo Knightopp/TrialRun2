@@ -653,72 +653,111 @@ export default function App() {
       if (!pData) {
         try {
           const cleanEmail = formEmail.trim().toLowerCase();
-          let existingP = null;
+
+          // 1. Try atomic server-side RPC (zero client manipulation, strictly enforced status)
           try {
-            const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
-            if (rpcRows && rpcRows.length > 0) existingP = rpcRows[0];
+            const { data: rpcRes, error: rpcErr } = await supabase.rpc('register_participant_and_event', {
+              p_name: formName.trim() || 'Attendee',
+              p_email: cleanEmail,
+              p_phone: formPhone.trim() || 'N/A',
+              p_college: formCollege.trim() || 'Participant',
+              p_department: formRoll.trim() || 'General',
+              p_year: '2026',
+              p_event_id: resolvedEventId || null,
+              p_participant_code: uniqueCode
+            });
+
+            if (!rpcErr && rpcRes?.success) {
+              pData = {
+                id: rpcRes.participant_id,
+                participant_code: rpcRes.participant_code || uniqueCode,
+                name: formName.trim(),
+                email: cleanEmail,
+                college: formCollege.trim(),
+                phone: formPhone.trim(),
+                department: formRoll.trim() || 'General'
+              };
+              participantPassCode = rpcRes.participant_code || uniqueCode;
+            }
           } catch (_) {}
 
-          if (!existingP) {
+          // 2. Direct fallback if RPC is not deployed yet
+          if (!pData) {
+            let existingP = null;
             try {
-              const { data: directP } = await supabase
-                .from('participants')
-                .select('*')
-                .ilike('email', cleanEmail)
-                .maybeSingle();
-              if (directP) existingP = directP;
+              const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
+              if (rpcRows && rpcRows.length > 0) existingP = rpcRows[0];
             } catch (_) {}
-          }
 
-          if (existingP) {
-            pData = existingP;
-            participantPassCode = existingP.participant_code;
-            const updatePayload = {};
-            if (formName.trim() && formName.trim() !== existingP.name) updatePayload.name = formName.trim();
-            if (formPhone.trim() && formPhone.trim() !== existingP.phone) updatePayload.phone = formPhone.trim();
-            if (formCollege.trim() && formCollege.trim() !== existingP.college) updatePayload.college = formCollege.trim();
-            if (formRoll.trim() && formRoll.trim() !== existingP.department) updatePayload.department = formRoll.trim();
+            if (!existingP) {
+              try {
+                const { data: directP } = await supabase
+                  .from('participants')
+                  .select('*')
+                  .ilike('email', cleanEmail)
+                  .maybeSingle();
+                if (directP) existingP = directP;
+              } catch (_) {}
+            }
 
-            if (Object.keys(updatePayload).length > 0) {
+            if (existingP) {
+              pData = existingP;
+              participantPassCode = existingP.participant_code;
+              const updatePayload = {};
+              if (formName.trim() && formName.trim() !== existingP.name) updatePayload.name = formName.trim();
+              if (formPhone.trim() && formPhone.trim() !== existingP.phone) updatePayload.phone = formPhone.trim();
+              if (formCollege.trim() && formCollege.trim() !== existingP.college) updatePayload.college = formCollege.trim();
+              if (formRoll.trim() && formRoll.trim() !== existingP.department) updatePayload.department = formRoll.trim();
+
+              if (Object.keys(updatePayload).length > 0) {
+                await supabase
+                  .from('participants')
+                  .update(updatePayload)
+                  .eq('id', existingP.id);
+              }
+            } else {
               await supabase
                 .from('participants')
-                .update(updatePayload)
-                .eq('id', existingP.id);
-            }
-          } else {
-            // INSERT ONLY without .select() - strictly adheres to public INSERT-only RLS
-            await supabase
-              .from('participants')
-              .insert([{
-                participant_code: uniqueCode,
-                name: formName.trim() || 'Attendee',
-                email: cleanEmail,
-                phone: formPhone.trim() || 'N/A',
-                college: formCollege.trim() || 'Participant',
-                department: formRoll.trim() || 'General',
-                year: '2026'
-              }]);
+                .insert([{
+                  participant_code: uniqueCode,
+                  name: formName.trim() || 'Attendee',
+                  email: cleanEmail,
+                  phone: formPhone.trim() || 'N/A',
+                  college: formCollege.trim() || 'Participant',
+                  department: formRoll.trim() || 'General',
+                  year: '2026'
+                }]);
 
-            // Retrieve created record via secure RPC
-            try {
-              const { data: createdRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
-              if (createdRows && createdRows.length > 0) {
-                pData = createdRows[0];
-                participantPassCode = pData.participant_code;
+              try {
+                const { data: createdRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
+                if (createdRows && createdRows.length > 0) {
+                  pData = createdRows[0];
+                  participantPassCode = pData.participant_code;
+                }
+              } catch (_) {}
+
+              if (!pData) {
+                pData = {
+                  participant_code: uniqueCode,
+                  name: formName.trim() || 'Attendee',
+                  email: cleanEmail,
+                  phone: formPhone.trim() || 'N/A',
+                  college: formCollege.trim() || 'Participant',
+                  department: formRoll.trim() || 'General',
+                  year: '2026'
+                };
+                participantPassCode = uniqueCode;
               }
-            } catch (_) {}
+            }
 
-            if (!pData) {
-              pData = {
-                participant_code: uniqueCode,
-                name: formName.trim() || 'Attendee',
-                email: cleanEmail,
-                phone: formPhone.trim() || 'N/A',
-                college: formCollege.trim() || 'Participant',
-                department: formRoll.trim() || 'General',
-                year: '2026'
-              };
-              participantPassCode = uniqueCode;
+            if (pData?.id && resolvedEventId) {
+              await supabase
+                .from('registrations')
+                .insert([{
+                  participant_id: pData.id,
+                  event_id: resolvedEventId,
+                  status: 'registered'
+                }]);
             }
           }
 
@@ -729,16 +768,6 @@ export default function App() {
             if (pData.phone) localStorage.setItem('srishti_user_phone', pData.phone);
             if (pData.department) localStorage.setItem('srishti_user_roll', pData.department);
             localStorage.setItem('srishti_session', cleanEmail);
-          }
-
-          if (pData?.id && resolvedEventId) {
-            await supabase
-              .from('registrations')
-              .insert([{
-                participant_id: pData.id,
-                event_id: resolvedEventId,
-                status: 'registered'
-              }]);
           }
         } catch (dbErr) {
           console.warn('Direct database registration notice:', dbErr);
