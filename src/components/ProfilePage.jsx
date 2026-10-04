@@ -87,22 +87,17 @@ export default function ProfilePage() {
       const clean = (userEmail || '').trim().toLowerCase();
       let currentParticipant = null;
 
-      // 1. Try secure Security Definer RPC
+      // 1. Try identity-based authenticated RPC get_my_participant
       try {
-        const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: clean });
-        if (rpcRows && rpcRows.length > 0) currentParticipant = rpcRows[0];
+        const { data: myRows } = await supabase.rpc('get_my_participant');
+        if (myRows && myRows.length > 0) currentParticipant = myRows[0];
       } catch (_) {}
 
-      // 2. Direct query fallback
+      // 2. Staff lookup fallback
       if (!currentParticipant) {
         try {
-          const { data: directP } = await supabase
-            .from('participants')
-            .select('*')
-            .ilike('email', clean)
-            .limit(1)
-            .maybeSingle();
-          if (directP) currentParticipant = directP;
+          const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: clean });
+          if (rpcRows && rpcRows.length > 0) currentParticipant = rpcRows[0];
         } catch (_) {}
       }
 
@@ -161,11 +156,11 @@ export default function ProfilePage() {
       }
 
       let regs = [];
-      // 1. Try secure registrations RPC
+      // 1. Try identity-based authenticated RPC get_my_registrations
       try {
-        const { data: rpcRegs } = await supabase.rpc('get_registrations_by_email', { lookup_email: clean });
-        if (rpcRegs && rpcRegs.length > 0) {
-          regs = rpcRegs.map(r => ({
+        const { data: myRegs } = await supabase.rpc('get_my_registrations');
+        if (myRegs && myRegs.length > 0) {
+          regs = myRegs.map(r => ({
             ...r,
             events: {
               name: r.event_name,
@@ -177,6 +172,25 @@ export default function ProfilePage() {
           }));
         }
       } catch (_) {}
+
+      // 2. Staff lookup fallback
+      if (regs.length === 0) {
+        try {
+          const { data: rpcRegs } = await supabase.rpc('get_registrations_by_email', { lookup_email: clean });
+          if (rpcRegs && rpcRegs.length > 0) {
+            regs = rpcRegs.map(r => ({
+              ...r,
+              events: {
+                name: r.event_name,
+                event_code: r.event_code,
+                venue: r.event_venue,
+                date: r.event_date,
+                start_time: r.event_time
+              }
+            }));
+          }
+        } catch (_) {}
+      }
 
       // 2. Direct query fallback
       if (regs.length === 0 && currentParticipant?.id) {

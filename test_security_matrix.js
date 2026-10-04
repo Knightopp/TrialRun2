@@ -135,32 +135,32 @@ async function runSecurityMatrix() {
     results.push({ test: 'Anonymous → SELECT events', expected: '✅ Allowed', actual: e.message, status: '🚨 FAIL' });
   }
 
-  // Test 9: Anonymous -> get_participant_by_email does NOT leak pass_token
+  // Test 9: Anonymous -> get_participant_by_email (PII Leak Prevention)
   try {
     const { data, error } = await anonClient.rpc('get_participant_by_email', { lookup_email: 'test@example.com' });
-    const hasToken = data && data.length > 0 && 'pass_token' in data[0];
+    const isBlocked = error !== null || (data && data.length === 0);
     results.push({
-      test: 'Anonymous → get_participant_by_email (Bearer Token Leak Check)',
-      expected: '❌ pass_token NOT returned (Zero-leak)',
-      actual: hasToken ? '🚨 LEAKED pass_token!' : 'Zero token returned',
-      status: !hasToken ? '✅ PASS' : '🚨 FAIL'
+      test: 'Anonymous → get_participant_by_email (PII Protection)',
+      expected: '❌ Blocked / Revoked from anon (Zero PII leak)',
+      actual: error ? `Protected: ${error.message}` : (data?.length ? '🚨 PII LEAKED!' : '0 rows returned'),
+      status: isBlocked ? '✅ PASS' : '🚨 FAIL'
     });
   } catch (e) {
-    results.push({ test: 'Anonymous → get_participant_by_email', expected: 'Zero-leak', actual: e.message, status: '✅ PASS' });
+    results.push({ test: 'Anonymous → get_participant_by_email', expected: '❌ Blocked', actual: e.message, status: '✅ PASS' });
   }
 
-  // Test 10: Anonymous -> get_registrations_by_email does NOT leak pass_token
+  // Test 10: Anonymous -> get_registrations_by_email (PII Leak Prevention)
   try {
     const { data, error } = await anonClient.rpc('get_registrations_by_email', { lookup_email: 'test@example.com' });
-    const hasToken = data && data.length > 0 && 'pass_token' in data[0];
+    const isBlocked = error !== null || (data && data.length === 0);
     results.push({
-      test: 'Anonymous → get_registrations_by_email (Bearer Token Leak Check)',
-      expected: '❌ pass_token NOT returned (Zero-leak)',
-      actual: hasToken ? '🚨 LEAKED pass_token!' : 'Zero token returned',
-      status: !hasToken ? '✅ PASS' : '🚨 FAIL'
+      test: 'Anonymous → get_registrations_by_email (PII Protection)',
+      expected: '❌ Blocked / Revoked from anon (Zero PII leak)',
+      actual: error ? `Protected: ${error.message}` : (data?.length ? '🚨 PII LEAKED!' : '0 rows returned'),
+      status: isBlocked ? '✅ PASS' : '🚨 FAIL'
     });
   } catch (e) {
-    results.push({ test: 'Anonymous → get_registrations_by_email', expected: 'Zero-leak', actual: e.message, status: '✅ PASS' });
+    results.push({ test: 'Anonymous → get_registrations_by_email', expected: '❌ Blocked', actual: e.message, status: '✅ PASS' });
   }
 
   // Test 11: Anonymous -> get_my_pass_credential (Identity check)
