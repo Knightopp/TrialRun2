@@ -195,6 +195,42 @@ async function runSecurityMatrix() {
     results.push({ test: 'Anonymous → verify_and_checkin_pass()', expected: '❌ Blocked', actual: e.message, status: '✅ PASS' });
   }
 
+  // Test 13: Anonymous -> register_participant_and_event with existing email (Profile Tamper & Token Leak Check)
+  try {
+    const { data, error } = await anonClient.rpc('register_participant_and_event', {
+      p_name: 'Attacker Impersonator',
+      p_email: 'tsrknight@gmail.com',
+      p_phone: '9999999999',
+      p_college: 'Attacker College',
+      p_department: 'Cyber',
+      p_year: '2026'
+    });
+    // Expected: rejected because email already exists and caller is anonymous
+    const isProtected = error !== null || (data && !data.success && data.is_existing && !data.pass_token);
+    results.push({
+      test: 'Anonymous → register with existing email (Account Hijacking Check)',
+      expected: '❌ Blocked (Zero profile modification & pass_token: null)',
+      actual: isProtected ? `Protected: ${data?.error || error?.message}` : '🚨 Tampered existing account!',
+      status: isProtected ? '✅ PASS' : '🚨 FAIL'
+    });
+  } catch (e) {
+    results.push({ test: 'Anonymous → register with existing email', expected: '❌ Blocked', actual: e.message, status: '✅ PASS' });
+  }
+
+  // Test 14: Anonymous -> link_participant_to_auth (Unowned Account Claiming Check)
+  try {
+    const { data, error } = await anonClient.rpc('link_participant_to_auth');
+    const passed = error !== null || (data && !data.success);
+    results.push({
+      test: 'Anonymous → link_participant_to_auth() (Claim Bypass Check)',
+      expected: '❌ Blocked (Requires verified authenticated session)',
+      actual: error ? error.message : (data?.error || 'Rejected'),
+      status: passed ? '✅ PASS' : '🚨 FAIL'
+    });
+  } catch (e) {
+    results.push({ test: 'Anonymous → link_participant_to_auth()', expected: '❌ Blocked', actual: e.message, status: '✅ PASS' });
+  }
+
   // Print results table
   console.table(results);
   console.log('\nAudit complete.');

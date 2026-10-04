@@ -666,6 +666,12 @@ export default function App() {
               p_event_id: resolvedEventId || null
             });
 
+            if (rpcRes && !rpcRes.success && rpcRes.is_existing) {
+              setIsRegistering(false);
+              alert(rpcRes.error || 'This email is already registered for Srishti 2.7. Please go to your Profile page and log in to manage your pass or register for more events.');
+              return;
+            }
+
             if (!rpcErr && rpcRes?.success) {
               let activeToken = rpcRes.pass_token || '';
               // If pass_token was not returned because user already existed, check device vault
@@ -695,84 +701,10 @@ export default function App() {
             }
           } catch (_) {}
 
-          // 2. Direct fallback if RPC is not deployed yet
           if (!pData) {
-            let existingP = null;
-            try {
-              const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
-              if (rpcRows && rpcRows.length > 0) existingP = rpcRows[0];
-            } catch (_) {}
-
-            if (!existingP) {
-              try {
-                const { data: directP } = await supabase
-                  .from('participants')
-                  .select('*')
-                  .ilike('email', cleanEmail)
-                  .maybeSingle();
-                if (directP) existingP = directP;
-              } catch (_) {}
-            }
-
-            if (existingP) {
-              pData = existingP;
-              participantPassCode = existingP.participant_code;
-              const updatePayload = {};
-              if (formName.trim() && formName.trim() !== existingP.name) updatePayload.name = formName.trim();
-              if (formPhone.trim() && formPhone.trim() !== existingP.phone) updatePayload.phone = formPhone.trim();
-              if (formCollege.trim() && formCollege.trim() !== existingP.college) updatePayload.college = formCollege.trim();
-              if (formRoll.trim() && formRoll.trim() !== existingP.department) updatePayload.department = formRoll.trim();
-
-              if (Object.keys(updatePayload).length > 0) {
-                await supabase
-                  .from('participants')
-                  .update(updatePayload)
-                  .eq('id', existingP.id);
-              }
-            } else {
-              await supabase
-                .from('participants')
-                .insert([{
-                  participant_code: uniqueCode,
-                  name: formName.trim() || 'Attendee',
-                  email: cleanEmail,
-                  phone: formPhone.trim() || 'N/A',
-                  college: formCollege.trim() || 'Participant',
-                  department: formRoll.trim() || 'General',
-                  year: '2026'
-                }]);
-
-              try {
-                const { data: createdRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
-                if (createdRows && createdRows.length > 0) {
-                  pData = createdRows[0];
-                  participantPassCode = pData.participant_code;
-                }
-              } catch (_) {}
-
-              if (!pData) {
-                pData = {
-                  participant_code: uniqueCode,
-                  name: formName.trim() || 'Attendee',
-                  email: cleanEmail,
-                  phone: formPhone.trim() || 'N/A',
-                  college: formCollege.trim() || 'Participant',
-                  department: formRoll.trim() || 'General',
-                  year: '2026'
-                };
-                participantPassCode = uniqueCode;
-              }
-            }
-
-            if (pData?.id && resolvedEventId) {
-              await supabase
-                .from('registrations')
-                .insert([{
-                  participant_id: pData.id,
-                  event_id: resolvedEventId,
-                  status: 'registered'
-                }]);
-            }
+            setIsRegistering(false);
+            alert('Registration could not be completed at this time. Please try again.');
+            return;
           }
 
           if (pData) {

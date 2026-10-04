@@ -1,24 +1,24 @@
 -- ==============================================================================
--- SRISHTI 2.7 — PRODUCTION ZERO-TRUST SECURITY & RLS ARCHITECTURE (V4 FINAL)
+-- SRISHTI 2.7 — PRODUCTION ZERO-TRUST SECURITY & RLS ARCHITECTURE (V5 HARDENED)
 -- ==============================================================================
--- Addressed Core Vulnerabilities:
--- 1. BEARER TOKEN LEAK PLUGGED: pass_token is strictly REMOVED from public 
---    get_participant_by_email and get_registrations_by_email RPCs.
---    Knowing an email NEVER yields a pass_token.
--- 2. SECURE PUBLIC REGISTRATION: register_participant_and_event NEVER returns 
---    an existing participant's pass_token to unauthenticated callers.
--- 3. SERVER-GENERATED CODES: p_participant_code parameter removed. 
---    PostgreSQL generates participant codes cryptographically using pgcrypto.
--- 4. IDENTITY-BASED RETRIEVAL: Authenticated RPC get_my_pass_credential() allows
---    only verified account owners (auth.uid() / verified session) to view pass_token.
--- 5. SCOPED ATTENDANCE: Event staff strictly restricted to their assigned event.
--- 6. ZERO DIRECT TABLE ACCESS FOR ANON: No direct table queries on participants/registrations.
+-- Addressed Security Verifications:
+-- 1. STRICT AUTH OWNERSHIP: get_my_pass_credential() strictly matches auth_user_id = auth.uid()
+--    (Removed JWT email fallback).
+-- 2. PROFILE IMMUTABILITY FOR ANON: Anonymous callers cannot modify or tamper with 
+--    existing participant records. If an email is already registered, an error is returned.
+-- 3. ANTI-ACCOUNT HIJACKING: Authenticated users cannot claim someone else's unowned record 
+--    via registration. Linking requires verified JWT email match via link_participant_to_auth().
+-- 4. REGISTRATION VERIFICATION AT EVENT ROOM: verify_and_checkin_pass verifies that the 
+--    participant actually registered for that specific event before marking attendance.
+-- 5. SERVER-GENERATED CREDENTIALS: Participant codes and 128-bit pass tokens are generated
+--    100% server-side via pgcrypto.
+-- 6. LEAST PRIVILEGE: Zero direct table access for anon. Isolated Security Definer RPCs only.
 -- ==============================================================================
 
 BEGIN;
 
 -- -----------------------------------------------------------------------------
--- 1. SCHEMA HARDENING & CRYPTO COLUMNS
+-- 1. SCHEMA HARDENING & EXTENSIONS
 -- -----------------------------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -66,7 +66,7 @@ END $$;
 -- 4. SECURITY HELPER FUNCTIONS FOR ROLE VERIFICATION
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.is_srishti_admin()
-RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.volunteers v
         WHERE v.auth_user_id = auth.uid()
@@ -76,7 +76,7 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_srishti_registration()
-RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.volunteers v
         WHERE v.auth_user_id = auth.uid()
@@ -86,7 +86,7 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_srishti_staff()
-RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.volunteers v
         WHERE v.auth_user_id = auth.uid()
@@ -96,7 +96,7 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_event_staff_for_event(target_event_id UUID)
-RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.volunteers v
         JOIN public.event_staff es ON es.volunteer_id = v.id
@@ -115,10 +115,9 @@ CREATE POLICY "Public can view upcoming events"
 ON public.events FOR SELECT TO anon, authenticated
 USING (status IN ('upcoming', 'ongoing') OR public.is_srishti_staff());
 
--- ZERO-TRUST HARDENING:
+-- ZERO-TRUST ENFORCEMENT:
 -- Anonymous public users have ZERO direct SELECT, INSERT, UPDATE, or DELETE 
 -- on participants and registrations.
--- All operations are performed strictly through validated Security Definer RPCs.
 
 -- -----------------------------------------------------------------------------
 -- 6. AUTHENTICATED STAFF & ADMIN POLICIES
@@ -202,10 +201,8 @@ USING (public.is_srishti_registration());
 -- -----------------------------------------------------------------------------
 -- 7. LEAST-PRIVILEGE TABLE GRANTS
 -- -----------------------------------------------------------------------------
--- Revoke all direct privileges on core tables from anon
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
 
--- Grant schema usage
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 
 -- Public can ONLY read published events
@@ -225,9 +222,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.event_attendance TO authenticated
 -- -----------------------------------------------------------------------------
 
 -- 8A. Atomic Registration Procedure
--- FIXES:
--- 1. No p_participant_code accepted: generated 100% server-side with gen_random_bytes.
--- 2. Never returns existing pass_token to unauthenticated callers (prevents credential harvesting).
+-- CRITICAL HARDENING:
+-- 1. Anonymous users CANNOT modify existing participant records or hijack accounts.
+-- 2. Authenticated users cannot claim unowned records without verified ownership.
+-- 3. Codes and tokens are generated strictly server-side.
 CREATE OR REPLACE FUNCTION public.register_participant_and_event(
     p_name TEXT,
     p_email TEXT,
@@ -240,7 +238,7 @@ CREATE OR REPLACE FUNCTION public.register_participant_and_event(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_clean_email TEXT := LOWER(TRIM(p_email));
@@ -252,10 +250,8 @@ DECLARE
     v_final_code TEXT;
     v_pass_token TEXT;
     v_existing_auth_id UUID;
-    v_return_token TEXT := NULL;
     v_reg_id UUID;
     v_event_status TEXT;
-    v_is_new BOOLEAN := false;
 BEGIN
     -- Validate required input
     IF v_clean_email IS NULL OR v_clean_email = '' THEN
@@ -282,14 +278,12 @@ BEGIN
     WHERE LOWER(email) = v_clean_email
     LIMIT 1;
 
-    -- Case 1: Brand new participant
+    -- CASE 1: Brand new participant
     IF v_participant_id IS NULL THEN
-        v_is_new := true;
         -- Server generates participant_code: 'SRI27-' + 6 uppercase hex chars
         v_final_code := 'SRI27-' || UPPER(SUBSTRING(encode(gen_random_bytes(4), 'hex') FROM 1 FOR 6));
         -- Server generates 128-bit secret pass_token
         v_pass_token := encode(gen_random_bytes(16), 'hex');
-        v_return_token := v_pass_token; -- Safe to return to registering user
 
         INSERT INTO public.participants (
             participant_code,
@@ -315,67 +309,87 @@ BEGIN
         )
         RETURNING id INTO v_participant_id;
 
-    -- Case 2: Participant already exists
+        -- Create registration if event specified
+        IF p_event_id IS NOT NULL THEN
+            INSERT INTO public.registrations (participant_id, event_id, status)
+            VALUES (v_participant_id, p_event_id, 'registered')
+            RETURNING id INTO v_reg_id;
+        END IF;
+
+        RETURN jsonb_build_object(
+            'success', true,
+            'is_new', true,
+            'participant_id', v_participant_id,
+            'participant_code', v_final_code,
+            'pass_token', v_pass_token,
+            'registration_id', v_reg_id,
+            'message', 'Registration successful! Your digital pass has been generated.'
+        );
+
+    -- CASE 2: Participant already exists
     ELSE
-        v_is_new := false;
-        
-        -- Ensure pass_token exists on legacy records
-        IF v_pass_token IS NULL THEN
-            v_pass_token := encode(gen_random_bytes(16), 'hex');
-            UPDATE public.participants SET pass_token = v_pass_token WHERE id = v_participant_id;
+        -- 2A. ANONYMOUS CALLER CHECK:
+        -- Anonymous callers CANNOT modify someone else's existing profile or register on their behalf!
+        IF auth.uid() IS NULL THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'is_existing', true,
+                'error', 'This email is already registered. Please sign in to your profile to register for additional events.'
+            );
         END IF;
 
-        -- If caller is authenticated as the participant, link and return token
-        IF auth.uid() IS NOT NULL THEN
-            IF v_existing_auth_id IS NULL THEN
+        -- 2B. AUTHENTICATED CALLER OWNERSHIP CHECK:
+        -- If caller is authenticated, they MUST be the linked owner of this participant record.
+        IF v_existing_auth_id IS NOT NULL AND v_existing_auth_id <> auth.uid() THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error', 'Unauthorized: You do not own this participant record.'
+            );
+        END IF;
+
+        -- 2C. If unowned and caller's verified JWT email matches, link them safely
+        IF v_existing_auth_id IS NULL THEN
+            IF LOWER(TRIM(auth.jwt() ->> 'email')) = v_clean_email THEN
                 UPDATE public.participants SET auth_user_id = auth.uid() WHERE id = v_participant_id;
-                v_return_token := v_pass_token;
-            ELSIF v_existing_auth_id = auth.uid() THEN
-                v_return_token := v_pass_token;
             ELSE
-                v_return_token := NULL; -- Caller is a different authenticated user!
+                RETURN jsonb_build_object(
+                    'success', false,
+                    'error', 'Unauthorized: Authenticated email does not match participant email.'
+                );
             END IF;
-        ELSE
-            -- CRITICAL FIX: Anonymous public callers NEVER receive an existing participant's pass_token!
-            -- This prevents an attacker from typing someone's email to steal their QR credential.
-            v_return_token := NULL;
         END IF;
 
-        -- Update non-blank profile details safely
+        -- Verified owner: update profile fields safely
         UPDATE public.participants
         SET name = COALESCE(NULLIF(v_clean_name, ''), name),
             phone = COALESCE(NULLIF(v_clean_phone, ''), phone),
             college = COALESCE(NULLIF(v_clean_college, ''), college),
             department = COALESCE(NULLIF(v_clean_dept, ''), department)
         WHERE id = v_participant_id;
-    END IF;
 
-    -- Create event registration if specified
-    IF p_event_id IS NOT NULL THEN
-        INSERT INTO public.registrations (participant_id, event_id, status)
-        VALUES (v_participant_id, p_event_id, 'registered')
-        ON CONFLICT DO NOTHING
-        RETURNING id INTO v_reg_id;
+        -- Register for additional event
+        IF p_event_id IS NOT NULL THEN
+            INSERT INTO public.registrations (participant_id, event_id, status)
+            VALUES (v_participant_id, p_event_id, 'registered')
+            ON CONFLICT DO NOTHING
+            RETURNING id INTO v_reg_id;
 
-        IF v_reg_id IS NULL THEN
-            SELECT id INTO v_reg_id FROM public.registrations 
-            WHERE participant_id = v_participant_id AND event_id = p_event_id;
+            IF v_reg_id IS NULL THEN
+                SELECT id INTO v_reg_id FROM public.registrations 
+                WHERE participant_id = v_participant_id AND event_id = p_event_id;
+            END IF;
         END IF;
-    END IF;
 
-    RETURN jsonb_build_object(
-        'success', true,
-        'is_new', v_is_new,
-        'participant_id', v_participant_id,
-        'participant_code', v_final_code,
-        'pass_token', v_return_token, -- ONLY returned on new registration or authenticated owner
-        'registration_id', v_reg_id,
-        'message', CASE 
-            WHEN v_is_new THEN 'Registration successful! Your digital pass has been generated.'
-            WHEN v_return_token IS NOT NULL THEN 'Registration linked to your account.'
-            ELSE 'Event added to existing profile. Log in to your profile to view your pass token.'
-        END
-    );
+        RETURN jsonb_build_object(
+            'success', true,
+            'is_new', false,
+            'participant_id', v_participant_id,
+            'participant_code', v_final_code,
+            'pass_token', v_pass_token,
+            'registration_id', v_reg_id,
+            'message', 'Registration confirmed for additional event.'
+        );
+    END IF;
 END;
 $$;
 
@@ -391,7 +405,7 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
     SELECT
         p.id,
@@ -422,7 +436,7 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
     SELECT 
         r.id,
@@ -442,8 +456,8 @@ AS $$
     WHERE LOWER(p.email) = LOWER(TRIM(lookup_email));
 $$;
 
--- 8D. Identity-Based Authenticated Pass Credential RPC (REQUIRES AUTHENTICATION)
--- ONLY an authenticated user whose auth.uid() or verified JWT email matches can retrieve their pass_token.
+-- 8D. Identity-Based Authenticated Pass Credential RPC (STRICT auth.uid() ONLY)
+-- NO email fallback. ONLY the account linked to auth_user_id can retrieve their pass_token.
 CREATE OR REPLACE FUNCTION public.get_my_pass_credential()
 RETURNS TABLE (
     participant_code TEXT,
@@ -453,17 +467,57 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
     SELECT p.participant_code, p.pass_token, p.name, p.college
     FROM public.participants p
     WHERE p.auth_user_id = auth.uid()
-       OR (auth.jwt() ->> 'email' IS NOT NULL AND LOWER(p.email) = LOWER(auth.jwt() ->> 'email'))
     LIMIT 1;
 $$;
 
--- 8E. Server-Side Cryptographic Pass Verification & Gate/Event Check-in RPC
--- Verifies 128-bit pass_token, scopes event staff, detects counterfeits & duplicates.
+-- 8E. Explicit Account Claiming Flow for Verified Users
+CREATE OR REPLACE FUNCTION public.link_participant_to_auth()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_user_email TEXT := LOWER(TRIM(auth.jwt() ->> 'email'));
+    v_participant_id UUID;
+    v_existing_auth UUID;
+BEGIN
+    IF auth.uid() IS NULL OR v_user_email IS NULL OR v_user_email = '' THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Must be authenticated with a verified email session.');
+    END IF;
+
+    SELECT id, auth_user_id INTO v_participant_id, v_existing_auth
+    FROM public.participants
+    WHERE LOWER(email) = v_user_email
+    LIMIT 1;
+
+    IF v_participant_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'No participant record found for this verified email.');
+    END IF;
+
+    IF v_existing_auth IS NOT NULL AND v_existing_auth <> auth.uid() THEN
+        RETURN jsonb_build_object('success', false, 'error', 'This participant record is already linked to another account.');
+    END IF;
+
+    UPDATE public.participants
+    SET auth_user_id = auth.uid()
+    WHERE id = v_participant_id;
+
+    RETURN jsonb_build_object('success', true, 'message', 'Participant profile successfully linked to your authenticated account.');
+END;
+$$;
+
+-- 8F. Server-Side Cryptographic Pass Verification & Gate/Event Check-in RPC
+-- Enforces:
+-- 1. 128-bit pass_token verification (detects counterfeit passes).
+-- 2. Staff role and station authorization.
+-- 3. CRITICAL: Verifies participant is registered for the event before marking event attendance!
+-- 4. Prevents duplicate check-ins.
 CREATE OR REPLACE FUNCTION public.verify_and_checkin_pass(
     p_code TEXT,
     p_token TEXT,
@@ -474,7 +528,7 @@ CREATE OR REPLACE FUNCTION public.verify_and_checkin_pass(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_part RECORD;
@@ -565,6 +619,21 @@ BEGIN
 
     -- 4. Event Station Check-In
     ELSIF p_station = 'event' THEN
+        -- CRITICAL BUSINESS LOGIC CHECK: Verify attendee is registered for this event!
+        IF NOT EXISTS (
+            SELECT 1
+            FROM public.registrations r
+            WHERE r.participant_id = v_part.id
+              AND r.event_id = p_event_id
+              AND r.status IN ('registered', 'confirmed', 'verified', 'paid')
+        ) THEN
+            RETURN jsonb_build_object(
+                'valid', false,
+                'is_not_registered', true,
+                'error', 'ACCESS_DENIED: Participant is not registered for this event.'
+            );
+        END IF;
+
         SELECT marked_at INTO v_existing_checkin
         FROM public.event_attendance
         WHERE participant_id = v_part.id
@@ -623,6 +692,9 @@ GRANT EXECUTE ON FUNCTION public.get_registrations_by_email(text) TO anon, authe
 -- Authenticated-Only RPCs: pass_token is ONLY returned to verified users / staff
 REVOKE EXECUTE ON FUNCTION public.get_my_pass_credential() FROM anon;
 GRANT EXECUTE ON FUNCTION public.get_my_pass_credential() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.link_participant_to_auth() FROM anon;
+GRANT EXECUTE ON FUNCTION public.link_participant_to_auth() TO authenticated, service_role;
 
 REVOKE EXECUTE ON FUNCTION public.verify_and_checkin_pass(text, text, text, uuid, text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.verify_and_checkin_pass(text, text, text, uuid, text) TO authenticated, service_role;
