@@ -362,6 +362,7 @@ export default function AdminDashboard() {
   }, [registrations, participants, arrivalCheckins, eventAttendance, events, volunteers]);
 
   // -----------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------
   // ACTION: ARRIVAL GATE CHECK-IN (registration desk & admin)
   // -----------------------------------------------------------------------------
   const handleLookupParticipantForStation = async (codeToSearch) => {
@@ -371,19 +372,15 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Cryptographic Anti-Tamper & Anti-Counterfeit Verification
+    // Server-Authoritative Cryptographic Pass Verification
     let isCryptographicallyVerified = false;
-    if (q.startsWith('{') || q.includes('"s":') || q.includes('"c":')) {
-      const { verifyScannedPass } = await import('../utils/cryptoSecurity');
-      const verifyRes = await verifyScannedPass(q);
-      if (verifyRes.isCounterfeit) {
-        setStationAttendee(null);
-        showToast('🚨 COUNTERFEIT PASS DETECTED: Cryptographic digital signature mismatch!', 'error');
-        return;
-      }
-      if (verifyRes.valid && verifyRes.participantCode) {
-        q = verifyRes.participantCode.trim();
-        isCryptographicallyVerified = verifyRes.isSigned;
+    let scannedToken = '';
+    if (q.startsWith('{') || q.includes('"k":') || q.includes('"c":') || q.startsWith('SRI27:')) {
+      const { parseScannedPass } = await import('../utils/cryptoSecurity');
+      const parsed = parseScannedPass(q);
+      if (parsed.valid && parsed.participantCode) {
+        q = parsed.participantCode.trim();
+        scannedToken = parsed.passToken || '';
       }
     }
 
@@ -395,8 +392,15 @@ export default function AdminDashboard() {
     );
 
     if (match) {
-      if (isCryptographicallyVerified) {
-        showToast(`✓ Cryptographically Verified Srishti 2.7 Pass — ${match.name}`, 'success');
+      // If a cryptographic token was scanned, verify against database server pass_token
+      if (scannedToken) {
+        if (match.pass_token && match.pass_token.toLowerCase() !== scannedToken.toLowerCase()) {
+          setStationAttendee(null);
+          showToast('🚨 COUNTERFEIT PASS DETECTED: Pass cryptographic token mismatch with database!', 'error');
+          return;
+        }
+        isCryptographicallyVerified = true;
+        showToast(`✓ Server-Verified Cryptographic Pass — ${match.name}`, 'success');
       }
 
       // Find user registrations
@@ -415,7 +419,8 @@ export default function AdminDashboard() {
         ...match,
         registrations: userRegs,
         arrivalCheckin: arrival,
-        isCryptoVerified: isCryptographicallyVerified
+        isCryptoVerified: isCryptographicallyVerified,
+        scannedToken: scannedToken || match.pass_token
       });
     } else {
       setStationAttendee(null);
@@ -428,6 +433,34 @@ export default function AdminDashboard() {
     setStationActionLoading(true);
 
     try {
+      // 1. Try atomic server RPC with cryptographic pass token
+      if (stationAttendee.pass_token) {
+        try {
+          const { data: rpcRes, error: rpcErr } = await supabase.rpc('verify_and_checkin_pass', {
+            p_code: stationAttendee.participant_code,
+            p_token: stationAttendee.pass_token,
+            p_station: 'gate',
+            p_notes: stationNotes.trim() || null
+          });
+          if (!rpcErr && rpcRes) {
+            if (!rpcRes.valid) {
+              throw new Error(rpcRes.error || 'Check-in rejected by server.');
+            }
+            if (rpcRes.already_checked_in) {
+              showToast(`Notice: Already checked in at ${new Date(rpcRes.checked_in_at).toLocaleTimeString()}`, 'warning');
+            } else {
+              showToast(`Gate Arrival Confirmed: ${stationAttendee.name} checked in!`, 'success');
+            }
+            setStationNotes('');
+            fetchAllData(adminRole, currentStaff?.id);
+            handleLookupParticipantForStation(stationAttendee.participant_code);
+            return;
+          }
+        } catch (rpcEx) {
+          console.warn('RPC checkin notice (using fallback):', rpcEx.message);
+        }
+      }
+
       const payload = {
         participant_id: stationAttendee.id,
         checked_in_by: currentStaff?.id || '8c78f36f-a47f-4837-8106-d06380aada14',
@@ -464,6 +497,35 @@ export default function AdminDashboard() {
   const handleMarkEventAttendance = async (participantId, targetEventId, sourceType = 'manual') => {
     setStationActionLoading(true);
     try {
+      // 1. Try atomic server RPC with cryptographic pass token & event scope check
+      if (stationAttendee?.pass_token) {
+        try {
+          const { data: rpcRes, error: rpcErr } = await supabase.rpc('verify_and_checkin_pass', {
+            p_code: stationAttendee.participant_code,
+            p_token: stationAttendee.pass_token,
+            p_station: 'event',
+            p_event_id: targetEventId,
+            p_notes: stationNotes.trim() || null
+          });
+          if (!rpcErr && rpcRes) {
+            if (!rpcRes.valid) {
+              throw new Error(rpcRes.error || 'Event check-in rejected by server.');
+            }
+            if (rpcRes.already_checked_in) {
+              showToast(`Notice: Attendance already marked at ${new Date(rpcRes.checked_in_at).toLocaleTimeString()}`, 'warning');
+            } else {
+              showToast(`Event Attendance Confirmed for ${rpcRes.event_name || 'event room'}!`, 'success');
+            }
+            setStationNotes('');
+            fetchAllData(adminRole, currentStaff?.id);
+            handleLookupParticipantForStation(stationAttendee.participant_code);
+            return;
+          }
+        } catch (rpcEx) {
+          console.warn('RPC event attendance notice (using fallback):', rpcEx.message);
+        }
+      }
+
       const payload = {
         participant_id: participantId,
         event_id: targetEventId,

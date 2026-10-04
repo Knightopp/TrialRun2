@@ -8,6 +8,7 @@ export async function generateCardImagePng({
   attendeeName = 'Participant',
   college = 'St Thomas College Thrissur',
   passCode = 'SRI27-PASS',
+  passToken = '',
   events = [],
   isVerified = true,
   statusText = 'VERIFIED'
@@ -287,11 +288,11 @@ export async function generateCardImagePng({
   const stubCenterX = bodyW + stubW / 2;
   ctx.fillText('SCAN ME', stubCenterX, 95);
 
-  // Generate & Draw Digitally Signed QR Code (Level H error correction)
+  // Generate & Draw Server-Authoritative QR Code (Level H error correction)
   let qrContent = passCode;
   try {
-    const { generateTamperProofQrPayload } = await import('./cryptoSecurity');
-    qrContent = await generateTamperProofQrPayload(passCode, attendeeName, events?.[0] || '');
+    const { generatePassPayload } = await import('./cryptoSecurity');
+    qrContent = generatePassPayload(passCode, passToken, attendeeName);
   } catch (_) {}
 
   const qrDataUrl = await QRCode.toDataURL(qrContent, {

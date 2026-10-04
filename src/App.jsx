@@ -671,6 +671,7 @@ export default function App() {
               pData = {
                 id: rpcRes.participant_id,
                 participant_code: rpcRes.participant_code || uniqueCode,
+                pass_token: rpcRes.pass_token || '',
                 name: formName.trim(),
                 email: cleanEmail,
                 college: formCollege.trim(),
@@ -790,11 +791,11 @@ export default function App() {
         }
       }
 
-      // Cryptographically signed tamper-proof QR code
+      // Server-authoritative QR code with cryptographic pass token
       let qrCodeString = participantPassCode;
       try {
-        const { generateTamperProofQrPayload } = await import('./utils/cryptoSecurity');
-        qrCodeString = await generateTamperProofQrPayload(participantPassCode, formName.trim(), activeEventData.label);
+        const { generatePassPayload } = await import('./utils/cryptoSecurity');
+        qrCodeString = generatePassPayload(participantPassCode, pData?.pass_token || '', formName.trim());
       } catch (_) {}
 
       const qrDataUrl = await QRCode.toDataURL(qrCodeString, {
@@ -813,6 +814,7 @@ export default function App() {
           attendeeName: formName,
           college: formCollege,
           passCode: participantPassCode,
+          passToken: pData?.pass_token || '',
           events: allEventsList,
           isVerified: true,
           statusText: 'VERIFIED'

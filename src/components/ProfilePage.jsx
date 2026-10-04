@@ -46,12 +46,13 @@ export default function ProfilePage() {
   useEffect(() => {
     const code = participantData?.participant_code || (isSuperAdmin ? 'ADMIN-PASS' : null);
     if (code) {
-      import('../utils/cryptoSecurity').then(({ generateTamperProofQrPayload }) => {
-        generateTamperProofQrPayload(
+      import('../utils/cryptoSecurity').then(({ generatePassPayload }) => {
+        const payload = generatePassPayload(
           code,
-          participantData?.name || (isSuperAdmin ? 'Master Superadmin' : ''),
-          registrations?.[0]?.events?.name || 'SRISHTI 2.7'
-        ).then(setSignedPassQr);
+          participantData?.pass_token || registrations?.[0]?.pass_token || '',
+          participantData?.name || (isSuperAdmin ? 'Master Superadmin' : '')
+        );
+        setSignedPassQr(payload);
       });
     }
   }, [participantData, registrations, isSuperAdmin]);
@@ -422,12 +423,13 @@ export default function ProfilePage() {
     const attendeeName = participantData?.name || (isSuperAdmin ? 'Master Superadmin' : 'Participant');
     const college = participantData?.college || (isSuperAdmin ? 'Srishti 2.7 HQ' : 'St Thomas College Thrissur');
     const passCode = participantData?.participant_code || registrations[0]?.participant_code || (isSuperAdmin ? 'ADMIN-PASS' : 'SRI27-PASS');
+    const passToken = participantData?.pass_token || registrations[0]?.pass_token || '';
     const events = isSuperAdmin 
       ? ['FULL ALL-ACCESS PASS', 'ADMIN COMMAND CENTER']
       : registrations.map(r => r.events?.name || r.event_name).filter(Boolean);
     const isVerified = isSuperAdmin || registrations.some(r => r.payment_status === 'verified' || r.status === 'verified') || !!participantData?.id;
     const statusText = isSuperAdmin ? 'SUPERADMIN' : (isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING'));
-    return { attendeeName, college, passCode, events, isVerified, statusText };
+    return { attendeeName, college, passCode, passToken, events, isVerified, statusText };
   };
 
   const handleEmailPassToUser = async () => {
@@ -452,6 +454,7 @@ export default function ProfilePage() {
         attendeeName: data.attendeeName,
         college: data.college,
         passCode: data.passCode,
+        passToken: data.passToken,
         events: data.events,
         isVerified: data.isVerified,
         statusText: data.statusText
@@ -503,6 +506,7 @@ export default function ProfilePage() {
         attendeeName: data.attendeeName,
         college: data.college,
         passCode: data.passCode,
+        passToken: data.passToken,
         events: data.events,
         isVerified: data.isVerified,
         statusText: data.statusText
