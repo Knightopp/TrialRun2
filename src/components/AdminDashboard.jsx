@@ -636,30 +636,65 @@ export default function AdminDashboard() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const eventCode = (eventFormData.event_code || '').trim().toUpperCase();
+      if (!eventCode) {
+        throw new Error('Event code is required (e.g. SRI27-AI)');
+      }
+      if (!eventFormData.name?.trim()) {
+        throw new Error('Event name is required');
+      }
+
       const payload = {
+        event_code: eventCode,
         name: eventFormData.name.trim(),
-        category: eventFormData.category.trim(),
-        venue: eventFormData.venue.trim(),
-        date: eventFormData.date,
-        start_time: eventFormData.start_time,
-        end_time: eventFormData.end_time,
-        capacity: Number(eventFormData.capacity) || null,
-        status: eventFormData.status || 'upcoming'
+        category: eventFormData.category?.trim() || 'TECHNICAL',
+        venue: eventFormData.venue?.trim() || 'Campus Venue',
+        date: eventFormData.date || new Date().toISOString().split('T')[0],
+        start_time: eventFormData.start_time ? `${eventFormData.start_time}:00`.substring(0, 8) : '10:00:00',
+        end_time: eventFormData.end_time ? `${eventFormData.end_time}:00`.substring(0, 8) : '12:00:00',
+        capacity: eventFormData.capacity ? Number(eventFormData.capacity) : null,
+        status: eventFormData.status || 'upcoming',
+        registration_fee: eventFormData.registration_fee !== undefined ? Number(eventFormData.registration_fee) : 0.00,
+        registration_type: eventFormData.registration_type || 'individual',
+        max_team_size: eventFormData.max_team_size ? Number(eventFormData.max_team_size) : 1,
+        is_spot_registration_enabled: eventFormData.is_spot_registration_enabled !== undefined ? Boolean(eventFormData.is_spot_registration_enabled) : true,
       };
 
-      const { error } = await supabase
-        .from('events')
-        .update(payload)
-        .eq('id', activeItem.id);
+      if (modalType === 'addEvent' || !activeItem) {
+        const { error } = await supabase
+          .from('events')
+          .insert([payload]);
 
-      if (error) throw error;
-      showToast(`Event updated successfully!`, 'success');
+        if (error) throw error;
+        showToast(`Event "${payload.name}" created successfully!`, 'success');
+      } else {
+        const { error } = await supabase
+          .from('events')
+          .update(payload)
+          .eq('id', activeItem.id);
+
+        if (error) throw error;
+        showToast(`Event "${payload.name}" updated successfully!`, 'success');
+      }
+
       setModalType(null);
       fetchAllData(adminRole, currentStaff?.id);
     } catch (err) {
-      showToast(err.message || 'Failed to update event', 'error');
+      showToast(err.message || 'Failed to save event', 'error');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId, eventName) => {
+    if (!window.confirm(`Are you sure you want to delete event "${eventName}"?`)) return;
+    try {
+      const { error } = await supabase.from('events').delete().eq('id', eventId);
+      if (error) throw error;
+      showToast(`Event "${eventName}" deleted successfully!`, 'success');
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || 'Failed to delete event', 'error');
     }
   };
 
@@ -1651,6 +1686,7 @@ export default function AdminDashboard() {
               {adminRole === 'admin' && (
                 <button 
                   onClick={() => {
+                    setActiveItem(null);
                     setEventFormData({
                       event_code: '',
                       name: '',
@@ -1660,7 +1696,11 @@ export default function AdminDashboard() {
                       start_time: '10:00',
                       end_time: '12:00',
                       capacity: 60,
-                      status: 'upcoming'
+                      status: 'upcoming',
+                      registration_fee: 0,
+                      registration_type: 'individual',
+                      max_team_size: 1,
+                      is_spot_registration_enabled: true
                     });
                     setModalType('addEvent');
                   }} 
@@ -1716,11 +1756,53 @@ export default function AdminDashboard() {
                       borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                       display: 'flex',
                       justifyContent: 'space-between',
+                      alignItems: 'center',
                       fontSize: '0.8rem',
                       color: '#cbd5e1'
                     }}>
-                      <span>Registered: <strong>{regCount}</strong></span>
-                      <span>Present: <strong style={{ color: '#38bdf8' }}>{attCount}</strong></span>
+                      <div>
+                        <span>Reg: <strong>{regCount}</strong></span>
+                        <span style={{ marginLeft: '0.6rem' }}>Att: <strong style={{ color: '#38bdf8' }}>{attCount}</strong></span>
+                      </div>
+
+                      {adminRole === 'admin' && (
+                        <div style={{ display: 'flex', gap: '0.35rem' }}>
+                          <button
+                            onClick={() => {
+                              setActiveItem(ev);
+                              setEventFormData({
+                                event_code: ev.event_code || '',
+                                name: ev.name || ev.label || '',
+                                category: ev.category || 'TECHNICAL',
+                                venue: ev.venue || '',
+                                date: ev.date || '2026-12-10',
+                                start_time: ev.start_time ? String(ev.start_time).substring(0, 5) : '10:00',
+                                end_time: ev.end_time ? String(ev.end_time).substring(0, 5) : '12:00',
+                                capacity: ev.capacity ?? 60,
+                                status: ev.status || 'upcoming',
+                                registration_fee: ev.registration_fee ?? 0,
+                                registration_type: ev.registration_type || 'individual',
+                                max_team_size: ev.max_team_size || 1,
+                                is_spot_registration_enabled: ev.is_spot_registration_enabled !== false
+                              });
+                              setModalType('editEvent');
+                            }}
+                            className="admin-btn admin-btn-secondary"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                            title="Edit Event"
+                          >
+                            <FiEdit2 />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEvent(ev.id, ev.name || ev.label)}
+                            className="admin-btn"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+                            title="Delete Event"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -2225,6 +2307,185 @@ export default function AdminDashboard() {
                 <button type="button" onClick={() => setModalType(null)} className="admin-btn admin-btn-secondary">Cancel</button>
                 <button type="submit" disabled={isSubmitting} className="admin-btn admin-btn-primary">
                   {isSubmitting ? 'Creating...' : 'Create Staff Member'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add or Edit Festival Event */}
+      {(modalType === 'addEvent' || modalType === 'editEvent') && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card" style={{ maxWidth: '640px' }}>
+            <div className="admin-modal-header">
+              <h3>{modalType === 'addEvent' ? 'Add New Festival Event' : 'Edit Festival Event'}</h3>
+              <button onClick={() => setModalType(null)} className="admin-modal-close"><FiX /></button>
+            </div>
+            <form onSubmit={handleSaveEvent}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="admin-form-group">
+                  <label>Event Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={eventFormData.name || ''}
+                    onChange={e => setEventFormData({ ...eventFormData, name: e.target.value })}
+                    className="admin-form-control"
+                    placeholder="e.g. AI Prompt Battle"
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label>Event Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={eventFormData.event_code || ''}
+                    onChange={e => setEventFormData({ ...eventFormData, event_code: e.target.value.toUpperCase() })}
+                    className="admin-form-control"
+                    placeholder="e.g. SRI27-PROMPT"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="admin-form-group">
+                  <label>Category</label>
+                  <select
+                    value={eventFormData.category || 'TECHNICAL'}
+                    onChange={e => setEventFormData({ ...eventFormData, category: e.target.value })}
+                    className="admin-select"
+                  >
+                    <option value="TECHNICAL">TECHNICAL</option>
+                    <option value="Coding">Coding</option>
+                    <option value="Robotics">Robotics</option>
+                    <option value="Web & App">Web & App</option>
+                    <option value="FUN">FUN</option>
+                    <option value="CULTURAL">CULTURAL</option>
+                    <option value="Gaming">Gaming</option>
+                    <option value="Workshops">Workshops</option>
+                  </select>
+                </div>
+
+                <div className="admin-form-group">
+                  <label>Venue</label>
+                  <input
+                    type="text"
+                    value={eventFormData.venue || ''}
+                    onChange={e => setEventFormData({ ...eventFormData, venue: e.target.value })}
+                    className="admin-form-control"
+                    placeholder="e.g. Main Auditorium / CS Lab 3"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div className="admin-form-group">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={eventFormData.date || '2026-12-10'}
+                    onChange={e => setEventFormData({ ...eventFormData, date: e.target.value })}
+                    className="admin-form-control"
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label>Start Time</label>
+                  <input
+                    type="time"
+                    value={eventFormData.start_time || '10:00'}
+                    onChange={e => setEventFormData({ ...eventFormData, start_time: e.target.value })}
+                    className="admin-form-control"
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label>End Time</label>
+                  <input
+                    type="time"
+                    value={eventFormData.end_time || '12:00'}
+                    onChange={e => setEventFormData({ ...eventFormData, end_time: e.target.value })}
+                    className="admin-form-control"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div className="admin-form-group">
+                  <label>Capacity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={eventFormData.capacity ?? 60}
+                    onChange={e => setEventFormData({ ...eventFormData, capacity: e.target.value })}
+                    className="admin-form-control"
+                    placeholder="60"
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label>Registration Fee (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="10"
+                    value={eventFormData.registration_fee ?? 0}
+                    onChange={e => setEventFormData({ ...eventFormData, registration_fee: e.target.value })}
+                    className="admin-form-control"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="admin-form-group">
+                  <label>Status</label>
+                  <select
+                    value={eventFormData.status || 'upcoming'}
+                    onChange={e => setEventFormData({ ...eventFormData, status: e.target.value })}
+                    className="admin-select"
+                  >
+                    <option value="upcoming">Upcoming</option>
+                    <option value="ongoing">Ongoing (Live)</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="admin-form-group">
+                  <label>Registration Type</label>
+                  <select
+                    value={eventFormData.registration_type || 'individual'}
+                    onChange={e => setEventFormData({ ...eventFormData, registration_type: e.target.value })}
+                    className="admin-select"
+                  >
+                    <option value="individual">Individual</option>
+                    <option value="team">Team Event</option>
+                  </select>
+                </div>
+
+                {eventFormData.registration_type === 'team' && (
+                  <div className="admin-form-group">
+                    <label>Max Team Size</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={eventFormData.max_team_size || 4}
+                      onChange={e => setEventFormData({ ...eventFormData, max_team_size: Number(e.target.value) })}
+                      className="admin-form-control"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <button type="button" onClick={() => setModalType(null)} className="admin-btn admin-btn-secondary">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="admin-btn admin-btn-primary">
+                  {isSubmitting ? 'Saving...' : modalType === 'addEvent' ? 'Create Event' : 'Save Changes'}
                 </button>
               </div>
             </form>
