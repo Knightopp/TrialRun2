@@ -317,16 +317,22 @@ export default function App() {
         }
       } catch (_) {}
       
-      // Async query Supabase if email is complete
+      // Async query Supabase via secure RPC if email is complete
       if (cleanEmail.includes('@') && cleanEmail.includes('.')) {
         try {
           const { supabase } = await import('./supabaseClient');
-          const { data } = await supabase
-            .from('participants')
-            .select('*')
-            .ilike('email', cleanEmail)
-            .limit(1)
-            .maybeSingle();
+          let data = null;
+          try {
+            const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
+            if (rpcRows && rpcRows.length > 0) data = rpcRows[0];
+          } catch (_) {}
+
+          if (!data) {
+            try {
+              const { data: directData } = await supabase.from('participants').select('*').ilike('email', cleanEmail).limit(1).maybeSingle();
+              if (directData) data = directData;
+            } catch (_) {}
+          }
 
           if (data) {
             if (data.name) { setFormName(data.name); localStorage.setItem('srishti_user_name', data.name); }
@@ -376,17 +382,28 @@ export default function App() {
         if (!localPhone) setFormPhone('+91 99999 99999');
       }
 
-      // 2. Fetch fresh profile from Supabase database
+      // 2. Fetch fresh profile from Supabase database (RPC first, fallback to direct)
       try {
         const { supabase } = await import('./supabaseClient');
-        const { data, error } = await supabase
-          .from('participants')
-          .select('*')
-          .ilike('email', cleanEmail)
-          .limit(1)
-          .maybeSingle();
+        let data = null;
+        try {
+          const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
+          if (rpcRows && rpcRows.length > 0) data = rpcRows[0];
+        } catch (_) {}
 
-        if (data && !error) {
+        if (!data) {
+          try {
+            const { data: directData } = await supabase
+              .from('participants')
+              .select('*')
+              .ilike('email', cleanEmail)
+              .limit(1)
+              .maybeSingle();
+            if (directData) data = directData;
+          } catch (_) {}
+        }
+
+        if (data) {
           if (data.name) {
             setFormName(data.name);
             localStorage.setItem('srishti_user_name', data.name);
@@ -636,11 +653,22 @@ export default function App() {
       if (!pData) {
         try {
           const cleanEmail = formEmail.trim().toLowerCase();
-          const { data: existingP } = await supabase
-            .from('participants')
-            .select('*')
-            .ilike('email', cleanEmail)
-            .maybeSingle();
+          let existingP = null;
+          try {
+            const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
+            if (rpcRows && rpcRows.length > 0) existingP = rpcRows[0];
+          } catch (_) {}
+
+          if (!existingP) {
+            try {
+              const { data: directP } = await supabase
+                .from('participants')
+                .select('*')
+                .ilike('email', cleanEmail)
+                .maybeSingle();
+              if (directP) existingP = directP;
+            } catch (_) {}
+          }
 
           if (existingP) {
             pData = existingP;
@@ -652,16 +680,14 @@ export default function App() {
             if (formRoll.trim() && formRoll.trim() !== existingP.department) updatePayload.department = formRoll.trim();
 
             if (Object.keys(updatePayload).length > 0) {
-              const { data: updatedP } = await supabase
+              await supabase
                 .from('participants')
                 .update(updatePayload)
-                .eq('id', existingP.id)
-                .select('*')
-                .maybeSingle();
-              if (updatedP) pData = updatedP;
+                .eq('id', existingP.id);
             }
           } else {
-            const { data: newP, error: pInsErr } = await supabase
+            // INSERT ONLY without .select() - strictly adheres to public INSERT-only RLS
+            await supabase
               .from('participants')
               .insert([{
                 participant_code: uniqueCode,
@@ -671,13 +697,28 @@ export default function App() {
                 college: formCollege.trim() || 'Participant',
                 department: formRoll.trim() || 'General',
                 year: '2026'
-              }])
-              .select('*')
-              .maybeSingle();
+              }]);
 
-            if (!pInsErr && newP) {
-              pData = newP;
-              participantPassCode = newP.participant_code;
+            // Retrieve created record via secure RPC
+            try {
+              const { data: createdRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
+              if (createdRows && createdRows.length > 0) {
+                pData = createdRows[0];
+                participantPassCode = pData.participant_code;
+              }
+            } catch (_) {}
+
+            if (!pData) {
+              pData = {
+                participant_code: uniqueCode,
+                name: formName.trim() || 'Attendee',
+                email: cleanEmail,
+                phone: formPhone.trim() || 'N/A',
+                college: formCollege.trim() || 'Participant',
+                department: formRoll.trim() || 'General',
+                year: '2026'
+              };
+              participantPassCode = uniqueCode;
             }
           }
 

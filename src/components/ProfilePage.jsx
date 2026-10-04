@@ -84,18 +84,28 @@ export default function ProfilePage() {
   const fetchUserData = async (userEmail) => {
     try {
       const clean = (userEmail || '').trim().toLowerCase();
-      const { data: participant, error: pError } = await supabase
-        .from('participants')
-        .select('*')
-        .ilike('email', clean)
-        .limit(1)
-        .maybeSingle();
+      let currentParticipant = null;
 
-      if (pError) console.warn('Participant lookup error:', pError);
+      // 1. Try secure Security Definer RPC
+      try {
+        const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: clean });
+        if (rpcRows && rpcRows.length > 0) currentParticipant = rpcRows[0];
+      } catch (_) {}
 
-      let currentParticipant = participant;
+      // 2. Direct query fallback
+      if (!currentParticipant) {
+        try {
+          const { data: directP } = await supabase
+            .from('participants')
+            .select('*')
+            .ilike('email', clean)
+            .limit(1)
+            .maybeSingle();
+          if (directP) currentParticipant = directP;
+        } catch (_) {}
+      }
 
-      // Local profile fallback if Supabase RLS limits select
+      // 3. Local profile fallback if Supabase RLS limits select
       if (!currentParticipant) {
         const cached = localStorage.getItem(`srishti_profile_${clean}`);
         if (cached) {
@@ -130,27 +140,31 @@ export default function ProfilePage() {
       }
 
       let regs = [];
-      if (currentParticipant?.id) {
-        const { data: rData, error: rError } = await supabase
-          .from('registrations')
-          .select('*, events(*)')
-          .eq('participant_id', currentParticipant.id);
-        if (!rError && rData) regs = rData;
-      }
-
-      // Fallback: search registrations via participant email join if participant_id lookup had no results
-      if (regs.length === 0) {
-        try {
-          const { data: relRegs } = await supabase
-            .from('registrations')
-            .select('*, events(*), participants!inner(id, email, name, college, phone, participant_code)')
-            .ilike('participants.email', clean);
-          if (relRegs && relRegs.length > 0) {
-            regs = relRegs;
-            if (!currentParticipant && relRegs[0]?.participants) {
-              setParticipantData(relRegs[0].participants);
+      // 1. Try secure registrations RPC
+      try {
+        const { data: rpcRegs } = await supabase.rpc('get_registrations_by_email', { lookup_email: clean });
+        if (rpcRegs && rpcRegs.length > 0) {
+          regs = rpcRegs.map(r => ({
+            ...r,
+            events: {
+              name: r.event_name,
+              event_code: r.event_code,
+              venue: r.event_venue,
+              date: r.event_date,
+              start_time: r.event_time
             }
-          }
+          }));
+        }
+      } catch (_) {}
+
+      // 2. Direct query fallback
+      if (regs.length === 0 && currentParticipant?.id) {
+        try {
+          const { data: rData } = await supabase
+            .from('registrations')
+            .select('*, events(*)')
+            .eq('participant_id', currentParticipant.id);
+          if (rData) regs = rData;
         } catch (_) {}
       }
 
@@ -340,17 +354,19 @@ export default function ProfilePage() {
 
     // 2. Attempt sync to Supabase without letting RLS errors block the user
     try {
-      const { data, error: insertError } = await supabase
+      await supabase
         .from('participants')
-        .insert([payload])
-        .select()
-        .maybeSingle();
+        .insert([payload]);
 
-      if (!insertError && data) {
-        setParticipantData(data);
-        localStorage.setItem(`srishti_profile_${userEmail}`, JSON.stringify(data));
-      } else {
-        console.warn('Participant DB notice (persisted locally):', insertError);
+      try {
+        const { data: createdRows } = await supabase.rpc('get_participant_by_email', { lookup_email: userEmail });
+        if (createdRows && createdRows.length > 0) {
+          setParticipantData(createdRows[0]);
+          localStorage.setItem(`srishti_profile_${userEmail}`, JSON.stringify(createdRows[0]));
+        } else {
+          setParticipantData(payload);
+        }
+      } catch (_) {
         setParticipantData(payload);
       }
     } catch (err) {
