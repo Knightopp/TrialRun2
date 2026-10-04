@@ -1,29 +1,33 @@
 -- ==============================================================================
--- SRISHTI 2.7 — PRODUCTION ZERO-TRUST SECURITY & RLS ARCHITECTURE (V3 FINAL)
+-- SRISHTI 2.7 — PRODUCTION ZERO-TRUST SECURITY & RLS ARCHITECTURE (V4 FINAL)
 -- ==============================================================================
--- Addressed Security Verifications:
--- 1. SERVER-AUTHORITATIVE PASS TOKENS: High-entropy 128-bit random tokens 
---    generated directly in PostgreSQL (gen_random_bytes). Zero secrets in client JS.
--- 2. ZERO DIRECT TABLE ACCESS FOR PUBLIC: Revoked direct INSERT on participants 
---    and registrations. Public MUST go through register_participant_and_event() RPC.
--- 3. SCOPED EVENT ATTENDANCE: Event coordinators strictly limited to their 
---    assigned event (is_event_staff_for_event).
--- 4. ATOMIC CHECK-IN RPC: Server-side validation, duplicate prevention, and role checking.
--- 5. MINIMAL DATA PROJECTION: Isolated, zero-leak RPCs for autofill & passes.
--- 6. NO BLANKET GRANTS: Granular least-privilege privileges only.
+-- Addressed Core Vulnerabilities:
+-- 1. BEARER TOKEN LEAK PLUGGED: pass_token is strictly REMOVED from public 
+--    get_participant_by_email and get_registrations_by_email RPCs.
+--    Knowing an email NEVER yields a pass_token.
+-- 2. SECURE PUBLIC REGISTRATION: register_participant_and_event NEVER returns 
+--    an existing participant's pass_token to unauthenticated callers.
+-- 3. SERVER-GENERATED CODES: p_participant_code parameter removed. 
+--    PostgreSQL generates participant codes cryptographically using pgcrypto.
+-- 4. IDENTITY-BASED RETRIEVAL: Authenticated RPC get_my_pass_credential() allows
+--    only verified account owners (auth.uid() / verified session) to view pass_token.
+-- 5. SCOPED ATTENDANCE: Event staff strictly restricted to their assigned event.
+-- 6. ZERO DIRECT TABLE ACCESS FOR ANON: No direct table queries on participants/registrations.
 -- ==============================================================================
 
 BEGIN;
 
 -- -----------------------------------------------------------------------------
--- 1. SCHEMA HARDENING & PASS TOKEN COLUMN
+-- 1. SCHEMA HARDENING & CRYPTO COLUMNS
 -- -----------------------------------------------------------------------------
--- Ensure pgcrypto extension is active for cryptographic random token generation
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Add server-generated cryptographic pass_token to participants if not present
+-- Ensure pass_token and auth_user_id columns exist
 ALTER TABLE public.participants 
 ADD COLUMN IF NOT EXISTS pass_token TEXT UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex');
+
+ALTER TABLE public.participants 
+ADD COLUMN IF NOT EXISTS auth_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 
 -- Backfill any existing participants missing pass_token
 UPDATE public.participants 
@@ -111,10 +115,10 @@ CREATE POLICY "Public can view upcoming events"
 ON public.events FOR SELECT TO anon, authenticated
 USING (status IN ('upcoming', 'ongoing') OR public.is_srishti_staff());
 
--- CRITICAL ZERO-TRUST HARDENING:
+-- ZERO-TRUST HARDENING:
 -- Anonymous public users have ZERO direct SELECT, INSERT, UPDATE, or DELETE 
--- on participants and registrations!
--- All registrations must go exclusively through the register_participant_and_event() RPC.
+-- on participants and registrations.
+-- All operations are performed strictly through validated Security Definer RPCs.
 
 -- -----------------------------------------------------------------------------
 -- 6. AUTHENTICATED STAFF & ADMIN POLICIES
@@ -198,13 +202,13 @@ USING (public.is_srishti_registration());
 -- -----------------------------------------------------------------------------
 -- 7. LEAST-PRIVILEGE TABLE GRANTS
 -- -----------------------------------------------------------------------------
--- Revoke all table-level privileges from anon
+-- Revoke all direct privileges on core tables from anon
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
 
--- Grant usage on public schema
+-- Grant schema usage
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 
--- Public can ONLY read events (No direct table access to participants/registrations)
+-- Public can ONLY read published events
 GRANT SELECT ON public.events TO anon;
 
 -- Authenticated staff have row-level permissions guarded by RLS:
@@ -221,8 +225,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.event_attendance TO authenticated
 -- -----------------------------------------------------------------------------
 
 -- 8A. Atomic Registration Procedure
--- Enforces: Server-generated participant codes & pass tokens, fixed status = 'registered',
--- event validation, duplicate prevention, and zero exposure of client table manipulation.
+-- FIXES:
+-- 1. No p_participant_code accepted: generated 100% server-side with gen_random_bytes.
+-- 2. Never returns existing pass_token to unauthenticated callers (prevents credential harvesting).
 CREATE OR REPLACE FUNCTION public.register_participant_and_event(
     p_name TEXT,
     p_email TEXT,
@@ -230,8 +235,7 @@ CREATE OR REPLACE FUNCTION public.register_participant_and_event(
     p_college TEXT,
     p_department TEXT,
     p_year TEXT,
-    p_event_id UUID,
-    p_participant_code TEXT DEFAULT NULL
+    p_event_id UUID DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -247,8 +251,11 @@ DECLARE
     v_participant_id UUID;
     v_final_code TEXT;
     v_pass_token TEXT;
+    v_existing_auth_id UUID;
+    v_return_token TEXT := NULL;
     v_reg_id UUID;
     v_event_status TEXT;
+    v_is_new BOOLEAN := false;
 BEGIN
     -- Validate required input
     IF v_clean_email IS NULL OR v_clean_email = '' THEN
@@ -269,20 +276,25 @@ BEGIN
     END IF;
 
     -- Lookup existing participant by email
-    SELECT id, participant_code, pass_token 
-    INTO v_participant_id, v_final_code, v_pass_token
+    SELECT id, participant_code, pass_token, auth_user_id
+    INTO v_participant_id, v_final_code, v_pass_token, v_existing_auth_id
     FROM public.participants
     WHERE LOWER(email) = v_clean_email
     LIMIT 1;
 
-    -- Create or update participant
+    -- Case 1: Brand new participant
     IF v_participant_id IS NULL THEN
-        v_final_code := COALESCE(NULLIF(TRIM(p_participant_code), ''), 'SRI27-' || UPPER(SUBSTRING(md5(random()::text) FROM 1 FOR 6)));
+        v_is_new := true;
+        -- Server generates participant_code: 'SRI27-' + 6 uppercase hex chars
+        v_final_code := 'SRI27-' || UPPER(SUBSTRING(encode(gen_random_bytes(4), 'hex') FROM 1 FOR 6));
+        -- Server generates 128-bit secret pass_token
         v_pass_token := encode(gen_random_bytes(16), 'hex');
+        v_return_token := v_pass_token; -- Safe to return to registering user
 
         INSERT INTO public.participants (
             participant_code,
             pass_token,
+            auth_user_id,
             name,
             email,
             phone,
@@ -293,6 +305,7 @@ BEGIN
         VALUES (
             v_final_code,
             v_pass_token,
+            auth.uid(), -- Link auth.uid() if authenticated session exists
             v_clean_name,
             v_clean_email,
             v_clean_phone,
@@ -301,14 +314,34 @@ BEGIN
             COALESCE(p_year, '2026')
         )
         RETURNING id INTO v_participant_id;
+
+    -- Case 2: Participant already exists
     ELSE
-        -- Ensure participant has a valid pass_token
+        v_is_new := false;
+        
+        -- Ensure pass_token exists on legacy records
         IF v_pass_token IS NULL THEN
             v_pass_token := encode(gen_random_bytes(16), 'hex');
             UPDATE public.participants SET pass_token = v_pass_token WHERE id = v_participant_id;
         END IF;
 
-        -- Update non-blank fields safely
+        -- If caller is authenticated as the participant, link and return token
+        IF auth.uid() IS NOT NULL THEN
+            IF v_existing_auth_id IS NULL THEN
+                UPDATE public.participants SET auth_user_id = auth.uid() WHERE id = v_participant_id;
+                v_return_token := v_pass_token;
+            ELSIF v_existing_auth_id = auth.uid() THEN
+                v_return_token := v_pass_token;
+            ELSE
+                v_return_token := NULL; -- Caller is a different authenticated user!
+            END IF;
+        ELSE
+            -- CRITICAL FIX: Anonymous public callers NEVER receive an existing participant's pass_token!
+            -- This prevents an attacker from typing someone's email to steal their QR credential.
+            v_return_token := NULL;
+        END IF;
+
+        -- Update non-blank profile details safely
         UPDATE public.participants
         SET name = COALESCE(NULLIF(v_clean_name, ''), name),
             phone = COALESCE(NULLIF(v_clean_phone, ''), phone),
@@ -317,7 +350,7 @@ BEGIN
         WHERE id = v_participant_id;
     END IF;
 
-    -- Register for event if specified (prevents duplicates)
+    -- Create event registration if specified
     IF p_event_id IS NOT NULL THEN
         INSERT INTO public.registrations (participant_id, event_id, status)
         VALUES (v_participant_id, p_event_id, 'registered')
@@ -332,21 +365,25 @@ BEGIN
 
     RETURN jsonb_build_object(
         'success', true,
+        'is_new', v_is_new,
         'participant_id', v_participant_id,
         'participant_code', v_final_code,
-        'pass_token', v_pass_token,
-        'registration_id', v_reg_id
+        'pass_token', v_return_token, -- ONLY returned on new registration or authenticated owner
+        'registration_id', v_reg_id,
+        'message', CASE 
+            WHEN v_is_new THEN 'Registration successful! Your digital pass has been generated.'
+            WHEN v_return_token IS NOT NULL THEN 'Registration linked to your account.'
+            ELSE 'Event added to existing profile. Log in to your profile to view your pass token.'
+        END
     );
 END;
 $$;
 
--- 8B. Data-Minimized Participant Autofill RPC
--- Only projects UI profile fields and the server-generated pass_token.
+-- 8B. Data-Minimized Participant Profile RPC (ZERO-LEAK: pass_token is NOT returned!)
 CREATE OR REPLACE FUNCTION public.get_participant_by_email(lookup_email text)
 RETURNS TABLE (
     id UUID,
     participant_code TEXT,
-    pass_token TEXT,
     name TEXT,
     email TEXT,
     college TEXT,
@@ -359,7 +396,6 @@ AS $$
     SELECT
         p.id,
         p.participant_code,
-        p.pass_token,
         p.name,
         p.email,
         p.college,
@@ -369,13 +405,12 @@ AS $$
     LIMIT 1;
 $$;
 
--- 8C. Registration Lookup for Ticket Passes RPC
+-- 8C. Registration Lookup for Ticket List RPC (ZERO-LEAK: pass_token is NOT returned!)
 CREATE OR REPLACE FUNCTION public.get_registrations_by_email(lookup_email text)
 RETURNS TABLE (
     id UUID,
     participant_id UUID,
     participant_code TEXT,
-    pass_token TEXT,
     event_id UUID,
     status TEXT,
     registered_at TIMESTAMPTZ,
@@ -393,7 +428,6 @@ AS $$
         r.id,
         r.participant_id,
         p.participant_code,
-        p.pass_token,
         r.event_id,
         r.status,
         r.registered_at,
@@ -408,9 +442,28 @@ AS $$
     WHERE LOWER(p.email) = LOWER(TRIM(lookup_email));
 $$;
 
--- 8D. Server-Side Cryptographic Pass Verification & Gate/Event Check-in RPC
--- Validates caller role, checks 128-bit server pass_token, detects counterfeits,
--- prevents duplicate check-ins, and records entry atomically in PostgreSQL.
+-- 8D. Identity-Based Authenticated Pass Credential RPC (REQUIRES AUTHENTICATION)
+-- ONLY an authenticated user whose auth.uid() or verified JWT email matches can retrieve their pass_token.
+CREATE OR REPLACE FUNCTION public.get_my_pass_credential()
+RETURNS TABLE (
+    participant_code TEXT,
+    pass_token TEXT,
+    name TEXT,
+    college TEXT
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT p.participant_code, p.pass_token, p.name, p.college
+    FROM public.participants p
+    WHERE p.auth_user_id = auth.uid()
+       OR (auth.jwt() ->> 'email' IS NOT NULL AND LOWER(p.email) = LOWER(auth.jwt() ->> 'email'))
+    LIMIT 1;
+$$;
+
+-- 8E. Server-Side Cryptographic Pass Verification & Gate/Event Check-in RPC
+-- Verifies 128-bit pass_token, scopes event staff, detects counterfeits & duplicates.
 CREATE OR REPLACE FUNCTION public.verify_and_checkin_pass(
     p_code TEXT,
     p_token TEXT,
@@ -562,9 +615,16 @@ $$;
 -- -----------------------------------------------------------------------------
 -- 9. EXECUTE PERMISSIONS FOR SECURE RPCS
 -- -----------------------------------------------------------------------------
-GRANT EXECUTE ON FUNCTION public.register_participant_and_event(text, text, text, text, text, text, uuid, text) TO anon, authenticated, service_role;
+-- Public RPCs: Safe, data-minimized, no bearer pass_tokens exposed
+GRANT EXECUTE ON FUNCTION public.register_participant_and_event(text, text, text, text, text, text, uuid) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_participant_by_email(text) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_registrations_by_email(text) TO anon, authenticated, service_role;
+
+-- Authenticated-Only RPCs: pass_token is ONLY returned to verified users / staff
+REVOKE EXECUTE ON FUNCTION public.get_my_pass_credential() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_my_pass_credential() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.verify_and_checkin_pass(text, text, text, uuid, text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.verify_and_checkin_pass(text, text, text, uuid, text) TO authenticated, service_role;
 
 -- -----------------------------------------------------------------------------

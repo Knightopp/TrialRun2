@@ -125,6 +125,26 @@ export default function ProfilePage() {
         };
       }
 
+      if (currentParticipant) {
+        // Retrieve pass_token ONLY via authenticated credential or local encrypted vault
+        if (!currentParticipant.pass_token) {
+          try {
+            const { data: credRows } = await supabase.rpc('get_my_pass_credential');
+            if (credRows && credRows.length > 0 && credRows[0].pass_token) {
+              currentParticipant.pass_token = credRows[0].pass_token;
+            }
+          } catch (_) {}
+
+          if (!currentParticipant.pass_token) {
+            try {
+              const { secureStorage } = await import('../utils/cryptoSecurity');
+              const localToken = await secureStorage.getItem(`srishti_token_${clean}`);
+              if (localToken) currentParticipant.pass_token = localToken;
+            } catch (_) {}
+          }
+        }
+      }
+
       setParticipantData(currentParticipant);
       
       if (currentParticipant) {

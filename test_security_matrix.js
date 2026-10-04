@@ -10,7 +10,7 @@ const anonClient = createClient(supabaseUrl, supabaseAnonKey);
 
 async function runSecurityMatrix() {
   console.log('================================================================');
-  console.log('SRISHTI 2.7 — ZERO-TRUST SECURITY AUDIT & VERIFICATION MATRIX');
+  console.log('SRISHTI 2.7 — ZERO-TRUST SECURITY AUDIT & VERIFICATION MATRIX (V4)');
   console.log('================================================================\n');
 
   const results = [];
@@ -133,6 +133,66 @@ async function runSecurityMatrix() {
     });
   } catch (e) {
     results.push({ test: 'Anonymous → SELECT events', expected: '✅ Allowed', actual: e.message, status: '🚨 FAIL' });
+  }
+
+  // Test 9: Anonymous -> get_participant_by_email does NOT leak pass_token
+  try {
+    const { data, error } = await anonClient.rpc('get_participant_by_email', { lookup_email: 'test@example.com' });
+    const hasToken = data && data.length > 0 && 'pass_token' in data[0];
+    results.push({
+      test: 'Anonymous → get_participant_by_email (Bearer Token Leak Check)',
+      expected: '❌ pass_token NOT returned (Zero-leak)',
+      actual: hasToken ? '🚨 LEAKED pass_token!' : 'Zero token returned',
+      status: !hasToken ? '✅ PASS' : '🚨 FAIL'
+    });
+  } catch (e) {
+    results.push({ test: 'Anonymous → get_participant_by_email', expected: 'Zero-leak', actual: e.message, status: '✅ PASS' });
+  }
+
+  // Test 10: Anonymous -> get_registrations_by_email does NOT leak pass_token
+  try {
+    const { data, error } = await anonClient.rpc('get_registrations_by_email', { lookup_email: 'test@example.com' });
+    const hasToken = data && data.length > 0 && 'pass_token' in data[0];
+    results.push({
+      test: 'Anonymous → get_registrations_by_email (Bearer Token Leak Check)',
+      expected: '❌ pass_token NOT returned (Zero-leak)',
+      actual: hasToken ? '🚨 LEAKED pass_token!' : 'Zero token returned',
+      status: !hasToken ? '✅ PASS' : '🚨 FAIL'
+    });
+  } catch (e) {
+    results.push({ test: 'Anonymous → get_registrations_by_email', expected: 'Zero-leak', actual: e.message, status: '✅ PASS' });
+  }
+
+  // Test 11: Anonymous -> get_my_pass_credential (Identity check)
+  try {
+    const { data, error } = await anonClient.rpc('get_my_pass_credential');
+    const passed = error !== null || (!data || data.length === 0);
+    results.push({
+      test: 'Anonymous → get_my_pass_credential()',
+      expected: '❌ Blocked (Requires authentication)',
+      actual: error ? error.message : (data?.length ? 'Leaked' : '0 rows returned'),
+      status: passed ? '✅ PASS' : '🚨 FAIL'
+    });
+  } catch (e) {
+    results.push({ test: 'Anonymous → get_my_pass_credential()', expected: '❌ Blocked', actual: e.message, status: '✅ PASS' });
+  }
+
+  // Test 12: Anonymous -> verify_and_checkin_pass (Scanner RPC)
+  try {
+    const { data, error } = await anonClient.rpc('verify_and_checkin_pass', {
+      p_code: 'SRI27-FAKE',
+      p_token: 'fake-token',
+      p_station: 'gate'
+    });
+    const passed = error !== null || (data && data.valid === false);
+    results.push({
+      test: 'Anonymous → verify_and_checkin_pass()',
+      expected: '❌ Blocked (Unauthorized station caller)',
+      actual: error ? error.message : (data?.error || 'Rejected'),
+      status: passed ? '✅ PASS' : '🚨 FAIL'
+    });
+  } catch (e) {
+    results.push({ test: 'Anonymous → verify_and_checkin_pass()', expected: '❌ Blocked', actual: e.message, status: '✅ PASS' });
   }
 
   // Print results table

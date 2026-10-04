@@ -663,15 +663,28 @@ export default function App() {
               p_college: formCollege.trim() || 'Participant',
               p_department: formRoll.trim() || 'General',
               p_year: '2026',
-              p_event_id: resolvedEventId || null,
-              p_participant_code: uniqueCode
+              p_event_id: resolvedEventId || null
             });
 
             if (!rpcErr && rpcRes?.success) {
+              let activeToken = rpcRes.pass_token || '';
+              // If pass_token was not returned because user already existed, check device vault
+              if (!activeToken) {
+                try {
+                  const { secureStorage } = await import('./utils/cryptoSecurity');
+                  activeToken = (await secureStorage.getItem(`srishti_token_${cleanEmail}`)) || '';
+                } catch (_) {}
+              } else {
+                try {
+                  const { secureStorage } = await import('./utils/cryptoSecurity');
+                  await secureStorage.setItem(`srishti_token_${cleanEmail}`, activeToken);
+                } catch (_) {}
+              }
+
               pData = {
                 id: rpcRes.participant_id,
                 participant_code: rpcRes.participant_code || uniqueCode,
-                pass_token: rpcRes.pass_token || '',
+                pass_token: activeToken,
                 name: formName.trim(),
                 email: cleanEmail,
                 college: formCollege.trim(),
