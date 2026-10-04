@@ -49,6 +49,13 @@ BEGIN
         ALTER TABLE public.event_attendance 
         ADD CONSTRAINT event_attendance_unique_participant_event UNIQUE (participant_id, event_id);
     END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'registrations_unique_participant_event'
+    ) THEN
+        ALTER TABLE public.registrations 
+        ADD CONSTRAINT registrations_unique_participant_event UNIQUE (participant_id, event_id);
+    END IF;
 END $$;
 
 -- -----------------------------------------------------------------------------
@@ -327,6 +334,7 @@ BEGIN
         IF p_event_id IS NOT NULL THEN
             INSERT INTO public.registrations (participant_id, event_id, status)
             VALUES (v_participant_id, p_event_id, 'registered')
+            ON CONFLICT (participant_id, event_id) DO NOTHING
             RETURNING id INTO v_reg_id;
         END IF;
 
@@ -392,7 +400,7 @@ BEGIN
         IF p_event_id IS NOT NULL THEN
             INSERT INTO public.registrations (participant_id, event_id, status)
             VALUES (v_participant_id, p_event_id, 'registered')
-            ON CONFLICT DO NOTHING
+            ON CONFLICT (participant_id, event_id) DO NOTHING
             RETURNING id INTO v_reg_id;
 
             IF v_reg_id IS NULL THEN
