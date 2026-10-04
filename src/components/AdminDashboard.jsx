@@ -364,20 +364,41 @@ export default function AdminDashboard() {
   // -----------------------------------------------------------------------------
   // ACTION: ARRIVAL GATE CHECK-IN (registration desk & admin)
   // -----------------------------------------------------------------------------
-  const handleLookupParticipantForStation = (codeToSearch) => {
-    const q = (codeToSearch || stationCodeInput).trim().toUpperCase();
+  const handleLookupParticipantForStation = async (codeToSearch) => {
+    let q = (codeToSearch || stationCodeInput).trim();
     if (!q) {
       setStationAttendee(null);
       return;
     }
 
+    // Cryptographic Anti-Tamper & Anti-Counterfeit Verification
+    let isCryptographicallyVerified = false;
+    if (q.startsWith('{') || q.includes('"s":') || q.includes('"c":')) {
+      const { verifyScannedPass } = await import('../utils/cryptoSecurity');
+      const verifyRes = await verifyScannedPass(q);
+      if (verifyRes.isCounterfeit) {
+        setStationAttendee(null);
+        showToast('🚨 COUNTERFEIT PASS DETECTED: Cryptographic digital signature mismatch!', 'error');
+        return;
+      }
+      if (verifyRes.valid && verifyRes.participantCode) {
+        q = verifyRes.participantCode.trim();
+        isCryptographicallyVerified = verifyRes.isSigned;
+      }
+    }
+
+    const searchUpper = q.toUpperCase();
     const match = participants.find(p => 
-      (p.participant_code && p.participant_code.toUpperCase() === q) ||
-      (p.email && p.email.toUpperCase() === q) ||
+      (p.participant_code && p.participant_code.toUpperCase() === searchUpper) ||
+      (p.email && p.email.toUpperCase() === searchUpper) ||
       (p.phone && p.phone.includes(q))
     );
 
     if (match) {
+      if (isCryptographicallyVerified) {
+        showToast(`✓ Cryptographically Verified Srishti 2.7 Pass — ${match.name}`, 'success');
+      }
+
       // Find user registrations
       const userRegs = registrations.filter(r => 
         r.participant_id === match.id || 
@@ -393,7 +414,8 @@ export default function AdminDashboard() {
       setStationAttendee({
         ...match,
         registrations: userRegs,
-        arrivalCheckin: arrival
+        arrivalCheckin: arrival,
+        isCryptoVerified: isCryptographicallyVerified
       });
     } else {
       setStationAttendee(null);
@@ -1110,6 +1132,23 @@ export default function AdminDashboard() {
                         }}>
                           {stationAttendee.participant_code}
                         </span>
+                        {stationAttendee.isCryptoVerified && (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            background: 'rgba(16, 185, 129, 0.2)',
+                            border: '1px solid rgba(16, 185, 129, 0.4)',
+                            color: '#34d399',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '0.05em'
+                          }}>
+                            <FiShield /> CRYPTO-VERIFIED
+                          </span>
+                        )}
                       </div>
                       <p style={{ margin: '0 0 0.25rem 0', color: '#cbd5e1', fontSize: '0.9rem' }}>
                         🏫 {stationAttendee.college || 'St. Thomas College Thrissur'} • 📚 {stationAttendee.department || 'CS'} ({stationAttendee.year || '2026'})

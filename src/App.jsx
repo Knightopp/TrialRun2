@@ -720,7 +720,14 @@ export default function App() {
         }
       }
 
-      const qrDataUrl = await QRCode.toDataURL(participantPassCode, {
+      // Cryptographically signed tamper-proof QR code
+      let qrCodeString = participantPassCode;
+      try {
+        const { generateTamperProofQrPayload } = await import('./utils/cryptoSecurity');
+        qrCodeString = await generateTamperProofQrPayload(participantPassCode, formName.trim(), activeEventData.label);
+      } catch (_) {}
+
+      const qrDataUrl = await QRCode.toDataURL(qrCodeString, {
          width: 320,
          margin: 2,
          errorCorrectionLevel: 'H',

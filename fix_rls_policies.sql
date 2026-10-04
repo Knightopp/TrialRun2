@@ -64,7 +64,57 @@ GRANT ALL ON public.participants TO anon, authenticated, service_role;
 GRANT ALL ON public.registrations TO anon, authenticated, service_role;
 GRANT SELECT ON public.events TO anon, authenticated, service_role;
 
--- 7. Notify PostgREST to reload schema cache immediately
+-- 7. Secure Security Definer RPCs (Enables targeted zero-leak lookups)
+CREATE OR REPLACE FUNCTION public.get_participant_by_email(lookup_email text)
+RETURNS SETOF public.participants
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT *
+    FROM public.participants
+    WHERE LOWER(email) = LOWER(lookup_email)
+    LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_registrations_by_email(lookup_email text)
+RETURNS TABLE (
+    id UUID,
+    participant_id UUID,
+    event_id UUID,
+    status TEXT,
+    registered_at TIMESTAMPTZ,
+    event_name TEXT,
+    event_code TEXT,
+    event_venue TEXT,
+    event_date DATE,
+    event_time TIME
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT 
+        r.id,
+        r.participant_id,
+        r.event_id,
+        r.status,
+        r.registered_at,
+        e.name AS event_name,
+        e.event_code,
+        e.venue AS event_venue,
+        e.date AS event_date,
+        e.start_time AS event_time
+    FROM public.registrations r
+    JOIN public.participants p ON p.id = r.participant_id
+    JOIN public.events e ON e.id = r.event_id
+    WHERE LOWER(p.email) = LOWER(lookup_email);
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_participant_by_email(text) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_registrations_by_email(text) TO anon, authenticated, service_role;
+
+-- 8. Notify PostgREST to reload schema cache immediately
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;

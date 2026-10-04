@@ -287,8 +287,14 @@ export async function generateCardImagePng({
   const stubCenterX = bodyW + stubW / 2;
   ctx.fillText('SCAN ME', stubCenterX, 95);
 
-  // Generate & Draw QR Code (level H matches QRCodeSVG exactly)
-  const qrDataUrl = await QRCode.toDataURL(passCode, {
+  // Generate & Draw Digitally Signed QR Code (Level H error correction)
+  let qrContent = passCode;
+  try {
+    const { generateTamperProofQrPayload } = await import('./cryptoSecurity');
+    qrContent = await generateTamperProofQrPayload(passCode, attendeeName, events?.[0] || '');
+  } catch (_) {}
+
+  const qrDataUrl = await QRCode.toDataURL(qrContent, {
     width: 360,
     margin: 2,
     errorCorrectionLevel: 'H',

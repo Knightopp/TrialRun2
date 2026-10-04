@@ -39,8 +39,22 @@ export default function ProfilePage() {
   const [emailPassMsg, setEmailPassMsg] = useState(null);
   const [arrivalCheckin, setArrivalCheckin] = useState(null);
   const [eventAttendance, setEventAttendance] = useState({});
+  const [signedPassQr, setSignedPassQr] = useState('');
 
   const isSuperAdmin = (session?.user?.email || localStorage.getItem('srishti_session') || '').trim().toLowerCase() === 'tsrknight@gmail.com';
+
+  useEffect(() => {
+    const code = participantData?.participant_code || (isSuperAdmin ? 'ADMIN-PASS' : null);
+    if (code) {
+      import('../utils/cryptoSecurity').then(({ generateTamperProofQrPayload }) => {
+        generateTamperProofQrPayload(
+          code,
+          participantData?.name || (isSuperAdmin ? 'Master Superadmin' : ''),
+          registrations?.[0]?.events?.name || 'SRISHTI 2.7'
+        ).then(setSignedPassQr);
+      });
+    }
+  }, [participantData, registrations, isSuperAdmin]);
 
   useEffect(() => {
     const rawEmail = localStorage.getItem('srishti_session');
@@ -710,7 +724,7 @@ export default function ProfilePage() {
                                     <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', borderBottom: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 0 4px 0' }}></div>
                                     
                                     <QRCodeSVG
-                                      value={passCode}
+                                      value={signedPassQr || passCode}
                                       size={115}
                                       bgColor="#ffffff"
                                       fgColor="#000000"
