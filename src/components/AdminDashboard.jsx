@@ -15,12 +15,15 @@ import './AdminDashboard.css';
 
 // Official SRISHTI 2.7 Database Events Catalog
 const DEFAULT_FEST_EVENTS = [
-  { id: 'SRI27-TREASURE', event_code: 'SRI27-TREASURE', label: 'TREASURE HUNT', name: 'Treasure Hunt', category: 'FUN', date: '2026-12-10', start_time: '10:00', end_time: '12:00', venue: 'College Campus', status: 'upcoming', capacity: 100 },
-  { id: 'SRI27-WALTZ', event_code: 'SRI27-WALTZ', label: 'WALTZ (DANCE)', name: 'Waltz', category: 'CULTURAL', date: '2026-12-10', start_time: '14:00', end_time: '16:00', venue: 'Main Auditorium', status: 'upcoming', capacity: 80 },
-  { id: 'SRI27-QUIZ', event_code: 'SRI27-QUIZ', label: 'IT QUIZ', name: 'Quiz', category: 'TECHNICAL', date: '2026-12-10', start_time: '10:00', end_time: '12:00', venue: 'Seminar Hall', status: 'upcoming', capacity: 60 },
-  { id: 'SRI27-CODE', event_code: 'SRI27-CODE', label: 'CODING & DEBUGGING', name: 'Coding and Debugging', category: 'TECHNICAL', date: '2026-12-11', start_time: '10:00', end_time: '12:00', venue: 'Computer Lab', status: 'upcoming', capacity: 50 },
-  { id: 'SRI27-TRACEBOT', event_code: 'SRI27-TRACEBOT', label: 'TRACE BOT', name: 'Tracebot', category: 'TECHNICAL', date: '2026-12-11', start_time: '13:00', end_time: '15:00', venue: 'CS Lab', status: 'upcoming', capacity: 40 },
-  { id: 'SRI27-RELAY', event_code: 'SRI27-RELAY', label: 'RELAY CODING', name: 'Relay Coding', category: 'TECHNICAL', date: '2026-12-11', start_time: '10:00', end_time: '12:00', venue: 'Computer Lab', status: 'upcoming', capacity: 50 }
+  { id: 'SRI27-TREASURE', event_code: 'SRI27-TREASURE', label: 'TREASURE HUNT', name: 'Treasure Hunt', category: 'FUN', date: '2026-12-10', start_time: '10:00', end_time: '12:00', venue: 'College Campus', status: 'upcoming', capacity: 100, registration_type: 'team', max_team_size: 4 },
+  { id: 'SRI27-WALTZ', event_code: 'SRI27-WALTZ', label: 'WALTZ (DANCE)', name: 'Waltz', category: 'CULTURAL', date: '2026-12-10', start_time: '14:00', end_time: '16:00', venue: 'Main Auditorium', status: 'upcoming', capacity: 80, registration_type: 'team', max_team_size: 8 },
+  { id: 'SRI27-QUIZ', event_code: 'SRI27-QUIZ', label: 'IT QUIZ', name: 'Quiz', category: 'TECHNICAL', date: '2026-12-10', start_time: '10:00', end_time: '12:00', venue: 'Seminar Hall', status: 'upcoming', capacity: 60, registration_type: 'team', max_team_size: 2 },
+  { id: 'SRI27-CODE', event_code: 'SRI27-CODE', label: 'CODING & DEBUGGING', name: 'Coding and Debugging', category: 'TECHNICAL', date: '2026-12-11', start_time: '10:00', end_time: '12:00', venue: 'Computer Lab', status: 'upcoming', capacity: 50, registration_type: 'individual', max_team_size: 1 },
+  { id: 'SRI27-TRACEBOT', event_code: 'SRI27-TRACEBOT', label: 'TRACE BOT', name: 'Tracebot', category: 'TECHNICAL', date: '2026-12-11', start_time: '13:00', end_time: '15:00', venue: 'CS Lab', status: 'upcoming', capacity: 40, registration_type: 'team', max_team_size: 4 },
+  { id: 'SRI27-RELAY', event_code: 'SRI27-RELAY', label: 'RELAY CODING', name: 'Relay Coding', category: 'TECHNICAL', date: '2026-12-11', start_time: '10:00', end_time: '12:00', venue: 'Computer Lab', status: 'upcoming', capacity: 50, registration_type: 'team', max_team_size: 4 },
+  { id: 'TEST-EV-02', event_code: 'TEST-EV-02', label: 'HACKAI 24H HACKATHON', name: 'HackAI 24h Hackathon', category: 'TECHNICAL', date: '2026-12-10', start_time: '10:00', end_time: '10:00', venue: 'Main Auditorium', status: 'upcoming', capacity: 80, registration_type: 'team', max_team_size: 4 },
+  { id: 'TEST-EV-01', event_code: 'TEST-EV-01', label: 'CODE SPRINT (SPEED CODING)', name: 'Code Sprint (Speed Coding)', category: 'TECHNICAL', date: '2026-12-11', start_time: '10:00', end_time: '12:00', venue: 'CS Lab 3', status: 'upcoming', capacity: 60, registration_type: 'individual', max_team_size: 1 },
+  { id: 'SRI27-BOMB', event_code: 'SRI27-BOMB', label: 'BOMB SQUAD', name: 'bomb squad', category: 'TECHNICAL', date: '2026-12-10', start_time: '10:00', end_time: '12:00', venue: 'Campus Venue', status: 'upcoming', capacity: 60, registration_type: 'team', max_team_size: 4 }
 ];
 
 // Presets for fast role testing matching exact database records
@@ -70,6 +73,7 @@ export default function AdminDashboard() {
   const [eventFilter, setEventFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedDbTable, setSelectedDbTable] = useState('participants');
+  const [eventTrackFilter, setEventTrackFilter] = useState('all'); // 'all', 'individual', 'team'
 
   // Live Check-in / Attendance Station State
   const [stationCodeInput, setStationCodeInput] = useState('');
@@ -656,7 +660,7 @@ export default function AdminDashboard() {
         status: eventFormData.status || 'upcoming',
         registration_fee: eventFormData.registration_fee !== undefined ? Number(eventFormData.registration_fee) : 0.00,
         registration_type: eventFormData.registration_type || 'individual',
-        max_team_size: eventFormData.max_team_size ? Number(eventFormData.max_team_size) : 1,
+        max_team_size: eventFormData.registration_type === 'team' ? (Number(eventFormData.max_team_size) || 4) : 1,
         is_spot_registration_enabled: eventFormData.is_spot_registration_enabled !== undefined ? Boolean(eventFormData.is_spot_registration_enabled) : true,
       };
 
@@ -1681,8 +1685,38 @@ export default function AdminDashboard() {
         {/* ========================================================================= */}
         {activeTab === 'events' && (
           <div>
-            <div className="admin-section-header">
-              <h2>Festival Competitions &amp; Events ({events.length})</h2>
+            <div className="admin-section-header" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2>Festival Competitions &amp; Events ({events.length})</h2>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  {[
+                    { key: 'all', label: `All (${events.length})` },
+                    { key: 'individual', label: `Solo (${events.filter(e => e.registration_type === 'individual').length})` },
+                    { key: 'team', label: `Team (${events.filter(e => e.registration_type === 'team').length})` }
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setEventTrackFilter(tab.key)}
+                      style={{
+                        padding: '0.3rem 0.8rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        borderRadius: '20px',
+                        border: '1px solid',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        background: eventTrackFilter === tab.key ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        borderColor: eventTrackFilter === tab.key ? '#38bdf8' : 'rgba(255, 255, 255, 0.12)',
+                        color: eventTrackFilter === tab.key ? '#38bdf8' : '#94a3b8'
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {adminRole === 'admin' && (
                 <button 
                   onClick={() => {
@@ -1712,14 +1746,32 @@ export default function AdminDashboard() {
             </div>
 
             <div className="admin-events-grid">
-              {events.map(ev => {
+              {events
+                .filter(ev => eventTrackFilter === 'all' || (ev.registration_type || 'individual') === eventTrackFilter)
+                .map(ev => {
                 const regCount = registrations.filter(r => r.event_id === ev.id || r.events?.event_code === ev.event_code).length;
                 const attCount = eventAttendance.filter(a => a.event_id === ev.id).length;
+                const isTeamEvent = ev.registration_type === 'team';
 
                 return (
                   <div key={ev.id} className="admin-event-card">
                     <div className="admin-event-card-header">
-                      <span className="admin-event-card-cat">{ev.category || 'TECHNICAL'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span className="admin-event-card-cat">{ev.category || 'TECHNICAL'}</span>
+                        <span style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.65rem',
+                          fontWeight: '700',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px',
+                          backgroundColor: isTeamEvent ? 'rgba(56, 189, 248, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+                          color: isTeamEvent ? '#38bdf8' : '#c084fc',
+                          border: isTeamEvent ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(168, 85, 247, 0.35)',
+                          textTransform: 'uppercase'
+                        }}>
+                          {isTeamEvent ? `Team (Max ${ev.max_team_size || 4})` : 'Solo'}
+                        </span>
+                      </div>
                       <span style={{ 
                         fontFamily: 'var(--font-mono)', 
                         fontSize: '0.72rem', 
@@ -2459,23 +2511,30 @@ export default function AdminDashboard() {
                   <label>Registration Type</label>
                   <select
                     value={eventFormData.registration_type || 'individual'}
-                    onChange={e => setEventFormData({ ...eventFormData, registration_type: e.target.value })}
+                    onChange={e => {
+                      const newType = e.target.value;
+                      setEventFormData({
+                        ...eventFormData,
+                        registration_type: newType,
+                        max_team_size: newType === 'team' ? (eventFormData.max_team_size > 1 ? eventFormData.max_team_size : 4) : 1
+                      });
+                    }}
                     className="admin-select"
                   >
-                    <option value="individual">Individual</option>
+                    <option value="individual">Solo (Individual)</option>
                     <option value="team">Team Event</option>
                   </select>
                 </div>
 
                 {eventFormData.registration_type === 'team' && (
                   <div className="admin-form-group">
-                    <label>Max Team Size</label>
+                    <label>Max Team Size (e.g. 2, 4, 8)</label>
                     <input
                       type="number"
-                      min="1"
-                      max="10"
+                      min="2"
+                      max="15"
                       value={eventFormData.max_team_size || 4}
-                      onChange={e => setEventFormData({ ...eventFormData, max_team_size: Number(e.target.value) })}
+                      onChange={e => setEventFormData({ ...eventFormData, max_team_size: Math.max(2, Number(e.target.value)) })}
                       className="admin-form-control"
                     />
                   </div>

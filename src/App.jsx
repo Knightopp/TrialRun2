@@ -40,9 +40,11 @@ let FEST_EVENTS = [
     event_code: 'SRI27-TREASURE',
     label: 'TREASURE HUNT', 
     category: 'FUN', 
-    group: 'Popular', 
+    group: 'Team Events', 
+    type: 'team',
+    maxTeamSize: 4,
     image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', 
-    details: 'Unravel cryptic campus riddles and hidden technical challenges.', 
+    details: 'Unravel cryptic campus riddles and hidden technical challenges in squads of 4.', 
     venue: 'College Campus',
     date: 'Dec 10, 2026', 
     time: '10:00 AM - 12:00 PM',
@@ -54,8 +56,10 @@ let FEST_EVENTS = [
     label: 'WALTZ (DANCE)', 
     category: 'CULTURAL', 
     group: 'Team Events', 
+    type: 'team',
+    maxTeamSize: 8,
     image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', 
-    details: 'Electrifying inter-college choreography and dance competition.', 
+    details: 'Electrifying inter-college choreography and dance group competition.', 
     venue: 'Main Auditorium',
     date: 'Dec 10, 2026', 
     time: '02:00 PM - 04:00 PM',
@@ -66,13 +70,15 @@ let FEST_EVENTS = [
     event_code: 'SRI27-QUIZ',
     label: 'IT QUIZ', 
     category: 'TECHNICAL', 
-    group: 'Solo Events', 
+    group: 'Team Events', 
+    type: 'team',
+    maxTeamSize: 2,
     image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', 
-    details: 'Premier IT & General Tech Quiz battle of sharpest minds.', 
+    details: 'Premier IT & General Tech Quiz battle of sharpest minds (Duo / Squad of 2).', 
     venue: 'Seminar Hall',
     date: 'Dec 10, 2026', 
     time: '10:00 AM - 12:00 PM',
-    fee: 0
+    fee: 150
   },
   { 
     id: 'SRI27-CODE', 
@@ -80,8 +86,10 @@ let FEST_EVENTS = [
     label: 'CODING & DEBUGGING', 
     category: 'TECHNICAL', 
     group: 'Solo Events', 
+    type: 'individual',
+    maxTeamSize: 1,
     image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', 
-    details: 'Test your algorithmic logic and debugging skills against time.', 
+    details: 'Solo algorithmic logic and error debugging challenge against the clock.', 
     venue: 'Computer Lab',
     date: 'Dec 11, 2026', 
     time: '10:00 AM - 12:00 PM',
@@ -93,8 +101,10 @@ let FEST_EVENTS = [
     label: 'TRACE BOT', 
     category: 'TECHNICAL', 
     group: 'Team Events', 
+    type: 'team',
+    maxTeamSize: 4,
     image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', 
-    details: 'Build an autonomous line-following robot to race the tracks.', 
+    details: 'Autonomous line-following robotics race on intricate tracks (Teams up to 4).', 
     venue: 'CS Lab',
     date: 'Dec 11, 2026', 
     time: '01:00 PM - 03:00 PM',
@@ -105,11 +115,58 @@ let FEST_EVENTS = [
     event_code: 'SRI27-RELAY',
     label: 'RELAY CODING', 
     category: 'TECHNICAL', 
-    group: 'Popular', 
+    group: 'Team Events', 
+    type: 'team',
+    maxTeamSize: 4,
     image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', 
     details: 'Fast-paced team tag-team programming relay challenge.', 
     venue: 'Computer Lab',
     date: 'Dec 11, 2026', 
+    time: '10:00 AM - 12:00 PM',
+    fee: 0
+  },
+  { 
+    id: 'TEST-EV-02', 
+    event_code: 'TEST-EV-02',
+    label: 'HACKAI 24H HACKATHON', 
+    category: 'TECHNICAL', 
+    group: 'Team Events', 
+    type: 'team',
+    maxTeamSize: 4,
+    image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', 
+    details: '24-hour flagship team hackathon building real-world AI solutions.', 
+    venue: 'Main Auditorium',
+    date: 'Dec 10, 2026', 
+    time: '10:00 AM - 10:00 AM',
+    fee: 150
+  },
+  { 
+    id: 'TEST-EV-01', 
+    event_code: 'TEST-EV-01',
+    label: 'CODE SPRINT (SPEED CODING)', 
+    category: 'TECHNICAL', 
+    group: 'Solo Events', 
+    type: 'individual',
+    maxTeamSize: 1,
+    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=900&auto=format&fit=crop', 
+    details: 'Individual speed competitive programming showdown on algorithmic tracks.', 
+    venue: 'CS Lab 3',
+    date: 'Dec 11, 2026', 
+    time: '10:00 AM - 12:00 PM',
+    fee: 0
+  },
+  { 
+    id: 'SRI27-BOMB', 
+    event_code: 'SRI27-BOMB',
+    label: 'BOMB SQUAD', 
+    category: 'TECHNICAL', 
+    group: 'Team Events', 
+    type: 'team',
+    maxTeamSize: 4,
+    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', 
+    details: 'Multi-chamber logic locks, code defusal and collaborative escape challenge.', 
+    venue: 'Campus Venue',
+    date: 'Dec 10, 2026', 
     time: '10:00 AM - 12:00 PM',
     fee: 0
   }
@@ -163,21 +220,24 @@ export default function App() {
             const fallback = FEST_EVENTS.find(d => 
               d.id.toLowerCase() === ev.event_code?.toLowerCase() ||
               `sri27-${d.id.toLowerCase()}` === ev.event_code?.toLowerCase() ||
-              d.id === ev.id
+              d.id === ev.id ||
+              d.event_code?.toLowerCase() === ev.event_code?.toLowerCase()
             );
+            const isTeam = ev.registration_type === 'team' || (ev.max_team_size && Number(ev.max_team_size) > 1) || fallback?.type === 'team' || fallback?.group === 'Team Events';
             return {
               id: ev.event_code || ev.id,
               dbId: ev.id,
+              event_code: ev.event_code,
               label: ev.name,
-              category: ev.category || fallback?.category || 'DEV',
-              group: fallback?.group || 'Popular',
+              category: ev.category || fallback?.category || 'TECHNICAL',
+              group: isTeam ? 'Team Events' : 'Solo Events',
               image: fallback?.image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop',
               details: ev.venue ? `Venue: ${ev.venue}. Fee: ₹${ev.registration_fee || 0}` : (fallback?.details || 'Festival event'),
-              date: ev.date || fallback?.date || 'Dec 6-7, 2026',
-              time: ev.start_time || fallback?.time || '10:00 AM',
+              date: ev.date || fallback?.date || 'Dec 10, 2026',
+              time: ev.start_time ? (ev.end_time ? `${ev.start_time.substring(0, 5)} - ${ev.end_time.substring(0, 5)}` : ev.start_time.substring(0, 5)) : (fallback?.time || '10:00 AM'),
               fee: ev.registration_fee || 0,
-              type: ev.registration_type || 'individual',
-              maxTeamSize: ev.max_team_size || 1
+              type: isTeam ? 'team' : 'individual',
+              maxTeamSize: ev.max_team_size || (isTeam ? (fallback?.maxTeamSize || 4) : 1)
             };
           });
           setLiveEvents(merged);
@@ -450,12 +510,12 @@ export default function App() {
 
   useEffect(() => {
     if (activeEventData) {
-      if (activeEventData.id === 'hackathon') {
-        setFormTeamSize(3);
-      } else if (activeEventData.group === 'Solo Events') {
+      if (activeEventData.type === 'individual' || activeEventData.group === 'Solo Events' || activeEventData.maxTeamSize === 1) {
         setFormTeamSize(1);
+      } else if (activeEventData.id?.toLowerCase().includes('hackathon')) {
+        setFormTeamSize(3);
       } else {
-        setFormTeamSize(2);
+        setFormTeamSize(Math.min(2, activeEventData.maxTeamSize || 2));
       }
     }
   }, [activeEventData]);
@@ -1228,49 +1288,81 @@ export default function App() {
         </button>
       </div>
 
-      {['Popular', 'Solo Events', 'Team Events'].map(groupName => (
-        <div key={groupName} style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
-            {groupName.toUpperCase()}
-          </h3>
-          <div className="reg-events-carousel">
-            {liveEvents.filter(ev => ev.group === groupName).map((ev) => (
-              <div 
-                key={ev.id} 
-                className={`reg-event-card ${selectedEventTrack === ev.label ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedEventTrack(ev.label);
-                  navigate(`/register/${ev.id}`);
-                }}
-                style={{ flexShrink: 0, scrollSnapAlign: 'start' }}
-              >
-                <GlareHover
-                  width="240px"
-                  height="340px"
-                  glareColor="#ffffff"
-                  glareOpacity={0.2}
-                  glareAngle={-30}
-                  glareSize={200}
-                  borderRadius="12px"
-                  borderColor={selectedEventTrack === ev.label ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'}
+      {['Solo Events', 'Team Events'].map(groupName => {
+        const filteredGroupEvents = liveEvents.filter(ev => ev.group === groupName);
+        if (filteredGroupEvents.length === 0) return null;
+        return (
+          <div key={groupName} style={{ marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '0.95rem', color: '#f8fafc', letterSpacing: '0.05em' }}>
+                {groupName.toUpperCase()}
+              </h3>
+              <span style={{ 
+                fontFamily: 'var(--font-mono)', 
+                fontSize: '0.72rem', 
+                padding: '0.15rem 0.5rem', 
+                borderRadius: '12px', 
+                background: groupName === 'Solo Events' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(56, 189, 248, 0.2)',
+                color: groupName === 'Solo Events' ? '#c084fc' : '#38bdf8',
+                border: groupName === 'Solo Events' ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid rgba(56, 189, 248, 0.4)'
+              }}>
+                {filteredGroupEvents.length} {filteredGroupEvents.length === 1 ? 'EVENT' : 'EVENTS'}
+              </span>
+            </div>
+            <div className="reg-events-carousel">
+              {filteredGroupEvents.map((ev) => (
+                <div 
+                  key={ev.id} 
+                  className={`reg-event-card ${selectedEventTrack === ev.label ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedEventTrack(ev.label);
+                    navigate(`/register/${ev.id}`);
+                  }}
+                  style={{ flexShrink: 0, scrollSnapAlign: 'start' }}
                 >
-                  <div className="reg-event-card-inner">
-                    <img src={ev.image} alt={ev.label} className="reg-event-card-bg" />
-                    <div className="reg-event-card-overlay"></div>
-                    <div className="reg-event-card-content">
-                      <div className="reg-event-card-title">{ev.label}</div>
-                      <div className="reg-event-card-category">{ev.category}</div>
-                      <div className="reg-event-card-active-line"></div>
+                  <GlareHover
+                    width="240px"
+                    height="340px"
+                    glareColor="#ffffff"
+                    glareOpacity={0.2}
+                    glareAngle={-30}
+                    glareSize={200}
+                    borderRadius="12px"
+                    borderColor={selectedEventTrack === ev.label ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'}
+                  >
+                    <div className="reg-event-card-inner">
+                      <img src={ev.image} alt={ev.label} className="reg-event-card-bg" />
+                      <div className="reg-event-card-overlay"></div>
+                      <div className="reg-event-card-content">
+                        <div className="reg-event-card-title">{ev.label}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                          <span className="reg-event-card-category">{ev.category}</span>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: '700',
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '4px',
+                            letterSpacing: '0.05em',
+                            textTransform: 'uppercase',
+                            background: ev.type === 'team' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(168, 85, 247, 0.25)',
+                            color: ev.type === 'team' ? '#38bdf8' : '#c084fc',
+                            border: ev.type === 'team' ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid rgba(168, 85, 247, 0.5)'
+                          }}>
+                            {ev.type === 'team' ? `TEAM (UP TO ${ev.maxTeamSize})` : 'SOLO'}
+                          </span>
+                        </div>
+                        <div className="reg-event-card-active-line"></div>
+                      </div>
                     </div>
-                  </div>
-                </GlareHover>
-              </div>
-            ))}
-            {/* Cross-browser bulletproof DOM spacer to force scroll space */}
-            <div style={{ flexShrink: 0, width: '1.5rem', height: '1px', pointerEvents: 'none' }} aria-hidden="true" />
+                  </GlareHover>
+                </div>
+              ))}
+              {/* Cross-browser bulletproof DOM spacer to force scroll space */}
+              <div style={{ flexShrink: 0, width: '1.5rem', height: '1px', pointerEvents: 'none' }} aria-hidden="true" />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 
@@ -1459,20 +1551,16 @@ export default function App() {
                               <div className="form-group-item">
                                 <label className="field-caption" style={{ color: '#cbd5e1' }}>Participation Type</label>
                                 <select className="app-select" value={formTeamSize} onChange={(e) => setFormTeamSize(Number(e.target.value))}>
-                                  {activeEventData?.id === 'hackathon' ? (
-                                    <>
-                                      <option value={3}>Team of 3</option>
-                                      <option value={4}>Team of 4</option>
-                                      <option value={5}>Team of 5</option>
-                                    </>
-                                  ) : activeEventData?.group === 'Solo Events' ? (
-                                    <option value={1}>Solo Delegate</option>
+                                  {activeEventData?.type === 'individual' || activeEventData?.group === 'Solo Events' || activeEventData?.maxTeamSize === 1 ? (
+                                    <option value={1}>Solo Delegate (1 Person)</option>
                                   ) : (
                                     <>
-                                      <option value={2}>Team of 2</option>
-                                      <option value={3}>Team of 3</option>
-                                      <option value={4}>Team of 4</option>
-                                      <option value={5}>Team of 5</option>
+                                      {Array.from(
+                                        { length: Math.max(1, (activeEventData?.maxTeamSize || 4) - 1) }, 
+                                        (_, i) => i + 2
+                                      ).map(size => (
+                                        <option key={size} value={size}>Team of {size}</option>
+                                      ))}
                                     </>
                                   )}
                                 </select>
