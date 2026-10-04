@@ -22,7 +22,7 @@ import GradientText from './components/GradientText';
 import SplitText from './components/SplitText';
 import Silk from './components/Silk';
 import PatternWaves from './components/PatternWaves';
-import { FiHome, FiCalendar, FiActivity, FiUserPlus, FiBookmark } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiActivity, FiUserPlus, FiBookmark, FiCheckCircle } from 'react-icons/fi';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import ColorBends from './components/ColorBends';
 import GlareHover from './components/GlareHover';
@@ -323,6 +323,78 @@ export default function App() {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [participantCode, setParticipantCode] = useState('');
 
+  // Track all events registered by the current user session
+  const [userRegistrations, setUserRegistrations] = useState(() => {
+    try {
+      const email = (localStorage.getItem('srishti_session') || '').replace(/['"]+/g, '').trim().toLowerCase();
+      if (email) {
+        const cached = localStorage.getItem(`srishti_user_registrations_${email}`);
+        if (cached) return JSON.parse(cached);
+      }
+    } catch (_) {}
+    return [];
+  });
+
+  const fetchUserRegistrations = async (emailToFetch, participantId) => {
+    const cleanEmail = (emailToFetch || formEmail || localStorage.getItem('srishti_session') || '').replace(/['"]+/g, '').trim().toLowerCase();
+    if (!cleanEmail) return [];
+    try {
+      const { supabase } = await import('./supabaseClient');
+      let pId = participantId;
+      if (!pId) {
+        const { data: pData } = await supabase.from('participants').select('id').ilike('email', cleanEmail).maybeSingle();
+        if (pData?.id) pId = pData.id;
+      }
+
+      let regs = [];
+      if (pId) {
+        const { data: rData } = await supabase
+          .from('registrations')
+          .select('id, event_id, event_code, event_name, status, events(id, event_code, name)')
+          .eq('participant_id', pId);
+        if (rData && rData.length > 0) regs = rData;
+      }
+      if (regs.length === 0) {
+        try {
+          const { data: rpcRegs } = await supabase.rpc('get_registrations_by_email', { lookup_email: cleanEmail });
+          if (rpcRegs && rpcRegs.length > 0) {
+            regs = rpcRegs.map(r => ({
+              ...r,
+              events: { id: r.event_id, event_code: r.event_code, name: r.event_name }
+            }));
+          }
+        } catch (_) {}
+      }
+
+      setUserRegistrations(regs);
+      try {
+        localStorage.setItem(`srishti_user_registrations_${cleanEmail}`, JSON.stringify(regs));
+      } catch (_) {}
+      return regs;
+    } catch (err) {
+      console.warn('Error fetching user registrations in App:', err);
+      return [];
+    }
+  };
+
+  const isEventAlreadyRegistered = (ev) => {
+    if (!ev || !userRegistrations || userRegistrations.length === 0) return false;
+    const evId = String(ev.id || '').toLowerCase();
+    const evCode = String(ev.event_code || ev.code || '').toLowerCase();
+    const evName = String(ev.name || ev.label || '').toLowerCase().trim();
+
+    return userRegistrations.some(r => {
+      const rId = String(r.event_id || r.events?.id || '').toLowerCase();
+      const rCode = String(r.event_code || r.events?.event_code || '').toLowerCase();
+      const rName = String(r.event_name || r.events?.name || '').toLowerCase().trim();
+
+      if (evId && (evId === rId || evId === rCode)) return true;
+      if (evCode && (evCode === rCode || evCode === rId)) return true;
+      if (evName && rName && (evName === rName || evName.includes(rName) || rName.includes(evName))) return true;
+      return false;
+    });
+  };
+
   // Helper to keep local profile cache in sync with user edits
   const updateCachedProfile = (field, value) => {
     try {
@@ -403,6 +475,9 @@ export default function App() {
               localStorage.setItem('srishti_user_roll', data.department);
             }
             localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(data));
+            fetchUserRegistrations(cleanEmail, data.id);
+          } else {
+            fetchUserRegistrations(cleanEmail);
           }
         } catch (_) {}
       }
@@ -481,6 +556,9 @@ export default function App() {
             localStorage.setItem('srishti_user_roll', data.department);
           }
           localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(data));
+          fetchUserRegistrations(cleanEmail, data.id);
+        } else {
+          fetchUserRegistrations(cleanEmail);
         }
       } catch (e) {
         console.warn('Autofill participant query notice:', e);
@@ -565,8 +643,12 @@ export default function App() {
   };
 
   const isStepValid = (step) => {
+    if (activeEventData && isEventAlreadyRegistered(activeEventData)) return false;
     if (step === 1) return true;
-    if (step === 2) return formName.trim() !== '' && formCollege.trim() !== '' && formEmail.trim() !== '' && formPhone.trim() !== '';
+    if (step === 2) {
+      if (activeEventData && isEventAlreadyRegistered(activeEventData)) return false;
+      return formName.trim() !== '' && formCollege.trim() !== '' && formEmail.trim() !== '' && formPhone.trim() !== '';
+    }
     
     if (step > 2 && step <= formTeamSize + 1) {
        const memberIndex = step - 1;
@@ -654,6 +736,13 @@ export default function App() {
       }
     }
 
+    if (activeEventData && isEventAlreadyRegistered(activeEventData)) {
+      setIsRegistering(false);
+      setFormStatus('idle');
+      alert(`You are already registered for ${activeEventData.label}! Duplicate registrations for the same event are not permitted.`);
+      return;
+    }
+
     try {
       const uniqueCode = 'SRI27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
       let participantPassCode = uniqueCode;
@@ -672,6 +761,33 @@ export default function App() {
         }
       } catch (evErr) {
         console.warn('Could not resolve event UUID:', evErr);
+      }
+
+      // Check if participant is already registered in DB for this event
+      const cleanEmail = formEmail.trim().toLowerCase();
+      try {
+        const { data: pCheck } = await supabase
+          .from('participants')
+          .select('id')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+
+        if (pCheck?.id && resolvedEventId) {
+          const { data: dupCheck } = await supabase
+            .from('registrations')
+            .select('id')
+            .eq('participant_id', pCheck.id)
+            .eq('event_id', resolvedEventId)
+            .maybeSingle();
+          if (dupCheck) {
+            setIsRegistering(false);
+            setFormStatus('idle');
+            alert(`You are already registered for this event (${activeEventData.label})! Duplicate registrations are not permitted.`);
+            return;
+          }
+        }
+      } catch (checkErr) {
+        console.warn('Existing registration pre-check notice:', checkErr);
       }
       // 2. Invoke the official web-register Supabase Edge Function
       let edgeInvokedSuccessfully = false;
@@ -789,11 +905,22 @@ export default function App() {
           .eq('participant_id', pData.id);
 
         if (userAllRegs && userAllRegs.length > 0) {
+          setUserRegistrations(userAllRegs);
+          try {
+            localStorage.setItem(`srishti_user_registrations_${cleanEmail}`, JSON.stringify(userAllRegs));
+          } catch (_) {}
           const mapped = userAllRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
           if (mapped.length > 0) {
             allEventsList = [...new Set(mapped)];
           }
         }
+      } else {
+        const addedReg = {
+          event_id: resolvedEventId,
+          event_code: activeEventData.id,
+          event_name: activeEventData.label
+        };
+        setUserRegistrations(prev => [...prev.filter(r => r.event_id !== resolvedEventId), addedReg]);
       }
 
       // Server-authoritative QR code with cryptographic pass token
@@ -1310,15 +1437,20 @@ export default function App() {
               </span>
             </div>
             <div className="reg-events-carousel">
-              {filteredGroupEvents.map((ev) => (
+              {filteredGroupEvents.map((ev) => {
+                const isAlreadyEnrolled = isEventAlreadyRegistered(ev);
+                return (
                 <div 
                   key={ev.id} 
-                  className={`reg-event-card ${selectedEventTrack === ev.label ? 'active' : ''}`}
+                  className={`reg-event-card ${selectedEventTrack === ev.label ? 'active' : ''} ${isAlreadyEnrolled ? 'already-registered' : ''}`}
                   onClick={() => {
+                    if (isAlreadyEnrolled) {
+                      alert(`Already Registered: You are already registered for ${ev.label}! You cannot register for the same event again.`);
+                    }
                     setSelectedEventTrack(ev.label);
                     navigate(`/register/${ev.id}`);
                   }}
-                  style={{ flexShrink: 0, scrollSnapAlign: 'start' }}
+                  style={{ flexShrink: 0, scrollSnapAlign: 'start', position: 'relative' }}
                 >
                   <GlareHover
                     width="240px"
@@ -1328,11 +1460,34 @@ export default function App() {
                     glareAngle={-30}
                     glareSize={200}
                     borderRadius="12px"
-                    borderColor={selectedEventTrack === ev.label ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)'}
+                    borderColor={isAlreadyEnrolled ? '#10b981' : (selectedEventTrack === ev.label ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)')}
                   >
                     <div className="reg-event-card-inner">
                       <img src={ev.image} alt={ev.label} className="reg-event-card-bg" />
                       <div className="reg-event-card-overlay"></div>
+                      {isAlreadyEnrolled && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          zIndex: 10,
+                          background: 'rgba(16, 185, 129, 0.95)',
+                          color: '#ffffff',
+                          fontSize: '0.68rem',
+                          fontWeight: '800',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '20px',
+                          boxShadow: '0 4px 14px rgba(0,0,0,0.6)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          backdropFilter: 'blur(4px)'
+                        }}>
+                          <FiCheckCircle size={12} /> Already Registered
+                        </div>
+                      )}
                       <div className="reg-event-card-content">
                         <div className="reg-event-card-title">{ev.label}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
@@ -1356,7 +1511,8 @@ export default function App() {
                     </div>
                   </GlareHover>
                 </div>
-              ))}
+              );
+            })}
               {/* Cross-browser bulletproof DOM spacer to force scroll space */}
               <div style={{ flexShrink: 0, width: '1.5rem', height: '1px', pointerEvents: 'none' }} aria-hidden="true" />
             </div>
@@ -1538,6 +1694,81 @@ export default function App() {
                         </div>
                         
                         {formStatus === 'idle' ? (
+                          isEventAlreadyRegistered(activeEventData) ? (
+                            <div style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              textAlign: 'center',
+                              padding: '2.5rem 1.5rem',
+                              gap: '1.25rem'
+                            }}>
+                              <div style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '50%',
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                border: '1px solid rgba(16, 185, 129, 0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#10b981'
+                              }}>
+                                <FiCheckCircle size={32} />
+                              </div>
+                              <div>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', letterSpacing: '0.15em', color: '#10b981', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                                  CONFIRMED REGISTRATION
+                                </div>
+                                <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#ffffff', margin: 0 }}>
+                                  Already Registered
+                                </h3>
+                                <p style={{ color: '#a1a1aa', fontSize: '0.9rem', marginTop: '0.75rem', lineHeight: '1.5', maxWidth: '380px' }}>
+                                  You have already registered for <strong style={{ color: '#ffffff' }}>{activeEventData.label}</strong>. Each participant is allowed only one registration per competition.
+                                </p>
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '320px', marginTop: '0.5rem' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => navigate('/profile')}
+                                  style={{
+                                    padding: '0.85rem 1.5rem',
+                                    background: '#ffffff',
+                                    color: '#000000',
+                                    fontWeight: '700',
+                                    fontSize: '0.9rem',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.5rem',
+                                    boxShadow: '0 4px 14px rgba(255, 255, 255, 0.2)'
+                                  }}
+                                >
+                                  <FiCheckCircle size={16} /> View in My Profile & Pass
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => navigate('/register')}
+                                  style={{
+                                    padding: '0.85rem 1.5rem',
+                                    background: 'rgba(255, 255, 255, 0.06)',
+                                    color: '#e4e4e7',
+                                    fontWeight: '600',
+                                    fontSize: '0.9rem',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Browse Other Events
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
                           <Stepper
                             initialStep={1}
                             onStepChange={setActiveStep}
@@ -1598,6 +1829,23 @@ export default function App() {
                                   <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
                                   <input type="email" required className="app-input" placeholder="alex@domain.edu" value={formEmail} onChange={(e) => handleEmailChange(e.target.value)} />
                                 </div>
+                                {isEventAlreadyRegistered(activeEventData) && (
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    marginTop: '0.85rem',
+                                    padding: '0.75rem 1rem',
+                                    background: 'rgba(239, 68, 68, 0.15)',
+                                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                                    borderRadius: '8px',
+                                    fontSize: '0.82rem',
+                                    color: '#f87171'
+                                  }}>
+                                    <FiCheckCircle size={16} />
+                                    <span>This email is already registered for this event. Duplicate registration is not permitted.</span>
+                                  </div>
+                                )}
                                 <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
                                   <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
                                   <input type="tel" required className="app-input" placeholder="+1 (555) 000-0000" value={formPhone} onChange={(e) => handlePhoneChange(e.target.value)} />
@@ -1773,6 +2021,7 @@ export default function App() {
                               </div>
                             </Step>
                           </Stepper>
+                          )
                         ) : (
                           <div style={{ textAlign: 'center', padding: '1rem 0', display: 'flex', justifyContent: 'center' }}>
                             {isRegistered && qrCodeDataUrl ? (
@@ -1982,10 +2231,14 @@ export default function App() {
             )
           },
           { 
-            label: 'Register Now', 
-            ariaLabel: 'Register', 
+            label: isEventAlreadyRegistered(selectedEventDetails) ? '✓ Already Registered' : 'Register Now', 
+            ariaLabel: isEventAlreadyRegistered(selectedEventDetails) ? 'Already Registered' : 'Register', 
             onClick: (e) => {
               e.preventDefault();
+              if (isEventAlreadyRegistered(selectedEventDetails)) {
+                alert(`Already Registered: You are already registered for ${selectedEventDetails.label}! Check your pass in your Profile.`);
+                return;
+              }
               const eventId = selectedEventDetails.id;
               setSelectedEventTrack(selectedEventDetails.label);
               setSelectedEventDetails(null);

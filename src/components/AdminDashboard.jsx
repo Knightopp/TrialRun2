@@ -819,9 +819,16 @@ export default function AdminDashboard() {
 
   const handleOpenQuickRegister = (participant) => {
     setActiveItem(participant);
+    const registeredEventIds = new Set(
+      registrations
+        .filter(r => r.participant_id === participant.id)
+        .map(r => r.event_id || r.events?.id)
+        .filter(Boolean)
+    );
+    const availableEvent = events.find(ev => !registeredEventIds.has(ev.id));
     setQuickRegData({
       participant_id: participant.id,
-      event_id: events[0]?.id || '',
+      event_id: availableEvent ? availableEvent.id : (events[0]?.id || ''),
       payment_status: 'verified',
       payment_method: 'cash'
     });
@@ -830,6 +837,13 @@ export default function AdminDashboard() {
 
   const handleSaveQuickRegistration = async (e) => {
     e.preventDefault();
+    const isAlready = registrations.some(
+      r => r.participant_id === quickRegData.participant_id && (r.event_id === quickRegData.event_id || r.events?.id === quickRegData.event_id)
+    );
+    if (isAlready) {
+      showToast('This participant is already registered for this event.', 'error');
+      return;
+    }
     setIsSubmitting(true);
     try {
       if (!quickRegData.participant_id || !quickRegData.event_id) {
@@ -1271,14 +1285,17 @@ export default function AdminDashboard() {
         {/* Ambient WebGL SideRays Background */}
         <div className="admin-ambient-rays">
           <SideRays
+            speed={2.5}
+            rayColor1="#EAB308"
+            rayColor2="#96c8ff"
+            intensity={2}
+            spread={2}
             origin="top-right"
-            saturation={0}
-            intensity={1.2}
-            opacity={0.35}
-            rayColor1="#FFFFFF"
-            rayColor2="#71717A"
-            speed={1.5}
-            spread={2.2}
+            tilt={0}
+            saturation={1.5}
+            blend={0.75}
+            falloff={1.6}
+            opacity={1.0}
           />
         </div>
 
@@ -1408,17 +1425,20 @@ export default function AdminDashboard() {
   // -----------------------------------------------------------------------------
   return (
     <div className="admin-portal-root">
-      {/* React Bits Volumetric SideRays Background Layer (Monochrome Pure Greyscale) */}
+      {/* React Bits Volumetric SideRays Background Layer */}
       <div className="admin-ambient-rays">
         <SideRays
+          speed={2.5}
+          rayColor1="#EAB308"
+          rayColor2="#96c8ff"
+          intensity={2}
+          spread={2}
           origin="top-right"
-          saturation={0}
-          intensity={1.4}
-          opacity={0.35}
-          rayColor1="#FFFFFF"
-          rayColor2="#71717A"
-          speed={1.8}
-          spread={2.5}
+          tilt={0}
+          saturation={1.5}
+          blend={0.75}
+          falloff={1.6}
+          opacity={1.0}
         />
       </div>
 
@@ -3703,12 +3723,24 @@ export default function AdminDashboard() {
                   className="admin-select"
                   required
                 >
-                  {events.map(ev => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.name || ev.label} ({ev.event_code}) — {ev.category || 'TECHNICAL'}
-                    </option>
-                  ))}
+                  {events.map(ev => {
+                    const isAlready = registrations.some(
+                      r => r.participant_id === activeItem.id && (r.event_id === ev.id || r.events?.id === ev.id)
+                    );
+                    return (
+                      <option key={ev.id} value={ev.id} disabled={isAlready}>
+                        {ev.name || ev.label} ({ev.event_code}) {isAlready ? '— [ALREADY REGISTERED]' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
+                {registrations.some(
+                  r => r.participant_id === activeItem.id && (r.event_id === quickRegData.event_id || r.events?.id === quickRegData.event_id)
+                ) && (
+                  <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.4rem', fontWeight: '600' }}>
+                    ⚠️ This participant is already registered for this event.
+                  </p>
+                )}
               </div>
 
               <div className="admin-form-group">

@@ -108,18 +108,7 @@ export default function AdminAnalytics({
       }
     });
 
-    const rows = Object.values(daysMap);
-    const totalRegCount = rows.reduce((s, r) => s + r.registrations, 0);
-    if (totalRegCount === 0) {
-      const baseSamples = [18, 34, 45, 62, 88, 110, 145, 190, 240, 310];
-      const baseCheckins = [5, 12, 20, 35, 52, 78, 102, 130, 175, 220];
-      return rows.map((r, idx) => ({
-        ...r,
-        registrations: baseSamples[idx] || 25,
-        checkins: baseCheckins[idx] || 10
-      }));
-    }
-    return rows;
+    return Object.values(daysMap);
   }, [registrations, arrivalCheckins]);
 
   // Dynamic Bar Chart dataset depending on active toggle
@@ -159,28 +148,14 @@ export default function AdminAnalytics({
       counts[typeKey] = (counts[typeKey] || 0) + 1;
     });
 
-    const items = Object.entries(counts).map(([name, value]) => ({ name, value }));
-    if (items.length === 0) {
-      return [
-        { name: 'Team Events', value: 7 },
-        { name: 'Solo Events', value: 2 }
-      ];
-    }
-    return items;
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
   }, [events]);
 
   // 5. Radar Chart: Visualizing Which Event Has the Highest Participants
   const radarData = useMemo(() => {
-    const list = eventRankings.length > 0 ? eventRankings : [
-      { shortName: 'HackAI', participants: 3 },
-      { shortName: 'Code Sprint', participants: 3 },
-      { shortName: 'Tracebot', participants: 1 },
-      { shortName: 'Relay Coding', participants: 1 },
-      { shortName: 'Quiz', participants: 1 },
-      { shortName: 'Debugging', participants: 1 }
-    ];
-    const maxVal = Math.max(...list.map(e => e.participants), 5);
-    return list.slice(0, 8).map(ev => ({
+    if (!eventRankings || eventRankings.length === 0) return [];
+    const maxVal = Math.max(...eventRankings.map(e => e.participants), 5);
+    return eventRankings.slice(0, 8).map(ev => ({
       subject: ev.shortName,
       name: ev.name,
       participants: ev.participants,
@@ -465,7 +440,11 @@ export default function AdminAnalytics({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#FFFFFF', fontWeight: '600' }}>
               <TrendingUp size={14} color="#FFFFFF" />
-              <span>Trending up by +22.4% registration rate</span>
+              <span>
+                {registrations.length === 0 
+                  ? '0 live registrations recorded' 
+                  : `${registrations.length} live registrations recorded`}
+              </span>
             </div>
             <span style={{ color: '#71717A' }}>Official SRISHTI 2.7 Trajectory</span>
           </div>
@@ -549,7 +528,7 @@ export default function AdminAnalytics({
                 Showing participant volume per competition to identify highest turnout
               </p>
             </div>
-            {topEvent && (
+            {topEvent && topEvent.participants > 0 && (
               <span style={{
                 background: 'rgba(255, 255, 255, 0.1)',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -602,7 +581,11 @@ export default function AdminAnalytics({
           }}>
             <span style={{ color: '#FFFFFF', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
               <TrendingUp size={13} color="#FFFFFF" />
-              <span>Highest Turnout: {topEvent ? `${topEvent.name} (${topEvent.participants} registered)` : 'Calculating...'}</span>
+              <span>
+                {topEvent && topEvent.participants > 0
+                  ? `Highest Turnout: ${topEvent.name} (${topEvent.participants} registered)`
+                  : 'No event registrations recorded yet'}
+              </span>
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
               <Users size={12} />

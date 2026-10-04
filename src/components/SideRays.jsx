@@ -20,16 +20,16 @@ const originToFlip = origin => {
 
 const SideRays = ({
   speed = 2.5,
-  rayColor1 = '#FFFFFF',
-  rayColor2 = '#888888',
+  rayColor1 = '#EAB308',
+  rayColor2 = '#96c8ff',
   intensity = 2,
   spread = 2,
   origin = 'top-right',
   tilt = 0,
-  saturation = 0,
+  saturation = 1.5,
   blend = 0.75,
   falloff = 1.6,
-  opacity = 0.6,
+  opacity = 1.0,
   className = ''
 }) => {
   const containerRef = useRef(null);
