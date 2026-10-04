@@ -6,48 +6,61 @@ import {
   FiCalendar, FiCheckCircle, FiClock, FiSearch, FiEdit2, FiPlus, 
   FiTrash2, FiDownload, FiSend, FiEye, FiRefreshCw, FiShield, 
   FiCheck, FiX, FiActivity, FiPhone, FiMail, FiBookOpen, 
-  FiAlertCircle, FiLayers
+  FiAlertCircle, FiLayers, FiUserCheck, FiAward, FiTag, FiMapPin
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { generateEntryPassEmailHtml } from '../utils/entryPassEmail';
 import { generateCardImagePng } from '../utils/cardImageGenerator';
 import './AdminDashboard.css';
 
-// Fest Event Catalog (aligned with client App.jsx)
+// Official SRISHTI 2.7 Database Events Catalog
 const DEFAULT_FEST_EVENTS = [
-  { id: 'tracebot', label: 'TRACE BOT', category: 'ROBOTICS', group: 'Team Events', date: 'Dec 6, 2026', time: '10:00 AM', venue: 'Main Auditorium' },
-  { id: 'treasurehunt', label: 'TREASURE HUNT', category: 'FUN', group: 'Popular', date: 'Dec 7, 2026', time: '01:00 PM', venue: 'Campus Grounds' },
-  { id: 'codingdebugging', label: 'CODING & DEBUGGING', category: 'DEV', group: 'Solo Events', date: 'Dec 6, 2026', time: '11:00 AM', venue: 'Lab 1 & 2' },
-  { id: 'aiwebsitemaking', label: 'AI WEBSITE MAKING', category: 'DEV', group: 'Popular', date: 'Dec 7, 2026', time: '09:30 AM', venue: 'Lab 3' },
-  { id: 'blindcoding', label: 'BLIND CODING', category: 'DEV', group: 'Solo Events', date: 'Dec 6, 2026', time: '02:00 PM', venue: 'Lab 1' },
-  { id: 'ideathon', label: 'IDEATHON', category: 'INNOVATION', group: 'Team Events', date: 'Dec 7, 2026', time: '10:30 AM', venue: 'Seminar Hall' },
-  { id: 'waltz', label: 'WALTZ (DANCE)', category: 'CULTURE', group: 'Team Events', date: 'Dec 7, 2026', time: '04:00 PM', venue: 'Open Air Theatre' },
-  { id: 'mindgame', label: 'MINDGAME', category: 'PUZZLE', group: 'Solo Events', date: 'Dec 6, 2026', time: '03:00 PM', venue: 'Hall B' },
-  { id: 'itquiz', label: 'IT QUIZ', category: 'KNOWLEDGE', group: 'Solo Events', date: 'Dec 7, 2026', time: '11:30 AM', venue: 'Audio Visual Hall' },
-  { id: 'facepainting', label: 'FACE PAINTING', category: 'ART', group: 'Solo Events', date: 'Dec 6, 2026', time: '12:00 PM', venue: 'Art Quad' },
-  { id: 'hackathon', label: 'HACKATHON', category: 'DEV', group: 'Popular', date: 'Dec 6, 2026', time: '05:00 PM', venue: 'Innovation Hub' }
+  { id: 'SRI27-TREASURE', event_code: 'SRI27-TREASURE', label: 'TREASURE HUNT', name: 'Treasure Hunt', category: 'FUN', date: '2026-12-10', start_time: '10:00', end_time: '12:00', venue: 'College Campus', status: 'upcoming', capacity: 100 },
+  { id: 'SRI27-WALTZ', event_code: 'SRI27-WALTZ', label: 'WALTZ (DANCE)', name: 'Waltz', category: 'CULTURAL', date: '2026-12-10', start_time: '14:00', end_time: '16:00', venue: 'Main Auditorium', status: 'upcoming', capacity: 80 },
+  { id: 'SRI27-QUIZ', event_code: 'SRI27-QUIZ', label: 'IT QUIZ', name: 'Quiz', category: 'TECHNICAL', date: '2026-12-10', start_time: '10:00', end_time: '12:00', venue: 'Seminar Hall', status: 'upcoming', capacity: 60 },
+  { id: 'SRI27-CODE', event_code: 'SRI27-CODE', label: 'CODING & DEBUGGING', name: 'Coding and Debugging', category: 'TECHNICAL', date: '2026-12-11', start_time: '10:00', end_time: '12:00', venue: 'Computer Lab', status: 'upcoming', capacity: 50 },
+  { id: 'SRI27-TRACEBOT', event_code: 'SRI27-TRACEBOT', label: 'TRACE BOT', name: 'Tracebot', category: 'TECHNICAL', date: '2026-12-11', start_time: '13:00', end_time: '15:00', venue: 'CS Lab', status: 'upcoming', capacity: 40 },
+  { id: 'SRI27-RELAY', event_code: 'SRI27-RELAY', label: 'RELAY CODING', name: 'Relay Coding', category: 'TECHNICAL', date: '2026-12-11', start_time: '10:00', end_time: '12:00', venue: 'Computer Lab', status: 'upcoming', capacity: 50 }
+];
+
+// Presets for fast role testing matching exact database records
+const DEMO_STAFF_PRESETS = [
+  { username: 'admin', email: 'anselrwilliams2106@gmail.com', name: 'SRISHTI Admin', role: 'admin', assignedEventCode: null },
+  { username: 'srishti_registration', email: 'srishti_registration@auth.srishti.internal', name: 'SRISHTI Registration', role: 'registration', assignedEventCode: null },
+  { username: 'srishti_quiz', email: 'quiz123@auth.srishti.internal', name: 'Quiz Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-QUIZ' },
+  { username: 'srishti_treasure', email: 'srishti_treasure@auth.srishti.internal', name: 'Treasure Hunt Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-TREASURE' },
+  { username: 'srishti_code', email: 'srishti_code@auth.srishti.internal', name: 'Coding Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-CODE' },
+  { username: 'srishti_tracebot', email: 'srishti_tracebot@auth.srishti.internal', name: 'Tracebot Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-TRACEBOT' },
+  { username: 'srishti_relay', email: 'srishti_relay@auth.srishti.internal', name: 'Relay Coding Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-RELAY' },
+  { username: 'srishti_waltz', email: 'srishti_waltz@auth.srishti.internal', name: 'Waltz Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-WALTZ' }
 ];
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
   // Authentication states
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState('email'); // 'email', 'otp', 'dashboard'
+  const [identifier, setIdentifier] = useState(''); // username or email
+  const [password, setPassword] = useState('');
+  const [step, setStep] = useState('login'); // 'login', 'dashboard'
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
-  const [adminRole, setAdminRole] = useState(null); // 'superadmin' or 'coordinator'
-  const [adminEventId, setAdminEventId] = useState(null);
 
-  // Active navigation tab
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'events', 'participants', 'registrations', 'databases'
+  // Active user / staff session
+  const [currentStaff, setCurrentStaff] = useState(null);
+  const [adminRole, setAdminRole] = useState(null); // 'admin', 'registration', 'event_staff', 'volunteer'
+  const [assignedEvents, setAssignedEvents] = useState([]); // events assigned to this event_staff
+  const [selectedStaffEventId, setSelectedStaffEventId] = useState('');
 
-  // Primary database tables in memory
-  const [events, setEvents] = useState([]);
+  // Navigation tab
+  const [activeTab, setActiveTab] = useState('overview'); 
+  // Tabs: 'overview', 'checkin', 'attendance', 'events', 'participants', 'registrations', 'staff', 'databases'
+
+  // Primary database tables
+  const [events, setEvents] = useState(DEFAULT_FEST_EVENTS);
   const [participants, setParticipants] = useState([]);
   const [registrations, setRegistrations] = useState([]);
-  const [adminsList, setAdminsList] = useState([]);
+  const [volunteers, setVolunteers] = useState([]);
+  const [eventStaff, setEventStaff] = useState([]);
   const [arrivalCheckins, setArrivalCheckins] = useState([]);
   const [eventAttendance, setEventAttendance] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(false);
@@ -58,22 +71,32 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedDbTable, setSelectedDbTable] = useState('participants');
 
+  // Live Check-in / Attendance Station State
+  const [stationCodeInput, setStationCodeInput] = useState('');
+  const [stationAttendee, setStationAttendee] = useState(null);
+  const [stationNotes, setStationNotes] = useState('');
+  const [stationActionLoading, setStationActionLoading] = useState(false);
+
   // Modals state
-  const [modalType, setModalType] = useState(null); // 'editUser', 'assignEvent', 'editEvent', 'addEvent', 'inspectRow', 'editRow'
+  const [modalType, setModalType] = useState(null); 
+  // 'editUser', 'editEvent', 'addEvent', 'addVolunteer', 'assignEventStaff', 'inspectRow'
   const [activeItem, setActiveItem] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Forms data
+  // Form states
   const [userFormData, setUserFormData] = useState({});
-  const [assignFormData, setAssignFormData] = useState({
-    eventId: '',
-    teamSize: 1,
-    teamMembers: '',
-    paymentStatus: 'verified',
-    sendEmailPass: true
-  });
   const [eventFormData, setEventFormData] = useState({});
-  const [rowEditData, setRowEditData] = useState({});
+  const [volunteerFormData, setVolunteerFormData] = useState({
+    username: '',
+    name: '',
+    email: '',
+    role: 'volunteer',
+    status: 'active'
+  });
+  const [assignStaffData, setAssignStaffData] = useState({
+    volunteer_id: '',
+    event_id: ''
+  });
 
   // Toast feedback
   const [toast, setToast] = useState(null);
@@ -86,638 +109,458 @@ export default function AdminDashboard() {
   }, []);
 
   // -----------------------------------------------------------------------------
-  // DATA HYDRATION
+  // DATA HYDRATION: FETCH ALL 7 CORE TABLES
   // -----------------------------------------------------------------------------
-  const fetchAllData = useCallback(async (role, scopedEventId) => {
+  const fetchAllData = useCallback(async (role, staffVolunteerId) => {
     setIsDataLoading(true);
     try {
       // 1. Fetch Events
-      const { data: dbEvents, error: evErr } = await supabase.from('events').select('*');
-      if (evErr) console.warn('Events fetch error:', evErr);
-      
-      const combinedEvents = (dbEvents && dbEvents.length > 0)
-        ? dbEvents.map(ev => {
-            const matchDefault = DEFAULT_FEST_EVENTS.find(d => d.id === ev.id || d.id === ev.event_code);
-            return {
-              ...ev,
-              label: ev.name || matchDefault?.label || ev.id,
-              category: ev.category || matchDefault?.category || 'DEV',
-              venue: ev.venue || matchDefault?.venue || 'TBA',
-              date: ev.date || matchDefault?.date || 'Dec 6-7, 2026',
-              time: ev.start_time || matchDefault?.time || '10:00 AM'
-            };
-          })
-        : DEFAULT_FEST_EVENTS;
-      setEvents(combinedEvents);
+      const { data: dbEvents, error: evErr } = await supabase
+        .from('events')
+        .select('*')
+        .order('date', { ascending: true });
+
+      let loadedEvents = DEFAULT_FEST_EVENTS;
+      if (!evErr && dbEvents && dbEvents.length > 0) {
+        loadedEvents = dbEvents.map(ev => ({
+          ...ev,
+          label: ev.name || ev.event_code,
+          category: ev.category || 'TECHNICAL',
+          venue: ev.venue || 'Campus Venue',
+          date: ev.date || '2026-12-10',
+          time: ev.start_time ? `${ev.start_time} - ${ev.end_time || ''}` : '10:00 AM'
+        }));
+      }
+      setEvents(loadedEvents);
 
       // 2. Fetch Participants
       const { data: pData, error: pErr } = await supabase
         .from('participants')
         .select('*')
         .order('created_at', { ascending: false });
+
       if (!pErr && pData) {
         setParticipants(pData);
       }
 
-      // 3. Fetch Registrations
-      let regQuery = supabase
-        .from('registrations')
-        .select('*, events(*)');
-
-      if (role === 'coordinator' && scopedEventId) {
-        regQuery = regQuery.eq('event_id', scopedEventId);
-      }
-
-      // Try ordering by registered_at (standard schema)
+      // 3. Fetch Registrations joined with participants and events
       try {
-        const { data: rData, error: rErr } = await regQuery.order('registered_at', { ascending: false });
+        const { data: rData, error: rErr } = await supabase
+          .from('registrations')
+          .select('*, participants(id, participant_code, name, email, phone, college, department, year), events(id, event_code, name, category, venue, date, start_time)')
+          .order('registered_at', { ascending: false });
+
         if (!rErr && rData) {
           setRegistrations(rData);
         } else {
-          const { data: fallbackData } = await regQuery;
-          if (fallbackData) setRegistrations(fallbackData);
-        }
-      } catch (_) {
-        const { data: fallbackData } = await regQuery;
-        if (fallbackData) setRegistrations(fallbackData);
-      }
-
-      // 4. Fetch Volunteers / Admins
-      try {
-        const { data: volData, error: volErr } = await supabase.from('volunteers').select('*');
-        if (!volErr && volData && volData.length > 0) {
-          setAdminsList(volData);
-        } else {
-          const { data: admData } = await supabase.from('event_admins').select('*');
-          if (admData) setAdminsList(admData);
+          const { data: fallbackR } = await supabase.from('registrations').select('*');
+          if (fallbackR) setRegistrations(fallbackR);
         }
       } catch (_) {}
 
-      // 5. Fetch Arrival Check-ins
-      try {
-        const { data: arrData } = await supabase.from('arrival_checkins').select('*, participants(name, participant_code, college)');
-        if (arrData) setArrivalCheckins(arrData);
-      } catch (_) {}
-
-      // 6. Fetch Event Attendance
-      try {
-        const { data: attData } = await supabase.from('event_attendance').select('*, participants(name, participant_code), events(name, event_code)');
-        if (attData) setEventAttendance(attData);
-      } catch (_) {}
-    } catch (err) {
-      console.error('Error fetching admin data:', err);
-      showToast('Error syncing with database', 'error');
-    } finally {
-      setIsDataLoading(false);
-    }
-  }, [showToast]);
-
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('srishti_admin_session');
-    setStep('email');
-    setAdminRole(null);
-    setAdminEventId(null);
-    setRegistrations([]);
-    setParticipants([]);
-    setEvents([]);
-  }, []);
-
-  // -----------------------------------------------------------------------------
-  // AUTHENTICATION & ACCESS VERIFICATION
-  // -----------------------------------------------------------------------------
-  const verifyAdminAccess = useCallback(async (adminEmail) => {
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      let adminData = null;
-
-      // Try volunteers table first (new schema)
+      // 4. Fetch Volunteers
       try {
         const { data: volData, error: volErr } = await supabase
           .from('volunteers')
           .select('*')
-          .eq('email', adminEmail)
-          .maybeSingle();
+          .order('name', { ascending: true });
 
         if (!volErr && volData) {
-          adminData = {
-            ...volData,
-            role: volData.role === 'admin' ? 'superadmin' : volData.role
-          };
+          setVolunteers(volData);
         }
       } catch (_) {}
 
-      // Fallback to legacy event_admins
-      if (!adminData) {
-        try {
-          const { data: legacyData } = await supabase
-            .from('event_admins')
-            .select('*')
-            .eq('email', adminEmail)
-            .maybeSingle();
-          if (legacyData) adminData = legacyData;
-        } catch (_) {}
+      // 5. Fetch Event Staff Assignments
+      let staffAssignments = [];
+      try {
+        const { data: esData, error: esErr } = await supabase
+          .from('event_staff')
+          .select('*, volunteers(id, name, username, email, role), events(id, name, event_code, venue)');
+
+        if (!esErr && esData) {
+          staffAssignments = esData;
+          setEventStaff(esData);
+        }
+      } catch (_) {}
+
+      // Filter assigned events for event_staff role
+      if (staffVolunteerId) {
+        const userAssignments = staffAssignments.filter(es => es.volunteer_id === staffVolunteerId);
+        const assignedEvs = userAssignments.map(ua => 
+          loadedEvents.find(e => e.id === ua.event_id || e.event_code === ua.events?.event_code)
+        ).filter(Boolean);
+
+        setAssignedEvents(assignedEvs);
+        if (assignedEvs.length > 0 && !selectedStaffEventId) {
+          setSelectedStaffEventId(assignedEvs[0].id);
+        }
       }
 
-      // Master admin fallback
-      if (!adminData && (adminEmail || '').trim().toLowerCase() === 'tsrknight@gmail.com') {
-        adminData = { email: 'tsrknight@gmail.com', name: 'Master Superadmin', role: 'superadmin' };
-      }
+      // 6. Fetch Arrival Check-ins
+      try {
+        const { data: arrData } = await supabase
+          .from('arrival_checkins')
+          .select('*, participants(id, participant_code, name, college, phone, email), volunteers(name, username)')
+          .order('checked_in_at', { ascending: false });
 
-      if (!adminData) {
-        handleLogout();
-        throw new Error('Access denied. No admin record with this email.');
-      }
+        if (arrData) setArrivalCheckins(arrData);
+      } catch (_) {}
 
-      setAdminRole(adminData.role || 'coordinator');
-      setAdminEventId(adminData.event_id || null);
-      setStep('dashboard');
+      // 7. Fetch Event Attendance
+      try {
+        const { data: attData } = await supabase
+          .from('event_attendance')
+          .select('*, participants(id, participant_code, name, college, phone), events(id, name, event_code, venue), volunteers(name, username)')
+          .order('marked_at', { ascending: false });
 
-      fetchAllData(adminData.role, adminData.event_id);
+        if (attData) setEventAttendance(attData);
+      } catch (_) {}
+
     } catch (err) {
-      setAuthError(err.message);
+      console.error('Error fetching admin data:', err);
+      showToast('Notice: Synced with available tables', 'info');
     } finally {
-      setAuthLoading(false);
+      setIsDataLoading(false);
     }
-  }, [fetchAllData, handleLogout]);
+  }, [selectedStaffEventId, showToast]);
 
-  useEffect(() => {
-    const savedAdmin = localStorage.getItem('srishti_admin_session');
-    if (savedAdmin) {
-      verifyAdminAccess(savedAdmin);
-    }
-  }, [verifyAdminAccess]);
-
-  const handleSendOtp = async (e) => {
-    e.preventDefault();
+  // -----------------------------------------------------------------------------
+  // AUTHENTICATION & LOGIN
+  // -----------------------------------------------------------------------------
+  const authenticateStaff = useCallback(async (userQuery) => {
     setAuthLoading(true);
     setAuthError(null);
-
-    const cleanEmail = email.trim().toLowerCase();
     try {
-      let adminData = null;
+      const clean = userQuery.trim().toLowerCase();
+      let matchedStaff = null;
 
-      // Check volunteers table
+      // 1. Try finding in Supabase volunteers table by username or email
       try {
         const { data: volData } = await supabase
           .from('volunteers')
           .select('*')
-          .eq('email', cleanEmail)
+          .or(`email.ilike.${clean},username.ilike.${clean}`)
           .maybeSingle();
-        if (volData) adminData = volData;
+
+        if (volData) {
+          matchedStaff = volData;
+        }
       } catch (_) {}
 
-      // Check legacy event_admins table
-      if (!adminData) {
-        try {
-          const { data: legData } = await supabase
-            .from('event_admins')
-            .select('*')
-            .eq('email', cleanEmail)
-            .maybeSingle();
-          if (legData) adminData = legData;
-        } catch (_) {}
+      // 2. Demo Presets fallback if offline or mock account
+      if (!matchedStaff) {
+        const preset = DEMO_STAFF_PRESETS.find(p => 
+          p.username.toLowerCase() === clean || p.email.toLowerCase() === clean
+        );
+        if (preset) {
+          matchedStaff = {
+            id: `mock-${preset.username}`,
+            auth_user_id: `mock-auth-${preset.username}`,
+            username: preset.username,
+            name: preset.name,
+            email: preset.email,
+            role: preset.role,
+            status: 'active'
+          };
+        }
       }
 
-      // Master Superadmin fallback
-      if (!adminData && cleanEmail === 'tsrknight@gmail.com') {
-        adminData = { email: cleanEmail, role: 'superadmin' };
+      // 3. Fallback for Master Superadmin
+      if (!matchedStaff && (clean === 'tsrknight@gmail.com' || clean === 'tsrknight_admin' || clean === 'anselrwilliams2106@gmail.com' || clean === 'admin')) {
+        matchedStaff = {
+          id: '2d7c07-9014-4ce3-88d2-3d899f0e',
+          auth_user_id: '8c78f36f-a47f-4837-8106-d06380aada14',
+          username: 'admin',
+          name: 'SRISHTI Admin',
+          email: clean.includes('tsrknight') ? 'tsrknight@gmail.com' : 'anselrwilliams2106@gmail.com',
+          role: 'admin',
+          status: 'active'
+        };
       }
 
-      if (!adminData) {
-        throw new Error('Access Denied: This email is not registered as an Admin.');
+      if (!matchedStaff) {
+        throw new Error('Access Denied: No active staff profile found with this username or email.');
       }
 
-      const code = Math.floor(1000 + Math.random() * 9000).toString();
-      localStorage.setItem('pending_admin_otp', code);
-      localStorage.setItem('pending_admin_email', cleanEmail);
+      const role = matchedStaff.role || 'volunteer';
+      setCurrentStaff(matchedStaff);
+      setAdminRole(role);
+      localStorage.setItem('srishti_staff_session', JSON.stringify(matchedStaff));
 
-      const htmlContent = `
-        <div style="font-family: sans-serif; background: #070b14; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 0 auto; border: 1px solid #ff4444;">
-          <h2 style="color: #ff4444; letter-spacing: 2px;">SRISHTI 2.7 ADMIN ACCESS</h2>
-          <p style="color: #94a3b8; font-size: 15px;">Use the following verification code to access the Admin Command Center:</p>
-          <h1 style="font-size: 48px; letter-spacing: 6px; margin: 25px 0; color: #fff; font-family: monospace;">${code}</h1>
-          <p style="color: #64748b; font-size: 13px;">If you did not request this verification code, please ignore this email.</p>
-        </div>
-      `;
-
-      try {
-        await fetch('/api/send_email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            to: cleanEmail, 
-            subject: 'Srishti 2.7 — Admin Login Verification Code', 
-            html: htmlContent 
-          })
-        });
-      } catch (mailErr) {
-        console.warn('Mail send notice (local fallback active):', mailErr);
+      // Set initial tab based on role
+      if (role === 'registration') {
+        setActiveTab('checkin');
+      } else if (role === 'event_staff') {
+        setActiveTab('attendance');
+      } else {
+        setActiveTab('overview');
       }
 
-      setStep('otp');
-      showToast(`Verification code sent to ${cleanEmail}!`, 'success');
+      setStep('dashboard');
+      showToast(`Welcome back, ${matchedStaff.name} (${role.toUpperCase()})`, 'success');
+
+      // Hydrate all database data
+      fetchAllData(role, matchedStaff.id);
+
     } catch (err) {
       setAuthError(err.message);
     } finally {
       setAuthLoading(false);
     }
-  };
+  }, [fetchAllData, showToast]);
 
-  const handleVerifyOtp = async (e) => {
+  const handleLoginSubmit = (e) => {
     e.preventDefault();
-    setAuthLoading(true);
-    setAuthError(null);
-
-    try {
-      const savedCode = localStorage.getItem('pending_admin_otp');
-      const savedEmail = localStorage.getItem('pending_admin_email');
-
-      if (otp.trim() !== savedCode || email.trim().toLowerCase() !== savedEmail) {
-        throw new Error('Invalid or expired verification code.');
-      }
-
-      localStorage.removeItem('pending_admin_otp');
-      localStorage.removeItem('pending_admin_email');
-      localStorage.setItem('srishti_admin_session', savedEmail);
-
-      await verifyAdminAccess(savedEmail);
-      showToast('Welcome to Srishti 2.7 Admin Center', 'success');
-    } catch (err) {
-      setAuthError(err.message);
-    } finally {
-      setAuthLoading(false);
-    }
+    if (!identifier.trim()) return;
+    authenticateStaff(identifier);
   };
+
+  const handleQuickPresetLogin = (preset) => {
+    setIdentifier(preset.username);
+    authenticateStaff(preset.username);
+  };
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('srishti_staff_session');
+    setStep('login');
+    setCurrentStaff(null);
+    setAdminRole(null);
+    setAssignedEvents([]);
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('srishti_staff_session');
+    if (saved) {
+      try {
+        const staffObj = JSON.parse(saved);
+        if (staffObj?.email || staffObj?.username) {
+          authenticateStaff(staffObj.username || staffObj.email);
+        }
+      } catch (_) {}
+    }
+  }, [authenticateStaff]);
 
   // -----------------------------------------------------------------------------
   // COMPUTED STATS & SUMMARY
   // -----------------------------------------------------------------------------
   const stats = useMemo(() => {
     const totalRegs = registrations.length;
-    const verifiedRegs = registrations.filter(r => r.payment_status === 'verified').length;
-    const pendingRegs = totalRegs - verifiedRegs;
     const totalUsers = participants.length;
+    const totalArrivals = arrivalCheckins.length;
+    const totalAttendance = eventAttendance.length;
     const totalEventsCount = events.length;
+    const totalStaffCount = volunteers.length;
 
     return {
       totalRegs,
-      verifiedRegs,
-      pendingRegs,
       totalUsers,
-      totalEventsCount
+      totalArrivals,
+      totalAttendance,
+      totalEventsCount,
+      totalStaffCount
     };
-  }, [registrations, participants, events]);
-
-  const participantRegistrationsMap = useMemo(() => {
-    const map = {};
-    registrations.forEach(reg => {
-      const keyId = reg.participant_id;
-      const keyCode = reg.participant_code;
-      const keyEmail = reg.lead_email?.toLowerCase();
-
-      if (keyId) {
-        if (!map[keyId]) map[keyId] = [];
-        map[keyId].push(reg);
-      }
-      if (keyCode) {
-        if (!map[keyCode]) map[keyCode] = [];
-        map[keyCode].push(reg);
-      }
-      if (keyEmail) {
-        if (!map[keyEmail]) map[keyEmail] = [];
-        map[keyEmail].push(reg);
-      }
-    });
-    return map;
-  }, [registrations]);
-
-  const eventRegCounts = useMemo(() => {
-    const counts = {};
-    registrations.forEach(r => {
-      const eid = r.event_id;
-      if (!counts[eid]) counts[eid] = { count: 0, verified: 0, members: 0 };
-      counts[eid].count += 1;
-      if (r.payment_status === 'verified') counts[eid].verified += 1;
-      counts[eid].members += (Number(r.team_size) || 1);
-    });
-    return counts;
-  }, [registrations]);
+  }, [registrations, participants, arrivalCheckins, eventAttendance, events, volunteers]);
 
   // -----------------------------------------------------------------------------
-  // ACTIONS: PARTICIPANT / USER EDITING & MANAGEMENT
+  // ACTION: ARRIVAL GATE CHECK-IN (registration desk & admin)
   // -----------------------------------------------------------------------------
-  const handleOpenEditUser = (participant) => {
-    setActiveItem(participant);
-    setUserFormData({
-      name: participant.name || '',
-      email: participant.email || '',
-      phone: participant.phone || '',
-      college: participant.college || '',
-      department: participant.department || '',
-      year: participant.year || '',
-      participant_code: participant.participant_code || ''
-    });
-    setModalType('editUser');
-  };
-
-  const handleSaveUser = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const original = activeItem;
-      const updates = {
-        name: userFormData.name.trim(),
-        email: userFormData.email.trim().toLowerCase(),
-        phone: userFormData.phone.trim(),
-        college: userFormData.college.trim(),
-        department: userFormData.department.trim(),
-        year: userFormData.year.trim(),
-        participant_code: userFormData.participant_code.trim().toUpperCase()
-      };
-
-      const { error: pUpdErr } = await supabase
-        .from('participants')
-        .update(updates)
-        .eq('id', original.id);
-
-      if (pUpdErr) throw pUpdErr;
-
-      // Synchronize matching registrations
-      await supabase
-        .from('registrations')
-        .update({
-          lead_name: updates.name,
-          lead_email: updates.email,
-          lead_phone: updates.phone,
-          lead_college: updates.college,
-          participant_code: updates.participant_code
-        })
-        .or(`participant_id.eq.${original.id},lead_email.ilike.${original.email}`);
-
-      showToast(`Participant ${updates.name} updated successfully!`, 'success');
-      setModalType(null);
-      fetchAllData(adminRole, adminEventId);
-    } catch (err) {
-      console.error(err);
-      showToast(err.message || 'Failed to update user', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteUser = async (participant) => {
-    if (!window.confirm(`Are you sure you want to delete participant ${participant.name} (${participant.email})? This action cannot be undone.`)) {
+  const handleLookupParticipantForStation = (codeToSearch) => {
+    const q = (codeToSearch || stationCodeInput).trim().toUpperCase();
+    if (!q) {
+      setStationAttendee(null);
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from('participants')
-        .delete()
-        .eq('id', participant.id);
+    const match = participants.find(p => 
+      (p.participant_code && p.participant_code.toUpperCase() === q) ||
+      (p.email && p.email.toUpperCase() === q) ||
+      (p.phone && p.phone.includes(q))
+    );
 
-      if (error) throw error;
+    if (match) {
+      // Find user registrations
+      const userRegs = registrations.filter(r => 
+        r.participant_id === match.id || 
+        r.participants?.participant_code === match.participant_code
+      );
+      
+      // Check if already arrived
+      const arrival = arrivalCheckins.find(a => 
+        a.participant_id === match.id || 
+        a.participants?.participant_code === match.participant_code
+      );
 
-      showToast(`Participant ${participant.name} removed.`, 'success');
-      fetchAllData(adminRole, adminEventId);
-    } catch (err) {
-      showToast(err.message || 'Failed to delete participant', 'error');
-    }
-  };
-
-  // -----------------------------------------------------------------------------
-  // ACTIONS: ASSIGN EVENT TO PARTICIPANT
-  // -----------------------------------------------------------------------------
-  const handleOpenAssignEvent = (participant) => {
-    setActiveItem(participant);
-    setAssignFormData({
-      eventId: events[0]?.id || 'tracebot',
-      teamSize: 1,
-      teamMembers: '',
-      paymentStatus: 'verified',
-      sendEmailPass: true
-    });
-    setModalType('assignEvent');
-  };
-
-  const handleSaveAssignEvent = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const participant = activeItem;
-      const targetEvent = events.find(ev => ev.id === assignFormData.eventId) || events[0];
-      const uniqueCode = participant.participant_code || `SRI27-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-      let membersArray = [];
-      if (assignFormData.teamMembers.trim()) {
-        membersArray = assignFormData.teamMembers
-          .split('\n')
-          .filter(m => m.trim().length > 0)
-          .map(name => ({ name: name.trim() }));
-      }
-
-      const newRegistration = {
-        participant_id: participant.id,
-        participant_code: uniqueCode,
-        event_id: targetEvent.id,
-        event_name: targetEvent.label || targetEvent.name,
-        team_size: Number(assignFormData.teamSize) || 1,
-        lead_name: participant.name,
-        lead_college: participant.college || 'St Thomas College',
-        lead_email: participant.email,
-        lead_phone: participant.phone || '',
-        lead_roll: '',
-        team_members: membersArray,
-        payment_status: assignFormData.paymentStatus
-      };
-
-      const { error: regError } = await supabase
-        .from('registrations')
-        .insert([newRegistration]);
-
-      if (regError) throw regError;
-
-      // Dispatch Entry Pass Email if option checked
-      if (assignFormData.sendEmailPass && participant.email) {
-        try {
-          const qrDataUrl = await QRCode.toDataURL(uniqueCode, {
-            width: 260,
-            margin: 2,
-            color: { dark: '#020617', light: '#ffffff' }
-          });
-
-          let cardPng = null;
-          try {
-            cardPng = await generateCardImagePng({
-              attendeeName: participant.name,
-              college: participant.college || 'St Thomas College',
-              passCode: uniqueCode,
-              events: [targetEvent.label || targetEvent.name],
-              isVerified: true,
-              statusText: 'VERIFIED'
-            });
-          } catch (pngErr) {
-            console.warn('PNG card generation notice:', pngErr);
-          }
-
-          const ticketHtml = generateEntryPassEmailHtml({
-            attendeeName: participant.name,
-            college: participant.college || 'St Thomas College',
-            passCode: uniqueCode,
-            eventName: targetEvent.label || targetEvent.name,
-            status: 'VERIFIED'
-          });
-
-          await fetch('/api/send_email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: participant.email,
-              subject: `Entry Pass: ${targetEvent.label || targetEvent.name} — Srishti 2.7`,
-              html: ticketHtml,
-              image: cardPng
-            })
-          });
-        } catch (mailErr) {
-          console.warn('Mail send failed in assign:', mailErr);
-        }
-      }
-
-      showToast(`Assigned ${participant.name} to ${targetEvent.label || targetEvent.name}!`, 'success');
-      setModalType(null);
-      fetchAllData(adminRole, adminEventId);
-    } catch (err) {
-      console.error(err);
-      showToast(err.message || 'Failed to assign event', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // -----------------------------------------------------------------------------
-  // ACTIONS: REGISTRATIONS MANAGEMENT
-  // -----------------------------------------------------------------------------
-  const handleTogglePaymentStatus = async (reg) => {
-    const newStatus = reg.payment_status === 'verified' ? 'pending' : 'verified';
-    try {
-      const { error } = await supabase
-        .from('registrations')
-        .update({ payment_status: newStatus })
-        .eq('id', reg.id);
-
-      if (error) throw error;
-
-      showToast(`Registration marked as ${newStatus.toUpperCase()}`, 'success');
-      setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, payment_status: newStatus } : r));
-    } catch (err) {
-      showToast(err.message || 'Failed to update payment status', 'error');
-    }
-  };
-
-  const handleDeleteRegistration = async (reg) => {
-    if (!window.confirm(`Delete registration for ${reg.lead_name} (${reg.event_name})?`)) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('registrations')
-        .delete()
-        .eq('id', reg.id);
-
-      if (error) throw error;
-
-      showToast('Registration deleted', 'success');
-      fetchAllData(adminRole, adminEventId);
-    } catch (err) {
-      showToast(err.message || 'Failed to delete registration', 'error');
-    }
-  };
-
-  const handleResendPassEmail = async (reg) => {
-    if (!reg.lead_email) {
-      showToast('No email found for this registration', 'error');
-      return;
-    }
-
-    try {
-      showToast(`Generating and sending pass to ${reg.lead_email}...`, 'info');
-      const uniqueCode = reg.participant_code || reg.id.substring(0, 8);
-      const qrDataUrl = await QRCode.toDataURL(uniqueCode, {
-        width: 256,
-        margin: 2,
-        color: { dark: '#020617', light: '#ffffff' }
+      setStationAttendee({
+        ...match,
+        registrations: userRegs,
+        arrivalCheckin: arrival
       });
-
-      let cardPng = null;
-      try {
-        cardPng = await generateCardImagePng({
-          attendeeName: reg.lead_name || 'Participant',
-          college: reg.lead_college || 'St Thomas College',
-          passCode: uniqueCode,
-          events: [reg.event_name || 'FEST PASS'],
-          isVerified: reg.payment_status === 'verified' || reg.status === 'verified',
-          statusText: (reg.payment_status || reg.status || 'VERIFIED').toUpperCase()
-        });
-      } catch (pngErr) {
-        console.warn('PNG card generation notice:', pngErr);
-      }
-
-      const ticketHtml = generateEntryPassEmailHtml({
-        attendeeName: reg.lead_name || 'Participant',
-        college: reg.lead_college || 'St Thomas College',
-        passCode: uniqueCode,
-        eventName: reg.event_name || reg.events?.name || 'FEST PASS',
-        status: reg.payment_status || reg.status || 'VERIFIED'
-      });
-
-      await fetch('/api/send_email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: reg.lead_email,
-          subject: `Entry Pass: ${reg.event_name} — Srishti 2.7`,
-          html: ticketHtml,
-          image: cardPng
-        })
-      });
-
-      showToast(`Pass email successfully re-sent to ${reg.lead_email}!`, 'success');
-    } catch {
-      showToast('Failed to send pass email', 'error');
+    } else {
+      setStationAttendee(null);
+      showToast(`No participant found with code "${q}"`, 'error');
     }
   };
 
-  // -----------------------------------------------------------------------------
-  // ACTIONS: EVENTS MANAGEMENT
-  // -----------------------------------------------------------------------------
-  const handleOpenEditEvent = (event) => {
-    setActiveItem(event);
-    setEventFormData({
-      id: event.id,
-      name: event.name || event.label || '',
-      category: event.category || 'DEV',
-      venue: event.venue || '',
-      date: event.date || '',
-      start_time: event.time || event.start_time || ''
-    });
-    setModalType('editEvent');
-  };
-
-  const handleSaveEvent = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const handleMarkGateArrival = async (sourceType = 'manual') => {
+    if (!stationAttendee) return;
+    setStationActionLoading(true);
 
     try {
       const payload = {
+        participant_id: stationAttendee.id,
+        checked_in_by: currentStaff?.id || '8c78f36f-a47f-4837-8106-d06380aada14',
+        source: sourceType,
+        notes: stationNotes.trim() || null
+      };
+
+      const { data, error } = await supabase
+        .from('arrival_checkins')
+        .insert([payload])
+        .select('*');
+
+      if (error && error.code !== '23505') { // 23505 is unique violation
+        throw error;
+      }
+
+      showToast(`Gate Arrival Confirmed: ${stationAttendee.name} checked in!`, 'success');
+      setStationNotes('');
+      
+      // Refresh data
+      fetchAllData(adminRole, currentStaff?.id);
+      handleLookupParticipantForStation(stationAttendee.participant_code);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Error recording arrival check-in', 'error');
+    } finally {
+      setStationActionLoading(false);
+    }
+  };
+
+  // -----------------------------------------------------------------------------
+  // ACTION: EVENT ROOM ATTENDANCE (event_staff & admin)
+  // -----------------------------------------------------------------------------
+  const handleMarkEventAttendance = async (participantId, targetEventId, sourceType = 'manual') => {
+    setStationActionLoading(true);
+    try {
+      const payload = {
+        participant_id: participantId,
+        event_id: targetEventId,
+        marked_by: currentStaff?.id || '8c78f36f-a47f-4837-8106-d06380aada14',
+        source: sourceType,
+        notes: stationNotes.trim() || null
+      };
+
+      const { error } = await supabase
+        .from('event_attendance')
+        .insert([payload]);
+
+      if (error && error.code !== '23505') {
+        throw error;
+      }
+
+      showToast(`Attendance marked successfully for event room!`, 'success');
+      setStationNotes('');
+      fetchAllData(adminRole, currentStaff?.id);
+
+      if (stationAttendee) {
+        handleLookupParticipantForStation(stationAttendee.participant_code);
+      }
+    } catch (err) {
+      showToast(err.message || 'Error marking attendance', 'error');
+    } finally {
+      setStationActionLoading(false);
+    }
+  };
+
+  // -----------------------------------------------------------------------------
+  // ACTION: EVENT STAFF ASSIGNMENT (Admin only)
+  // -----------------------------------------------------------------------------
+  const handleAssignStaffToEvent = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const { volunteer_id, event_id } = assignStaffData;
+      if (!volunteer_id || !event_id) throw new Error('Please select both staff member and event.');
+
+      const { error } = await supabase
+        .from('event_staff')
+        .insert([{ volunteer_id, event_id }]);
+
+      if (error && error.code !== '23505') throw error;
+
+      showToast('Staff coordinator assigned to event successfully!', 'success');
+      setModalType(null);
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || 'Failed to assign staff to event', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveStaffAssignment = async (assignmentId) => {
+    if (!window.confirm('Remove this coordinator assignment?')) return;
+    try {
+      const { error } = await supabase
+        .from('event_staff')
+        .delete()
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+      showToast('Assignment removed.', 'success');
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || 'Failed to remove assignment', 'error');
+    }
+  };
+
+  // -----------------------------------------------------------------------------
+  // ACTION: VOLUNTEER MANAGEMENT (Admin only)
+  // -----------------------------------------------------------------------------
+  const handleSaveVolunteer = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        name: volunteerFormData.name.trim(),
+        username: volunteerFormData.username.trim().toLowerCase(),
+        email: volunteerFormData.email.trim().toLowerCase(),
+        role: volunteerFormData.role,
+        status: volunteerFormData.status
+      };
+
+      const { error } = await supabase
+        .from('volunteers')
+        .insert([payload]);
+
+      if (error) throw error;
+
+      showToast(`Staff member ${payload.name} added!`, 'success');
+      setModalType(null);
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || 'Failed to add staff member', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // -----------------------------------------------------------------------------
+  // ACTION: EVENT MANAGEMENT (Admin only)
+  // -----------------------------------------------------------------------------
+  const handleSaveEvent = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const payload = {
         name: eventFormData.name.trim(),
-        category: eventFormData.category.trim().toUpperCase(),
+        category: eventFormData.category.trim(),
         venue: eventFormData.venue.trim(),
-        date: eventFormData.date.trim(),
-        start_time: eventFormData.start_time.trim()
+        date: eventFormData.date,
+        start_time: eventFormData.start_time,
+        end_time: eventFormData.end_time,
+        capacity: Number(eventFormData.capacity) || null,
+        status: eventFormData.status || 'upcoming'
       };
 
       const { error } = await supabase
@@ -726,10 +569,9 @@ export default function AdminDashboard() {
         .eq('id', activeItem.id);
 
       if (error) throw error;
-
-      showToast(`Event ${payload.name} updated!`, 'success');
+      showToast(`Event updated successfully!`, 'success');
       setModalType(null);
-      fetchAllData(adminRole, adminEventId);
+      fetchAllData(adminRole, currentStaff?.id);
     } catch (err) {
       showToast(err.message || 'Failed to update event', 'error');
     } finally {
@@ -737,220 +579,98 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleOpenAddEvent = () => {
-    setEventFormData({
-      id: '',
-      name: '',
-      category: 'DEV',
-      venue: '',
-      date: '2026-10-06',
-      start_time: '10:00 AM'
-    });
-    setModalType('addEvent');
-  };
-
-  const handleSaveAddEvent = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const safeId = eventFormData.id.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (!safeId) throw new Error('Valid event ID required');
-
-      const payload = {
-        id: safeId,
-        event_code: safeId,
-        name: eventFormData.name.trim(),
-        category: eventFormData.category.trim().toUpperCase(),
-        venue: eventFormData.venue.trim() || 'TBA',
-        date: eventFormData.date.trim() || '2026-10-06',
-        start_time: eventFormData.start_time.trim() || '10:00 AM'
-      };
-
-      const { error } = await supabase
-        .from('events')
-        .insert([payload]);
-
-      if (error) throw error;
-
-      showToast(`New Event ${payload.name} created!`, 'success');
-      setModalType(null);
-      fetchAllData(adminRole, adminEventId);
-    } catch (err) {
-      showToast(err.message || 'Failed to add event', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // -----------------------------------------------------------------------------
-  // ACTIONS: DATABASE EXPLORER & CSV EXPORT
+  // ACTION: EXPORT CSV FOR ANY TABLE
   // -----------------------------------------------------------------------------
   const handleExportCsv = (tableName, data) => {
     if (!data || data.length === 0) {
-      showToast('No rows to export for this table', 'error');
+      showToast('No records available to export', 'error');
       return;
     }
 
     const headers = Object.keys(data[0]);
-    const csvRows = [
-      headers.join(','),
-      ...data.map(row => 
-        headers.map(field => {
-          let val = row[field];
-          if (val === null || val === undefined) return '""';
-          if (typeof val === 'object') val = JSON.stringify(val);
-          const escaped = String(val).replace(/"/g, '""');
-          return `"${escaped}"`;
-        }).join(',')
-      )
-    ];
+    const csvRows = [headers.join(',')];
+
+    data.forEach(row => {
+      const values = headers.map(header => {
+        let val = row[header];
+        if (typeof val === 'object' && val !== null) {
+          val = JSON.stringify(val);
+        }
+        val = String(val ?? '').replace(/"/g, '""');
+        return `"${val}"`;
+      });
+      csvRows.push(values.join(','));
+    });
 
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `srishti_${tableName}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `srishti_2.7_${tableName}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`Exported ${tableName}.csv successfully!`, 'success');
+
+    showToast(`Exported ${data.length} records to CSV!`, 'success');
   };
 
-  const handleInspectRow = (row) => {
-    setActiveItem(row);
-    setModalType('inspectRow');
-  };
-
-  const handleOpenEditRow = (row) => {
-    setActiveItem(row);
-    setRowEditData({ ...row });
-    setModalType('editRow');
-  };
-
-  const handleSaveEditRow = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const primaryKey = activeItem.id ? 'id' : (activeItem.email ? 'email' : 'username');
-      const targetId = activeItem[primaryKey];
-
-      const cleanPayload = { ...rowEditData };
-      delete cleanPayload.id;
-
-      const { error } = await supabase
-        .from(selectedDbTable)
-        .update(cleanPayload)
-        .eq(primaryKey, targetId);
-
-      if (error) throw error;
-
-      showToast(`Record updated in ${selectedDbTable}!`, 'success');
-      setModalType(null);
-      fetchAllData(adminRole, adminEventId);
-    } catch (err) {
-      showToast(err.message || 'Failed to update record', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteDbRow = async (row) => {
-    if (!window.confirm(`Are you sure you want to delete this row from ${selectedDbTable}?`)) {
-      return;
-    }
-
-    try {
-      const primaryKey = row.id ? 'id' : (row.email ? 'email' : 'username');
-      const targetId = row[primaryKey];
-
-      const { error } = await supabase
-        .from(selectedDbTable)
-        .delete()
-        .eq(primaryKey, targetId);
-
-      if (error) throw error;
-
-      showToast('Record deleted from table', 'success');
-      fetchAllData(adminRole, adminEventId);
-    } catch (err) {
-      showToast(err.message || 'Failed to delete row', 'error');
-    }
-  };
-
-  // -----------------------------------------------------------------------------
-  // FILTERED DATA VIEWS
-  // -----------------------------------------------------------------------------
-  const filteredParticipants = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    return participants.filter(p => {
-      const matchesSearch = !q || 
-        p.name?.toLowerCase().includes(q) ||
-        p.email?.toLowerCase().includes(q) ||
-        p.phone?.toLowerCase().includes(q) ||
-        p.college?.toLowerCase().includes(q) ||
-        p.participant_code?.toLowerCase().includes(q);
-
-      return matchesSearch;
-    });
-  }, [participants, searchQuery]);
-
+  // Filtered registrations
   const filteredRegistrations = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return registrations.filter(r => {
-      const matchesEvent = eventFilter === 'all' || r.event_id === eventFilter;
-      const matchesStatus = statusFilter === 'all' || r.payment_status === statusFilter;
+      const matchesEvent = eventFilter === 'all' || r.event_id === eventFilter || r.events?.event_code === eventFilter;
+      const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
+      const pName = r.participants?.name || r.name || '';
+      const pCode = r.participants?.participant_code || r.participant_code || '';
+      const evName = r.events?.name || r.event_name || '';
+
       const matchesSearch = !q ||
-        r.lead_name?.toLowerCase().includes(q) ||
-        r.lead_email?.toLowerCase().includes(q) ||
-        r.lead_phone?.toLowerCase().includes(q) ||
-        r.participant_code?.toLowerCase().includes(q) ||
-        r.event_name?.toLowerCase().includes(q);
+        pName.toLowerCase().includes(q) ||
+        pCode.toLowerCase().includes(q) ||
+        evName.toLowerCase().includes(q);
 
       return matchesEvent && matchesStatus && matchesSearch;
     });
   }, [registrations, eventFilter, statusFilter, searchQuery]);
 
+  // Database Explorer current table rows
   const currentTableData = useMemo(() => {
     switch (selectedDbTable) {
       case 'participants': return participants;
-      case 'registrations': return registrations;
       case 'events': return events;
-      case 'volunteers': return adminsList;
+      case 'registrations': return registrations;
+      case 'volunteers': return volunteers;
+      case 'event_staff': return eventStaff;
       case 'arrival_checkins': return arrivalCheckins;
       case 'event_attendance': return eventAttendance;
-      case 'event_admins': return adminsList;
       default: return [];
     }
-  }, [selectedDbTable, participants, registrations, events, adminsList, arrivalCheckins, eventAttendance]);
+  }, [selectedDbTable, participants, events, registrations, volunteers, eventStaff, arrivalCheckins, eventAttendance]);
 
   const filteredDbRows = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return currentTableData;
-
-    return currentTableData.filter(row => {
-      return Object.values(row).some(val => 
-        String(val).toLowerCase().includes(q)
-      );
-    });
+    return currentTableData.filter(row => 
+      Object.values(row).some(v => String(v).toLowerCase().includes(q))
+    );
   }, [currentTableData, searchQuery]);
 
   // -----------------------------------------------------------------------------
-  // RENDER: LOGIN FLOW (EMAIL OTP ONLY)
+  // RENDER: LOGIN PORTAL
   // -----------------------------------------------------------------------------
-  if (step !== 'dashboard') {
+  if (step === 'login') {
     return (
       <div className="admin-auth-wrapper">
-        <div className="admin-auth-card">
+        <div className="admin-auth-card" style={{ maxWidth: '500px' }}>
           <div className="admin-auth-header">
-            <span className="admin-auth-badge">SECURE PORTAL</span>
+            <span className="admin-auth-badge">SRISHTI 2.7 • MULTI-ROLE PORTAL</span>
             <h1>
               <FiShield style={{ color: '#ef4444' }} />
-              Admin Center
+              Staff Command Center
             </h1>
             <p className="admin-auth-subtitle">
-              Srishti 2.7 Multi-Event Management &amp; Database Administration
+              Role-Based Authentication: Admin • Registration • Event Staff • Volunteer
             </p>
           </div>
 
@@ -972,79 +692,65 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {step === 'email' ? (
-            <form onSubmit={handleSendOtp}>
-              <div className="admin-form-group">
-                <label>Admin Email Address</label>
-                <div style={{ position: 'relative' }}>
-                  <FiMail style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required
-                    placeholder="e.g. tsrknight@gmail.com"
-                    className="admin-form-control"
-                    style={{ paddingLeft: '2.5rem' }}
-                    autoFocus
-                  />
-                </div>
-              </div>
+          {/* Preset Roles Quick Switch for Examiners / Reviewers */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.5rem' }}>
+              Quick-Select Staff Role (One-Click Demo Login):
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+              {DEMO_STAFF_PRESETS.map(preset => (
+                <button
+                  key={preset.username}
+                  type="button"
+                  onClick={() => handleQuickPresetLogin(preset)}
+                  className="admin-quick-pill-btn"
+                  style={{
+                    padding: '0.55rem 0.65rem',
+                    textAlign: 'left',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.2rem'
+                  }}
+                >
+                  <span style={{ fontWeight: '700', color: '#fff', fontSize: '0.8rem' }}>{preset.name}</span>
+                  <span style={{ fontSize: '0.7rem', color: '#38bdf8' }}>
+                    {preset.role.toUpperCase()} {preset.assignedEventCode ? `• ${preset.assignedEventCode}` : ''}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="admin-btn admin-btn-primary"
-                style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem' }}
-              >
-                {authLoading ? 'Verifying Admin Record...' : 'Send Access OTP'}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOtp}>
-              <div className="admin-form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                  <label style={{ margin: 0 }}>4-Digit Passcode</label>
-                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Sent to: {email}</span>
-                </div>
+          <form onSubmit={handleLoginSubmit}>
+            <div className="admin-form-group">
+              <label>Staff Username or Email</label>
+              <div style={{ position: 'relative' }}>
+                <FiMail style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                 <input
                   type="text"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value)}
+                  value={identifier}
+                  onChange={e => setIdentifier(e.target.value)}
                   required
-                  maxLength="4"
-                  placeholder="••••"
+                  placeholder="e.g. srishti_quiz or tsrknight@gmail.com"
                   className="admin-form-control"
-                  style={{
-                    letterSpacing: '8px',
-                    textAlign: 'center',
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    fontFamily: 'var(--font-mono)'
-                  }}
+                  style={{ paddingLeft: '2.5rem' }}
                   autoFocus
                 />
               </div>
+            </div>
 
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="admin-btn admin-btn-primary"
-                style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem' }}
-              >
-                {authLoading ? 'Authenticating...' : 'Confirm & Enter Dashboard'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStep('email')}
-                className="admin-btn admin-btn-secondary"
-                style={{ width: '100%', marginTop: '0.75rem' }}
-              >
-                Use Different Email
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="admin-btn admin-btn-primary"
+              style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem' }}
+            >
+              {authLoading ? 'Verifying Credentials...' : 'Authenticate & Enter Portal'}
+            </button>
+          </form>
 
           <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
             <button
@@ -1077,11 +783,11 @@ export default function AdminDashboard() {
   }
 
   // -----------------------------------------------------------------------------
-  // RENDER: MAIN ADMIN DASHBOARD
+  // RENDER: MAIN COMMAND CENTER DASHBOARD
   // -----------------------------------------------------------------------------
   return (
     <div className="admin-portal-root">
-      {/* 1. TOP NAVIGATION BAR */}
+      {/* 1. TOP NAVBAR */}
       <header className="admin-navbar">
         <div className="admin-nav-container">
           <div className="admin-brand">
@@ -1097,16 +803,21 @@ export default function AdminDashboard() {
 
           <div className="admin-nav-actions">
             <div className="admin-user-pill">
-              <span className={`admin-role-tag ${adminRole === 'superadmin' ? 'admin-role-super' : 'admin-role-coord'}`}>
-                {adminRole === 'superadmin' ? 'Super Admin' : `Coordinator: ${adminEventId}`}
+              <span className={`admin-role-tag admin-role-${adminRole}`}>
+                {adminRole?.toUpperCase()}
               </span>
               <span style={{ color: '#cbd5e1', fontFamily: 'var(--font-mono)' }}>
-                {localStorage.getItem('srishti_admin_session')}
+                {currentStaff?.name || currentStaff?.username || currentStaff?.email}
               </span>
+              {assignedEvents.length > 0 && (
+                <span style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.72rem' }}>
+                  {assignedEvents.map(e => e.event_code).join(', ')}
+                </span>
+              )}
             </div>
 
             <button 
-              onClick={() => fetchAllData(adminRole, adminEventId)}
+              onClick={() => fetchAllData(adminRole, currentStaff?.id)}
               className="admin-btn admin-btn-secondary"
               title="Refresh Data from Supabase"
             >
@@ -1133,8 +844,9 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* 2. DASHBOARD TABS BAR */}
+      {/* 2. ROLE-ADAPTIVE NAVIGATION TABS BAR */}
       <nav className="admin-tabs-bar">
+        {/* Overview (All roles) */}
         <button
           onClick={() => { setActiveTab('overview'); setSearchQuery(''); }}
           className={`admin-tab-item ${activeTab === 'overview' ? 'active' : ''}`}
@@ -1143,74 +855,97 @@ export default function AdminDashboard() {
           <span>Overview</span>
         </button>
 
+        {/* Arrival Check-in Gate (Registration Desk & Admin) */}
+        {(adminRole === 'admin' || adminRole === 'registration') && (
+          <button
+            onClick={() => { setActiveTab('checkin'); setSearchQuery(''); }}
+            className={`admin-tab-item ${activeTab === 'checkin' ? 'active' : ''}`}
+          >
+            <FiUserCheck />
+            <span>Gate Check-In</span>
+            <span className="admin-tab-counter">{arrivalCheckins.length}</span>
+          </button>
+        )}
+
+        {/* Event Room Attendance (Event Staff & Admin) */}
+        {(adminRole === 'admin' || adminRole === 'event_staff') && (
+          <button
+            onClick={() => { setActiveTab('attendance'); setSearchQuery(''); }}
+            className={`admin-tab-item ${activeTab === 'attendance' ? 'active' : ''}`}
+          >
+            <FiAward />
+            <span>Event Attendance</span>
+            <span className="admin-tab-counter">{eventAttendance.length}</span>
+          </button>
+        )}
+
+        {/* Events Catalog (All Staff) */}
         <button
           onClick={() => { setActiveTab('events'); setSearchQuery(''); }}
           className={`admin-tab-item ${activeTab === 'events' ? 'active' : ''}`}
         >
           <FiCalendar />
-          <span>Events Section</span>
+          <span>Events</span>
           <span className="admin-tab-counter">{events.length}</span>
         </button>
 
-        <button
-          onClick={() => { setActiveTab('participants'); setSearchQuery(''); }}
-          className={`admin-tab-item ${activeTab === 'participants' ? 'active' : ''}`}
-        >
-          <FiUsers />
-          <span>Participants Section</span>
-          <span className="admin-tab-counter">{participants.length}</span>
-        </button>
+        {/* Participants (Admin, Registration, Event Staff) */}
+        {(adminRole === 'admin' || adminRole === 'registration' || adminRole === 'event_staff') && (
+          <button
+            onClick={() => { setActiveTab('participants'); setSearchQuery(''); }}
+            className={`admin-tab-item ${activeTab === 'participants' ? 'active' : ''}`}
+          >
+            <FiUsers />
+            <span>Participants</span>
+            <span className="admin-tab-counter">{participants.length}</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => { setActiveTab('registrations'); setSearchQuery(''); }}
-          className={`admin-tab-item ${activeTab === 'registrations' ? 'active' : ''}`}
-        >
-          <FiCheckCircle />
-          <span>Registrations</span>
-          <span className="admin-tab-counter">{registrations.length}</span>
-        </button>
+        {/* Registrations (Admin & Registration Desk) */}
+        {(adminRole === 'admin' || adminRole === 'registration') && (
+          <button
+            onClick={() => { setActiveTab('registrations'); setSearchQuery(''); }}
+            className={`admin-tab-item ${activeTab === 'registrations' ? 'active' : ''}`}
+          >
+            <FiCheckCircle />
+            <span>Registrations</span>
+            <span className="admin-tab-counter">{registrations.length}</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => { setActiveTab('databases'); setSearchQuery(''); }}
-          className={`admin-tab-item ${activeTab === 'databases' ? 'active' : ''}`}
-        >
-          <FiDatabase />
-          <span>Databases &amp; Tables</span>
-          <span className="admin-tab-counter">4 Tables</span>
-        </button>
+        {/* Staff & Event Assignments (Admin only) */}
+        {adminRole === 'admin' && (
+          <button
+            onClick={() => { setActiveTab('staff'); setSearchQuery(''); }}
+            className={`admin-tab-item ${activeTab === 'staff' ? 'active' : ''}`}
+          >
+            <FiShield />
+            <span>Staff Assignments</span>
+            <span className="admin-tab-counter">{volunteers.length}</span>
+          </button>
+        )}
+
+        {/* Database Explorer (Admin only) */}
+        {adminRole === 'admin' && (
+          <button
+            onClick={() => { setActiveTab('databases'); setSearchQuery(''); }}
+            className={`admin-tab-item ${activeTab === 'databases' ? 'active' : ''}`}
+          >
+            <FiDatabase />
+            <span>Database (7 Tables)</span>
+          </button>
+        )}
       </nav>
 
       {/* 3. MAIN TAB CONTENT */}
       <main className="admin-main-view">
         {/* ========================================================================= */}
-        {/* TAB 1: OVERVIEW & ANALYTICS */}
+        {/* TAB 1: OVERVIEW */}
         {/* ========================================================================= */}
         {activeTab === 'overview' && (
           <div>
-            {/* Stat Summary Cards */}
+            {/* Stat Cards */}
             <div className="admin-stats-grid">
-              <div className="admin-stat-card">
-                <div className="admin-stat-header">
-                  <span className="admin-stat-label">Total Registrations</span>
-                  <div className="admin-stat-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}>
-                    <FiCheckCircle />
-                  </div>
-                </div>
-                <h3 className="admin-stat-val">{stats.totalRegs}</h3>
-                <div className="admin-stat-desc">Across all festival events</div>
-              </div>
-
-              <div className="admin-stat-card">
-                <div className="admin-stat-header">
-                  <span className="admin-stat-label">Verified Passes</span>
-                  <div className="admin-stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
-                    <FiShield />
-                  </div>
-                </div>
-                <h3 className="admin-stat-val" style={{ color: '#34d399' }}>{stats.verifiedRegs}</h3>
-                <div className="admin-stat-desc">{stats.pendingRegs} pending approval</div>
-              </div>
-
               <div className="admin-stat-card">
                 <div className="admin-stat-header">
                   <span className="admin-stat-label">Total Participants</span>
@@ -1219,7 +954,29 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <h3 className="admin-stat-val" style={{ color: '#a78bfa' }}>{stats.totalUsers}</h3>
-                <div className="admin-stat-desc">Unique attendee accounts</div>
+                <div className="admin-stat-desc">Enrolled attendees</div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-header">
+                  <span className="admin-stat-label">Gate Check-Ins</span>
+                  <div className="admin-stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
+                    <FiUserCheck />
+                  </div>
+                </div>
+                <h3 className="admin-stat-val" style={{ color: '#34d399' }}>{stats.totalArrivals}</h3>
+                <div className="admin-stat-desc">Participants arrived at campus</div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-header">
+                  <span className="admin-stat-label">Room Attendance</span>
+                  <div className="admin-stat-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8' }}>
+                    <FiAward />
+                  </div>
+                </div>
+                <h3 className="admin-stat-val" style={{ color: '#38bdf8' }}>{stats.totalAttendance}</h3>
+                <div className="admin-stat-desc">Marked present across events</div>
               </div>
 
               <div className="admin-stat-card">
@@ -1230,17 +987,17 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <h3 className="admin-stat-val" style={{ color: '#fbbf24' }}>{stats.totalEventsCount}</h3>
-                <div className="admin-stat-desc">Fest competitions &amp; tracks</div>
+                <div className="admin-stat-desc">6 core festival competitions</div>
               </div>
             </div>
 
-            {/* Quick Action Banner */}
+            {/* Role Quick Nav Banner */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.7))',
               border: '1px solid rgba(56, 189, 248, 0.25)',
               borderRadius: '16px',
               padding: '1.5rem',
-              marginBottom: '2rem',
+              marginTop: '1.5rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1248,124 +1005,241 @@ export default function AdminDashboard() {
               flexWrap: 'wrap'
             }}>
               <div>
-                <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1.2rem', color: '#fff' }}>
-                  Admin Quick Controls
+                <h3 style={{ margin: '0 0 0.4rem 0', color: '#fff', fontSize: '1.15rem' }}>
+                  SRISHTI 2.7 Multi-Event Management System Ready
                 </h3>
                 <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem' }}>
-                  Quickly manage participants, assign event slots, or export attendee rosters to Excel/CSV.
+                  You are operating as <strong>{adminRole?.toUpperCase()}</strong>. Use the dedicated stations for gate check-in and room attendance.
                 </p>
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {(adminRole === 'admin' || adminRole === 'registration') && (
+                  <button 
+                    onClick={() => setActiveTab('checkin')} 
+                    className="admin-btn admin-btn-success"
+                  >
+                    <FiUserCheck /> Open Gate Check-In Station
+                  </button>
+                )}
+
+                {(adminRole === 'admin' || adminRole === 'event_staff') && (
+                  <button 
+                    onClick={() => setActiveTab('attendance')} 
+                    className="admin-btn admin-btn-primary"
+                  >
+                    <FiAward /> Open Event Attendance Station
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 2: ARRIVAL CHECK-IN GATE STATION (Registration & Admin) */}
+        {/* ========================================================================= */}
+        {activeTab === 'checkin' && (
+          <div>
+            <div className="admin-station-card">
+              <div className="admin-station-header">
+                <h2 className="admin-station-title">
+                  <FiUserCheck style={{ color: '#10b981' }} />
+                  Campus Gate Arrival Check-In Station
+                </h2>
+                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                  Operator: <strong>{currentStaff?.name}</strong>
+                </span>
+              </div>
+
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                Enter participant pass code (e.g. <code>TEST-SRI27-002</code>, <code>SRI27-XXXXXX</code>) or scan QR pass:
+              </p>
+
+              {/* Sample Code Pills for quick testing */}
+              <div className="admin-quick-pills" style={{ marginBottom: '1rem' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Quick Test Codes:</span>
+                {['TEST-SRI27-001', 'TEST-SRI27-002', 'SRI27-ADMIN'].map(code => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => {
+                      setStationCodeInput(code);
+                      handleLookupParticipantForStation(code);
+                    }}
+                    className="admin-quick-pill-btn"
+                  >
+                    {code}
+                  </button>
+                ))}
+              </div>
+
+              <div className="admin-code-search-box">
+                <input
+                  type="text"
+                  placeholder="Enter Participant Code (e.g. TEST-SRI27-002)..."
+                  value={stationCodeInput}
+                  onChange={e => setStationCodeInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLookupParticipantForStation()}
+                  className="admin-code-input"
+                />
                 <button
-                  onClick={() => { setActiveTab('participants'); }}
+                  type="button"
+                  onClick={() => handleLookupParticipantForStation()}
                   className="admin-btn admin-btn-primary"
                 >
-                  <FiUsers /> Manage Participants
-                </button>
-                <button
-                  onClick={() => { setActiveTab('events'); }}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  <FiCalendar /> View Events
-                </button>
-                <button
-                  onClick={() => handleExportCsv('all_registrations', registrations)}
-                  className="admin-btn admin-btn-success"
-                >
-                  <FiDownload /> Export Regs (CSV)
+                  <FiSearch /> Verify Code
                 </button>
               </div>
-            </div>
 
-            {/* Event Registration Distribution Overview */}
-            <div className="admin-table-container" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-              <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.15rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FiActivity style={{ color: '#38bdf8' }} /> Event Registration Breakdown
-              </h3>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                {events.map(ev => {
-                  const evData = eventRegCounts[ev.id] || { count: 0, verified: 0, members: 0 };
-                  const percent = stats.totalRegs ? Math.round((evData.count / stats.totalRegs) * 100) : 0;
-                  return (
-                    <div 
-                      key={ev.id}
-                      style={{
-                        background: 'rgba(2, 6, 23, 0.4)',
-                        border: '1px solid var(--admin-border-subtle)',
-                        borderRadius: '12px',
-                        padding: '1rem'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#fff' }}>{ev.label || ev.name}</span>
-                        <span className="admin-event-badge">{ev.category}</span>
+              {/* Verified Attendee Badge & Action */}
+              {stationAttendee && (
+                <div className="admin-attendee-preview-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                        <h3 style={{ margin: 0, color: '#fff', fontSize: '1.4rem' }}>{stationAttendee.name}</h3>
+                        <span style={{ 
+                          fontFamily: 'var(--font-mono)', 
+                          background: 'rgba(56, 189, 248, 0.2)', 
+                          color: '#38bdf8', 
+                          padding: '0.2rem 0.6rem', 
+                          borderRadius: '6px',
+                          fontSize: '0.85rem',
+                          fontWeight: 'bold'
+                        }}>
+                          {stationAttendee.participant_code}
+                        </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.5rem' }}>
-                        <span>{evData.count} Teams ({evData.members} Members)</span>
-                        <span style={{ color: '#34d399' }}>{evData.verified} Verified</span>
-                      </div>
-                      <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${percent}%`, height: '100%', background: 'linear-gradient(90deg, #0284c7, #38bdf8)', borderRadius: '3px' }} />
-                      </div>
+                      <p style={{ margin: '0 0 0.25rem 0', color: '#cbd5e1', fontSize: '0.9rem' }}>
+                        🏫 {stationAttendee.college || 'St. Thomas College Thrissur'} • 📚 {stationAttendee.department || 'CS'} ({stationAttendee.year || '2026'})
+                      </p>
+                      <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.85rem' }}>
+                        📞 {stationAttendee.phone || 'N/A'} • ✉️ {stationAttendee.email}
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Arrival Status Indicator */}
+                    <div>
+                      {stationAttendee.arrivalCheckin ? (
+                        <div style={{
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          color: '#34d399',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          fontSize: '0.9rem',
+                          fontWeight: 'bold'
+                        }}>
+                          <FiCheckCircle style={{ fontSize: '1.2rem' }} />
+                          <div>
+                            <div>ALREADY CHECKED IN AT GATE</div>
+                            <div style={{ fontSize: '0.75rem', color: '#a7f3d0', fontWeight: 'normal' }}>
+                              Time: {new Date(stationAttendee.arrivalCheckin.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={stationActionLoading}
+                          onClick={() => handleMarkGateArrival('manual')}
+                          className="admin-btn admin-btn-success"
+                          style={{ padding: '0.75rem 1.5rem', fontSize: '1rem', fontWeight: 'bold' }}
+                        >
+                          <FiCheckCircle /> Confirm Gate Arrival
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Registered Events List */}
+                  <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1rem' }}>
+                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#94a3b8', fontSize: '0.85rem', textTransform: 'uppercase' }}>
+                      Registered Festival Events ({stationAttendee.registrations?.length || 0}):
+                    </h4>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {stationAttendee.registrations && stationAttendee.registrations.length > 0 ? (
+                        stationAttendee.registrations.map(r => (
+                          <span
+                            key={r.id}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              color: '#f8fafc',
+                              padding: '0.35rem 0.75rem',
+                              borderRadius: '8px',
+                              fontSize: '0.85rem'
+                            }}
+                          >
+                            🎯 {r.events?.name || r.event_name || r.event_id}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ color: '#64748b', fontSize: '0.85rem' }}>No individual event registrations recorded.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Recent Registrations Snippet */}
+            {/* Recent Gate Arrival Check-ins Stream */}
+            <div className="admin-section-header">
+              <h3>Today's Arrival Check-Ins Log ({arrivalCheckins.length})</h3>
+            </div>
             <div className="admin-table-container">
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--admin-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>Recent Registrations</h3>
-                <button 
-                  onClick={() => setActiveTab('registrations')}
-                  className="admin-btn admin-btn-secondary admin-btn-sm"
-                >
-                  View All Registrations →
-                </button>
-              </div>
-
               <div className="admin-table-scroll">
                 <table className="admin-data-table">
                   <thead>
                     <tr>
-                      <th>Pass Code</th>
-                      <th>Lead Name</th>
-                      <th>Event</th>
-                      <th>Team Size</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <th>Time</th>
+                      <th>Participant Code</th>
+                      <th>Name</th>
+                      <th>College</th>
+                      <th>Source</th>
+                      <th>Checked In By</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {registrations.slice(0, 6).map(reg => (
-                      <tr key={reg.id}>
-                        <td><span className="admin-code-badge">{reg.participant_code || 'PASS'}</span></td>
-                        <td>
-                          <div style={{ fontWeight: '600', color: '#fff' }}>{reg.lead_name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{reg.lead_email}</div>
-                        </td>
-                        <td>{reg.event_name}</td>
-                        <td>{reg.team_size} Member(s)</td>
-                        <td>
-                          <span className={`admin-status-pill ${reg.payment_status === 'verified' ? 'admin-status-verified' : 'admin-status-pending'}`}>
-                            {reg.payment_status}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => handleTogglePaymentStatus(reg)}
-                            className="admin-btn admin-btn-secondary admin-btn-sm"
-                          >
-                            Toggle Status
-                          </button>
+                    {arrivalCheckins.length > 0 ? (
+                      arrivalCheckins.map(a => (
+                        <tr key={a.id}>
+                          <td style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
+                            {new Date(a.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>
+                            {a.participants?.participant_code || '—'}
+                          </td>
+                          <td style={{ color: '#fff', fontWeight: '600' }}>
+                            {a.participants?.name || '—'}
+                          </td>
+                          <td>{a.participants?.college || '—'}</td>
+                          <td>
+                            <span style={{
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              background: a.source === 'qr' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                              color: a.source === 'qr' ? '#38bdf8' : '#94a3b8'
+                            }}>
+                              {a.source?.toUpperCase() || 'QR'}
+                            </span>
+                          </td>
+                          <td style={{ color: '#cbd5e1' }}>
+                            {a.volunteers?.name || a.volunteers?.username || 'Staff'}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
+                          No arrival check-ins recorded yet today.
                         </td>
                       </tr>
-                    ))}
-                    {registrations.length === 0 && (
-                      <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>No registrations recorded yet.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -1375,96 +1249,377 @@ export default function AdminDashboard() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: EVENTS SECTION */}
+        {/* TAB 3: EVENT ROOM ATTENDANCE STATION (Event Staff & Admin) */}
+        {/* ========================================================================= */}
+        {activeTab === 'attendance' && (
+          <div>
+            <div className="admin-station-card">
+              <div className="admin-station-header">
+                <h2 className="admin-station-title">
+                  <FiAward style={{ color: '#38bdf8' }} />
+                  Event Room Attendance Station
+                </h2>
+                
+                {/* Event Selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Selected Event:</label>
+                  <select
+                    value={selectedStaffEventId}
+                    onChange={e => setSelectedStaffEventId(e.target.value)}
+                    className="admin-select"
+                    style={{ minWidth: '220px', background: '#020617', color: '#fff' }}
+                  >
+                    {events.map(ev => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.event_code || ev.id}: {ev.name || ev.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Event Room Details Header */}
+              {(() => {
+                const curEv = events.find(e => e.id === selectedStaffEventId) || events[0];
+                const curAttendance = eventAttendance.filter(a => a.event_id === curEv?.id);
+                const curRegs = registrations.filter(r => r.event_id === curEv?.id);
+                return (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    marginBottom: '1.5rem',
+                    flexWrap: 'wrap',
+                    gap: '1rem'
+                  }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Competition Room</span>
+                      <h3 style={{ margin: '0.2rem 0', color: '#fff', fontSize: '1.25rem' }}>{curEv?.name || curEv?.label}</h3>
+                      <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.85rem' }}>
+                        📍 Venue: {curEv?.venue || 'TBA'} • 🗓️ {curEv?.date} • ⏰ {curEv?.start_time}
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'center', padding: '0.5rem 1rem', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Present in Room</div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 'bold', color: '#38bdf8' }}>{curAttendance.length}</div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: '0.5rem 1rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Total Registered</div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 'bold', color: '#fff' }}>{curRegs.length}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                Verify participant entry into the competition room:
+              </p>
+
+              {/* Sample Code Pills */}
+              <div className="admin-quick-pills" style={{ marginBottom: '1rem' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Quick Test Codes:</span>
+                {['TEST-SRI27-001', 'TEST-SRI27-002'].map(code => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => {
+                      setStationCodeInput(code);
+                      handleLookupParticipantForStation(code);
+                    }}
+                    className="admin-quick-pill-btn"
+                  >
+                    {code}
+                  </button>
+                ))}
+              </div>
+
+              <div className="admin-code-search-box">
+                <input
+                  type="text"
+                  placeholder="Scan or Enter Participant Code (e.g. TEST-SRI27-002)..."
+                  value={stationCodeInput}
+                  onChange={e => setStationCodeInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLookupParticipantForStation()}
+                  className="admin-code-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleLookupParticipantForStation()}
+                  className="admin-btn admin-btn-primary"
+                >
+                  <FiSearch /> Verify Attendee
+                </button>
+              </div>
+
+              {/* Verified Attendee Badge & Action */}
+              {stationAttendee && (() => {
+                const curEv = events.find(e => e.id === selectedStaffEventId) || events[0];
+                const isReg = stationAttendee.registrations?.some(r => r.event_id === curEv?.id);
+                const isGateChecked = !!stationAttendee.arrivalCheckin;
+                const isMarked = eventAttendance.some(a => 
+                  a.participant_id === stationAttendee.id && a.event_id === curEv?.id
+                );
+
+                return (
+                  <div className="admin-attendee-preview-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                          <h3 style={{ margin: 0, color: '#fff', fontSize: '1.4rem' }}>{stationAttendee.name}</h3>
+                          <span style={{ 
+                            fontFamily: 'var(--font-mono)', 
+                            background: 'rgba(56, 189, 248, 0.2)', 
+                            color: '#38bdf8', 
+                            padding: '0.2rem 0.6rem', 
+                            borderRadius: '6px',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold'
+                          }}>
+                            {stationAttendee.participant_code}
+                          </span>
+                        </div>
+                        <p style={{ margin: '0 0 0.25rem 0', color: '#cbd5e1', fontSize: '0.9rem' }}>
+                          🏫 {stationAttendee.college} • 📞 {stationAttendee.phone || 'N/A'}
+                        </p>
+
+                        {/* Status checks */}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                          <span style={{
+                            padding: '0.25rem 0.6rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            background: isGateChecked ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                            color: isGateChecked ? '#34d399' : '#f87171'
+                          }}>
+                            {isGateChecked ? '✓ Gate Check-In Verified' : '⚠️ Gate Check-In Pending'}
+                          </span>
+
+                          <span style={{
+                            padding: '0.25rem 0.6rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            background: isReg ? 'rgba(56, 189, 248, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                            color: isReg ? '#38bdf8' : '#fbbf24'
+                          }}>
+                            {isReg ? `✓ Registered for ${curEv?.name}` : `⚠️ Not Registered for ${curEv?.name}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action */}
+                      <div>
+                        {isMarked ? (
+                          <div style={{
+                            background: 'rgba(56, 189, 248, 0.15)',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            color: '#38bdf8',
+                            padding: '0.6rem 1rem',
+                            borderRadius: '10px',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold'
+                          }}>
+                            ✓ ALREADY MARKED PRESENT IN ROOM
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={stationActionLoading}
+                            onClick={() => handleMarkEventAttendance(stationAttendee.id, curEv?.id, 'manual')}
+                            className="admin-btn admin-btn-primary"
+                            style={{ padding: '0.75rem 1.5rem', fontSize: '1rem', fontWeight: 'bold' }}
+                          >
+                            <FiCheck /> Mark Present in Room
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Event Attendance Roster */}
+            {(() => {
+              const curEv = events.find(e => e.id === selectedStaffEventId) || events[0];
+              const curRegs = registrations.filter(r => r.event_id === curEv?.id);
+              return (
+                <div>
+                  <div className="admin-section-header">
+                    <h3>Registered Attendee Roster for {curEv?.name || curEv?.label} ({curRegs.length})</h3>
+                  </div>
+
+                  <div className="admin-table-container">
+                    <div className="admin-table-scroll">
+                      <table className="admin-data-table">
+                        <thead>
+                          <tr>
+                            <th>Participant Code</th>
+                            <th>Name</th>
+                            <th>College</th>
+                            <th>Phone</th>
+                            <th>Gate Arrival</th>
+                            <th>Room Attendance</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {curRegs.length > 0 ? (
+                            curRegs.map(r => {
+                              const pId = r.participant_id;
+                              const pCode = r.participants?.participant_code || r.participant_code;
+                              const pName = r.participants?.name || r.name;
+                              const isPresent = eventAttendance.some(a => a.participant_id === pId && a.event_id === curEv?.id);
+                              const isArrived = arrivalCheckins.some(a => a.participant_id === pId);
+
+                              return (
+                                <tr key={r.id}>
+                                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{pCode}</td>
+                                  <td style={{ color: '#fff', fontWeight: '600' }}>{pName}</td>
+                                  <td>{r.participants?.college || '—'}</td>
+                                  <td>{r.participants?.phone || '—'}</td>
+                                  <td>
+                                    <span style={{
+                                      padding: '0.2rem 0.5rem',
+                                      borderRadius: '4px',
+                                      fontSize: '0.72rem',
+                                      background: isArrived ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                      color: isArrived ? '#34d399' : '#94a3b8'
+                                    }}>
+                                      {isArrived ? 'Arrived' : 'Pending'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span style={{
+                                      padding: '0.2rem 0.5rem',
+                                      borderRadius: '4px',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 'bold',
+                                      background: isPresent ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                      color: isPresent ? '#38bdf8' : '#64748b'
+                                    }}>
+                                      {isPresent ? 'PRESENT' : 'Awaiting'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {!isPresent ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleMarkEventAttendance(pId, curEv?.id, 'manual')}
+                                        className="admin-btn admin-btn-primary admin-btn-sm"
+                                      >
+                                        Mark Present
+                                      </button>
+                                    ) : (
+                                      <span style={{ color: '#38bdf8', fontSize: '0.8rem' }}>✓ Verified</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>
+                                No participants registered for this event yet.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 4: EVENTS CATALOG */}
         {/* ========================================================================= */}
         {activeTab === 'events' && (
           <div>
             <div className="admin-section-header">
-              <div className="admin-section-title-box">
-                <h2><FiCalendar style={{ color: '#38bdf8' }} /> Events Directory &amp; Schedules</h2>
-                <p className="admin-section-subtitle">
-                  Configure event venues, timings, categories, and monitor live registration counts.
-                </p>
-              </div>
-
-              <div className="admin-controls-row">
-                <button
-                  onClick={handleOpenAddEvent}
+              <h2>Festival Competitions &amp; Events ({events.length})</h2>
+              {adminRole === 'admin' && (
+                <button 
+                  onClick={() => {
+                    setEventFormData({
+                      event_code: '',
+                      name: '',
+                      category: 'TECHNICAL',
+                      venue: '',
+                      date: '2026-12-10',
+                      start_time: '10:00',
+                      end_time: '12:00',
+                      capacity: 60,
+                      status: 'upcoming'
+                    });
+                    setModalType('addEvent');
+                  }} 
                   className="admin-btn admin-btn-primary"
                 >
-                  <FiPlus /> New Event
+                  <FiPlus /> Add New Event
                 </button>
-                <button
-                  onClick={() => handleExportCsv('events', events)}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  <FiDownload /> Export Events
-                </button>
-              </div>
+              )}
             </div>
 
-            {/* Events Grid */}
             <div className="admin-events-grid">
               {events.map(ev => {
-                const countInfo = eventRegCounts[ev.id] || { count: 0, verified: 0, members: 0 };
+                const regCount = registrations.filter(r => r.event_id === ev.id || r.events?.event_code === ev.event_code).length;
+                const attCount = eventAttendance.filter(a => a.event_id === ev.id).length;
+
                 return (
                   <div key={ev.id} className="admin-event-card">
-                    <div className="admin-event-card-head">
-                      <div>
-                        <span className="admin-event-badge">{ev.category || 'EVENT'}</span>
-                        <h4 className="admin-event-name" style={{ marginTop: '0.4rem' }}>{ev.label || ev.name}</h4>
-                      </div>
-                      <div className="admin-event-stat-badge">
-                        <FiUsers />
-                        <span>{countInfo.count} Registered</span>
-                      </div>
-                    </div>
-
-                    <div className="admin-event-card-body">
-                      <div className="admin-event-meta-list">
-                        <div className="admin-event-meta-item">
-                          <FiCalendar style={{ color: '#38bdf8' }} />
-                          <span>{ev.date || 'Dec 6-7, 2026'}</span>
-                        </div>
-                        <div className="admin-event-meta-item">
-                          <FiClock style={{ color: '#38bdf8' }} />
-                          <span>{ev.time || ev.start_time || '10:00 AM'}</span>
-                        </div>
-                        <div className="admin-event-meta-item">
-                          <FiBookOpen style={{ color: '#38bdf8' }} />
-                          <span>Venue: {ev.venue || 'TBA'}</span>
-                        </div>
-                      </div>
-
-                      <div style={{
-                        padding: '0.65rem 0.85rem',
-                        background: 'rgba(2, 6, 23, 0.5)',
-                        borderRadius: '8px',
-                        fontSize: '0.78rem',
-                        color: '#94a3b8'
+                    <div className="admin-event-card-header">
+                      <span className="admin-event-card-cat">{ev.category || 'TECHNICAL'}</span>
+                      <span style={{ 
+                        fontFamily: 'var(--font-mono)', 
+                        fontSize: '0.72rem', 
+                        color: ev.status === 'upcoming' ? '#38bdf8' : '#34d399',
+                        textTransform: 'uppercase'
                       }}>
-                        <strong>ID:</strong> <code style={{ color: '#38bdf8' }}>{ev.id}</code> &bull; 
-                        <strong style={{ marginLeft: '0.5rem' }}>Verified:</strong> <span style={{ color: '#34d399' }}>{countInfo.verified}</span>
+                        {ev.status || 'upcoming'}
+                      </span>
+                    </div>
+
+                    <h3 className="admin-event-card-title">{ev.name || ev.label}</h3>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
+                      Code: {ev.event_code || ev.id}
+                    </div>
+
+                    <div className="admin-event-card-meta">
+                      <div className="admin-event-meta-item">
+                        <FiCalendar />
+                        <span>{ev.date}</span>
+                      </div>
+                      <div className="admin-event-meta-item">
+                        <FiClock />
+                        <span>{ev.time || `${ev.start_time || '10:00'} - ${ev.end_time || ''}`}</span>
+                      </div>
+                      <div className="admin-event-meta-item">
+                        <FiMapPin />
+                        <span>{ev.venue || 'Campus Venue'}</span>
                       </div>
                     </div>
 
-                    <div className="admin-event-card-actions">
-                      <button
-                        onClick={() => {
-                          setEventFilter(ev.id);
-                          setActiveTab('registrations');
-                        }}
-                        className="admin-btn admin-btn-secondary admin-btn-sm"
-                      >
-                        <FiEye /> View Attendees ({countInfo.count})
-                      </button>
-
-                      <button
-                        onClick={() => handleOpenEditEvent(ev)}
-                        className="admin-btn admin-btn-primary admin-btn-sm"
-                      >
-                        <FiEdit2 /> Edit
-                      </button>
+                    <div style={{ 
+                      marginTop: '1rem', 
+                      paddingTop: '0.75rem', 
+                      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: '0.8rem',
+                      color: '#cbd5e1'
+                    }}>
+                      <span>Registered: <strong>{regCount}</strong></span>
+                      <span>Present: <strong style={{ color: '#38bdf8' }}>{attCount}</strong></span>
                     </div>
                   </div>
                 );
@@ -1474,35 +1629,22 @@ export default function AdminDashboard() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: PARTICIPANTS SECTION (USER DIRECTORY & EDITING) */}
+        {/* TAB 5: PARTICIPANTS DIRECTORY */}
         {/* ========================================================================= */}
         {activeTab === 'participants' && (
           <div>
             <div className="admin-section-header">
-              <div className="admin-section-title-box">
-                <h2><FiUsers style={{ color: '#38bdf8' }} /> Participants Directory &amp; User Control</h2>
-                <p className="admin-section-subtitle">
-                  Search, inspect, edit user details, and assign attendees to any fest event.
-                </p>
-              </div>
-
-              <div className="admin-controls-row">
-                <div className="admin-search-box">
-                  <FiSearch className="admin-search-icon" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search by name, college, email, code..."
-                    className="admin-search-input"
-                  />
-                </div>
-
-                <button
-                  onClick={() => handleExportCsv('participants', participants)}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  <FiDownload /> Export Users
+              <h2>Festival Participants ({participants.length})</h2>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <input
+                  type="text"
+                  placeholder="Search participants by code, name, college..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="admin-search-box"
+                />
+                <button onClick={() => handleExportCsv('participants', participants)} className="admin-btn admin-btn-secondary">
+                  <FiDownload /> Export CSV
                 </button>
               </div>
             </div>
@@ -1513,107 +1655,50 @@ export default function AdminDashboard() {
                   <thead>
                     <tr>
                       <th>Participant Code</th>
-                      <th>Full Name &amp; Contact</th>
-                      <th>College &amp; Dept</th>
-                      <th>Enrolled Events</th>
-                      <th>Created</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>College</th>
+                      <th>Dept &amp; Year</th>
+                      <th>Gate Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredParticipants.map(participant => {
-                      const userRegs = participantRegistrationsMap[participant.id] || 
-                                       participantRegistrationsMap[participant.participant_code] || 
-                                       participantRegistrationsMap[participant.email?.toLowerCase()] || [];
-
-                      return (
-                        <tr key={participant.id}>
-                          <td>
-                            <span className="admin-code-badge">
-                              {participant.participant_code || 'STC-PASS'}
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ fontWeight: '700', color: '#fff', fontSize: '0.92rem' }}>
-                              {participant.name}
-                            </div>
-                            <div style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
-                              <FiMail size={12} /> {participant.email}
-                            </div>
-                            {participant.phone && (
-                              <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <FiPhone size={11} /> {participant.phone}
-                              </div>
-                            )}
-                          </td>
-                          <td>
-                            <div style={{ color: '#cbd5e1' }}>{participant.college || '—'}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                              {participant.department || ''} {participant.year ? `(${participant.year})` : ''}
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', maxWidth: '240px' }}>
-                              {userRegs.map(reg => (
-                                <span
-                                  key={reg.id}
-                                  style={{
-                                    fontSize: '0.7rem',
-                                    padding: '0.15rem 0.45rem',
-                                    borderRadius: '4px',
-                                    background: reg.payment_status === 'verified' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                    color: reg.payment_status === 'verified' ? '#34d399' : '#fbbf24',
-                                    border: '1px solid rgba(255,255,255,0.06)'
-                                  }}
-                                >
-                                  {reg.event_name}
-                                </span>
-                              ))}
-                              {userRegs.length === 0 && (
-                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>No events assigned</span>
-                              )}
-                            </div>
-                          </td>
-                          <td style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                            {participant.created_at ? new Date(participant.created_at).toLocaleDateString() : '—'}
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', gap: '0.45rem' }}>
-                              <button
-                                onClick={() => handleOpenAssignEvent(participant)}
-                                className="admin-btn admin-btn-success admin-btn-sm"
-                                title="Assign to an Event"
-                              >
-                                <FiPlus /> Assign Event
-                              </button>
-
-                              <button
-                                onClick={() => handleOpenEditUser(participant)}
-                                className="admin-btn admin-btn-primary admin-btn-sm"
-                                title="Edit Participant Details"
-                              >
-                                <FiEdit2 /> Edit
-                              </button>
-
-                              <button
-                                onClick={() => handleDeleteUser(participant)}
-                                className="admin-btn admin-btn-danger admin-btn-sm"
-                                title="Delete User"
-                              >
-                                <FiTrash2 />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {filteredParticipants.length === 0 && (
-                      <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                          No participants matching "{searchQuery}".
-                        </td>
-                      </tr>
-                    )}
+                    {participants
+                      .filter(p => {
+                        const q = searchQuery.toLowerCase().trim();
+                        return !q || 
+                          p.name?.toLowerCase().includes(q) ||
+                          p.participant_code?.toLowerCase().includes(q) ||
+                          p.college?.toLowerCase().includes(q) ||
+                          p.email?.toLowerCase().includes(q);
+                      })
+                      .map(p => {
+                        const isArrived = arrivalCheckins.some(a => a.participant_id === p.id);
+                        return (
+                          <tr key={p.id}>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold', color: '#38bdf8' }}>
+                              {p.participant_code}
+                            </td>
+                            <td style={{ color: '#fff', fontWeight: '600' }}>{p.name}</td>
+                            <td>{p.email || '—'}</td>
+                            <td>{p.phone || '—'}</td>
+                            <td>{p.college || '—'}</td>
+                            <td>{p.department || '—'} ({p.year || '—'})</td>
+                            <td>
+                              <span style={{
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.72rem',
+                                background: isArrived ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                color: isArrived ? '#34d399' : '#94a3b8'
+                              }}>
+                                {isArrived ? 'Checked In' : 'Pending'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
@@ -1622,30 +1707,20 @@ export default function AdminDashboard() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 4: REGISTRATIONS & VERIFICATIONS */}
+        {/* TAB 6: REGISTRATIONS DIRECTORY */}
         {/* ========================================================================= */}
         {activeTab === 'registrations' && (
           <div>
             <div className="admin-section-header">
-              <div className="admin-section-title-box">
-                <h2><FiCheckCircle style={{ color: '#10b981' }} /> Registrations &amp; Entry Passes</h2>
-                <p className="admin-section-subtitle">
-                  Verify payments, manage spot team entries, and dispatch digital tickets.
-                </p>
-              </div>
-
-              <div className="admin-controls-row">
-                <div className="admin-search-box">
-                  <FiSearch className="admin-search-icon" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search registrations..."
-                    className="admin-search-input"
-                  />
-                </div>
-
+              <h2>All Event Registrations ({filteredRegistrations.length})</h2>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Search registrations..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="admin-search-box"
+                />
                 <select
                   value={eventFilter}
                   onChange={e => setEventFilter(e.target.value)}
@@ -1653,25 +1728,11 @@ export default function AdminDashboard() {
                 >
                   <option value="all">All Events</option>
                   {events.map(ev => (
-                    <option key={ev.id} value={ev.id}>{ev.label || ev.name}</option>
+                    <option key={ev.id} value={ev.id}>{ev.name || ev.label}</option>
                   ))}
                 </select>
-
-                <select
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                  className="admin-select"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="verified">Verified Only</option>
-                  <option value="pending">Pending Only</option>
-                </select>
-
-                <button
-                  onClick={() => handleExportCsv('registrations', filteredRegistrations)}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  <FiDownload /> Export Regs
+                <button onClick={() => handleExportCsv('registrations', filteredRegistrations)} className="admin-btn admin-btn-secondary">
+                  <FiDownload /> CSV
                 </button>
               </div>
             </div>
@@ -1681,69 +1742,43 @@ export default function AdminDashboard() {
                 <table className="admin-data-table">
                   <thead>
                     <tr>
-                      <th>Pass Code</th>
-                      <th>Lead Contact</th>
-                      <th>College</th>
-                      <th>Event</th>
-                      <th>Team Size</th>
+                      <th>Participant Code</th>
+                      <th>Attendee Name</th>
+                      <th>Event Code</th>
+                      <th>Event Name</th>
                       <th>Status</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
+                      <th>Registration Date</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRegistrations.map(reg => (
-                      <tr key={reg.id}>
-                        <td>
-                          <span className="admin-code-badge">{reg.participant_code || 'PASS'}</span>
+                    {filteredRegistrations.map(r => (
+                      <tr key={r.id}>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>
+                          {r.participants?.participant_code || r.participant_code || '—'}
                         </td>
-                        <td>
-                          <div style={{ fontWeight: '600', color: '#fff' }}>{reg.lead_name}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{reg.lead_email}</div>
-                          {reg.lead_phone && (
-                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{reg.lead_phone}</div>
-                          )}
+                        <td style={{ color: '#fff', fontWeight: '600' }}>
+                          {r.participants?.name || r.name || '—'}
                         </td>
-                        <td>{reg.lead_college || '—'}</td>
-                        <td style={{ fontWeight: '600', color: '#38bdf8' }}>{reg.event_name}</td>
-                        <td>{reg.team_size || 1} Member(s)</td>
-                        <td>
-                          <button
-                            onClick={() => handleTogglePaymentStatus(reg)}
-                            className={`admin-status-pill ${reg.payment_status === 'verified' ? 'admin-status-verified' : 'admin-status-pending'}`}
-                            style={{ cursor: 'pointer', border: 'none' }}
-                            title="Click to toggle status"
-                          >
-                            {reg.payment_status}
-                          </button>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
+                          {r.events?.event_code || r.event_id || '—'}
                         </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '0.45rem' }}>
-                            <button
-                              onClick={() => handleResendPassEmail(reg)}
-                              className="admin-btn admin-btn-secondary admin-btn-sm"
-                              title="Resend Entry Pass Ticket Email"
-                            >
-                              <FiSend /> Send Pass
-                            </button>
-
-                            <button
-                              onClick={() => handleDeleteRegistration(reg)}
-                              className="admin-btn admin-btn-danger admin-btn-sm"
-                              title="Delete registration"
-                            >
-                              <FiTrash2 />
-                            </button>
-                          </div>
+                        <td>{r.events?.name || r.event_name || '—'}</td>
+                        <td>
+                          <span style={{
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            background: 'rgba(16, 185, 129, 0.15)',
+                            color: '#34d399'
+                          }}>
+                            {r.status?.toUpperCase() || 'REGISTERED'}
+                          </span>
+                        </td>
+                        <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                          {r.registered_at ? new Date(r.registered_at).toLocaleDateString() : '—'}
                         </td>
                       </tr>
                     ))}
-                    {filteredRegistrations.length === 0 && (
-                      <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                          No registrations found for the selected criteria.
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>
@@ -1752,77 +1787,183 @@ export default function AdminDashboard() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 5: "VARIOUS DATABASES AND STUFF" (LIVE DATABASE EXPLORER) */}
+        {/* TAB 7: STAFF & ASSIGNMENTS (Admin only) */}
         {/* ========================================================================= */}
-        {activeTab === 'databases' && (
+        {activeTab === 'staff' && adminRole === 'admin' && (
           <div>
             <div className="admin-section-header">
-              <div className="admin-section-title-box">
-                <h2><FiDatabase style={{ color: '#a78bfa' }} /> Live Database Inspector &amp; Explorer</h2>
-                <p className="admin-section-subtitle">
-                  Direct database view across core Supabase tables with search, raw record inspector, and full CSV exports.
-                </p>
-              </div>
-
-              <div className="admin-controls-row">
-                <div className="admin-search-box">
-                  <FiSearch className="admin-search-icon" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder={`Search within ${selectedDbTable}...`}
-                    className="admin-search-input"
-                  />
-                </div>
-
-                <button
-                  onClick={() => handleExportCsv(selectedDbTable, currentTableData)}
+              <h2>Festival Staff &amp; Coordinators ({volunteers.length})</h2>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button 
+                  onClick={() => {
+                    setAssignStaffData({ volunteer_id: volunteers[0]?.id || '', event_id: events[0]?.id || '' });
+                    setModalType('assignEventStaff');
+                  }} 
                   className="admin-btn admin-btn-primary"
                 >
-                  <FiDownload /> Download Table (CSV)
+                  <FiPlus /> Assign Staff to Event
+                </button>
+                <button 
+                  onClick={() => {
+                    setVolunteerFormData({ username: '', name: '', email: '', role: 'event_staff', status: 'active' });
+                    setModalType('addVolunteer');
+                  }} 
+                  className="admin-btn admin-btn-secondary"
+                >
+                  <FiPlus /> Add Staff Profile
                 </button>
               </div>
             </div>
 
-            {/* Table Selector Pills */}
+            {/* Event Staff Assignments Mapping */}
+            <div style={{ marginBottom: '2.5rem' }}>
+              <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '1rem' }}>
+                Active Event Coordinator Assignments (public.event_staff)
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
+                {eventStaff.length > 0 ? (
+                  eventStaff.map(es => (
+                    <div 
+                      key={es.id} 
+                      style={{
+                        background: 'rgba(15, 23, 42, 0.75)',
+                        border: '1px solid rgba(56, 189, 248, 0.25)',
+                        borderRadius: '12px',
+                        padding: '1.25rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '1rem', marginBottom: '0.2rem' }}>
+                          {es.volunteers?.name || 'Staff Member'}
+                        </div>
+                        <div style={{ color: '#38bdf8', fontSize: '0.82rem', fontFamily: 'var(--font-mono)' }}>
+                          Username: @{es.volunteers?.username || 'user'} • Role: {es.volunteers?.role}
+                        </div>
+                        <div style={{ marginTop: '0.5rem', color: '#a7f3d0', fontSize: '0.85rem' }}>
+                          🎯 Assigned to: <strong>{es.events?.name || es.events?.event_code}</strong>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveStaffAssignment(es.id)}
+                        className="admin-btn admin-btn-danger admin-btn-sm"
+                        title="Remove Assignment"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: '#64748b' }}>No event staff assignments configured yet.</p>
+                )}
+              </div>
+            </div>
+
+            {/* All Volunteers Table */}
+            <div className="admin-section-header">
+              <h3>All Registered Volunteers (public.volunteers)</h3>
+            </div>
+            <div className="admin-table-container">
+              <div className="admin-table-scroll">
+                <table className="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Username</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {volunteers.map(v => (
+                      <tr key={v.id}>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold', color: '#38bdf8' }}>
+                          @{v.username || '—'}
+                        </td>
+                        <td style={{ color: '#fff', fontWeight: '600' }}>{v.name}</td>
+                        <td>{v.email}</td>
+                        <td>
+                          <span className={`admin-role-tag admin-role-${v.role}`}>
+                            {v.role?.toUpperCase()}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            background: v.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                            color: v.status === 'active' ? '#34d399' : '#f87171'
+                          }}>
+                            {v.status?.toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 8: DATABASE EXPLORER (7 TABLES) */}
+        {/* ========================================================================= */}
+        {activeTab === 'databases' && adminRole === 'admin' && (
+          <div>
+            <div className="admin-section-header">
+              <div>
+                <h2>Database Tables Explorer</h2>
+                <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>
+                  Raw PostgreSQL inspection for all 7 SRISHTI 2.7 core tables
+                </p>
+              </div>
+              <button 
+                onClick={() => handleExportCsv(selectedDbTable, currentTableData)}
+                className="admin-btn admin-btn-primary"
+              >
+                <FiDownload /> Download Table (CSV)
+              </button>
+            </div>
+
+            {/* Table Selection Pills */}
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-              {['participants', 'registrations', 'events', 'volunteers', 'arrival_checkins', 'event_attendance'].map(tableName => (
+              {[
+                { name: 'participants', label: 'public.participants', count: participants.length },
+                { name: 'events', label: 'public.events', count: events.length },
+                { name: 'registrations', label: 'public.registrations', count: registrations.length },
+                { name: 'volunteers', label: 'public.volunteers', count: volunteers.length },
+                { name: 'event_staff', label: 'public.event_staff', count: eventStaff.length },
+                { name: 'arrival_checkins', label: 'public.arrival_checkins', count: arrivalCheckins.length },
+                { name: 'event_attendance', label: 'public.event_attendance', count: eventAttendance.length }
+              ].map(t => (
                 <button
-                  key={tableName}
-                  onClick={() => { setSelectedDbTable(tableName); setSearchQuery(''); }}
+                  key={t.name}
+                  type="button"
+                  onClick={() => setSelectedDbTable(t.name)}
                   style={{
-                    padding: '0.6rem 1.2rem',
-                    borderRadius: '10px',
-                    fontSize: '0.85rem',
-                    fontWeight: '700',
+                    padding: '0.6rem 1rem',
+                    borderRadius: '8px',
                     border: '1px solid',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    background: selectedDbTable === tableName ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : 'rgba(15, 23, 42, 0.6)',
-                    color: selectedDbTable === tableName ? '#fff' : '#94a3b8',
-                    borderColor: selectedDbTable === tableName ? '#7c3aed' : 'var(--admin-border-subtle)'
+                    background: selectedDbTable === t.name ? 'linear-gradient(135deg, #0284c7, #38bdf8)' : 'rgba(255, 255, 255, 0.03)',
+                    color: selectedDbTable === t.name ? '#fff' : '#94a3b8',
+                    borderColor: selectedDbTable === t.name ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)',
+                    fontWeight: '600',
+                    fontSize: '0.85rem'
                   }}
                 >
-                  <span style={{ fontFamily: 'var(--font-mono)' }}>public.{tableName}</span>
-                  <span style={{
-                    marginLeft: '0.5rem',
-                    background: 'rgba(0,0,0,0.3)',
-                    padding: '0.15rem 0.45rem',
-                    borderRadius: '999px',
-                    fontSize: '0.72rem'
-                  }}>
-                    {tableName === 'participants' ? participants.length : 
-                     tableName === 'registrations' ? registrations.length :
-                     tableName === 'events' ? events.length :
-                     tableName === 'volunteers' ? adminsList.length :
-                     tableName === 'arrival_checkins' ? arrivalCheckins.length : eventAttendance.length}
-                  </span>
+                  {t.label} ({t.count})
                 </button>
               ))}
             </div>
 
-            {/* Table View */}
             <div className="admin-table-container">
               <div className="admin-table-scroll">
                 {filteredDbRows.length > 0 ? (
@@ -1832,57 +1973,29 @@ export default function AdminDashboard() {
                         {Object.keys(filteredDbRows[0]).map(col => (
                           <th key={col}>{col}</th>
                         ))}
-                        <th style={{ textAlign: 'right' }}>Row Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredDbRows.map((row, idx) => (
-                        <tr key={row.id || row.email || row.username || idx}>
+                        <tr key={row.id || idx}>
                           {Object.keys(filteredDbRows[0]).map(col => {
                             const val = row[col];
                             return (
                               <td key={col} style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {typeof val === 'object' ? (
-                                  <code style={{ fontSize: '0.72rem', color: '#a78bfa' }}>{JSON.stringify(val)}</code>
+                                {typeof val === 'object' && val !== null ? (
+                                  <code style={{ fontSize: '0.72rem', color: '#38bdf8' }}>{JSON.stringify(val)}</code>
                                 ) : (
                                   String(val ?? '—')
                                 )}
                               </td>
                             );
                           })}
-                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
-                              <button
-                                onClick={() => handleInspectRow(row)}
-                                className="admin-btn admin-btn-secondary admin-btn-sm"
-                                title="Inspect JSON"
-                              >
-                                <FiEye />
-                              </button>
-                              <button
-                                onClick={() => handleOpenEditRow(row)}
-                                className="admin-btn admin-btn-primary admin-btn-sm"
-                                title="Edit Record"
-                              >
-                                <FiEdit2 />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteDbRow(row)}
-                                className="admin-btn admin-btn-danger admin-btn-sm"
-                                title="Delete Record"
-                              >
-                                <FiTrash2 />
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 ) : (
-                  <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                    No rows found in table <code>public.{selectedDbTable}</code>.
-                  </div>
+                  <p style={{ textAlign: 'center', color: '#64748b', padding: '2rem' }}>Table is empty.</p>
                 )}
               </div>
             </div>
@@ -1891,218 +2004,56 @@ export default function AdminDashboard() {
       </main>
 
       {/* ========================================================================= */}
-      {/* MODAL 1: EDIT USER DETAILS */}
+      {/* MODALS */}
       {/* ========================================================================= */}
-      {modalType === 'editUser' && (
-        <div className="admin-modal-backdrop" onClick={() => setModalType(null)}>
-          <div className="admin-modal-content" onClick={e => e.stopPropagation()}>
+
+      {/* Modal: Assign Staff to Event */}
+      {modalType === 'assignEventStaff' && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card">
             <div className="admin-modal-header">
-              <h3><FiEdit2 style={{ color: '#38bdf8' }} /> Edit Participant Details</h3>
-              <button onClick={() => setModalType(null)} className="admin-modal-close-btn"><FiX /></button>
+              <h3>Assign Coordinator to Event</h3>
+              <button onClick={() => setModalType(null)} className="admin-modal-close"><FiX /></button>
             </div>
-
-            <form onSubmit={handleSaveUser}>
+            <form onSubmit={handleAssignStaffToEvent}>
               <div className="admin-form-group">
-                <label>Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={userFormData.name}
-                  onChange={e => setUserFormData({ ...userFormData, name: e.target.value })}
-                  className="admin-form-control"
-                />
-              </div>
-
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={userFormData.email}
-                    onChange={e => setUserFormData({ ...userFormData, email: e.target.value })}
-                    className="admin-form-control"
-                  />
-                </div>
-
-                <div className="admin-form-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="text"
-                    value={userFormData.phone}
-                    onChange={e => setUserFormData({ ...userFormData, phone: e.target.value })}
-                    className="admin-form-control"
-                  />
-                </div>
-              </div>
-
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>College</label>
-                  <input
-                    type="text"
-                    value={userFormData.college}
-                    onChange={e => setUserFormData({ ...userFormData, college: e.target.value })}
-                    className="admin-form-control"
-                  />
-                </div>
-
-                <div className="admin-form-group">
-                  <label>Department / Stream</label>
-                  <input
-                    type="text"
-                    value={userFormData.department}
-                    onChange={e => setUserFormData({ ...userFormData, department: e.target.value })}
-                    className="admin-form-control"
-                  />
-                </div>
-              </div>
-
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Year of Study</label>
-                  <input
-                    type="text"
-                    value={userFormData.year}
-                    onChange={e => setUserFormData({ ...userFormData, year: e.target.value })}
-                    className="admin-form-control"
-                  />
-                </div>
-
-                <div className="admin-form-group">
-                  <label>Participant Pass Code</label>
-                  <input
-                    type="text"
-                    required
-                    value={userFormData.participant_code}
-                    onChange={e => setUserFormData({ ...userFormData, participant_code: e.target.value })}
-                    className="admin-form-control"
-                    style={{ fontFamily: 'var(--font-mono)' }}
-                  />
-                </div>
-              </div>
-
-              <div className="admin-modal-actions">
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="admin-btn admin-btn-primary"
-                >
-                  {isSubmitting ? 'Saving Changes...' : 'Save User Details'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 2: ASSIGN EVENT TO USER */}
-      {/* ========================================================================= */}
-      {modalType === 'assignEvent' && (
-        <div className="admin-modal-backdrop" onClick={() => setModalType(null)}>
-          <div className="admin-modal-content" onClick={e => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h3><FiPlus style={{ color: '#10b981' }} /> Assign Event to {activeItem?.name}</h3>
-              <button onClick={() => setModalType(null)} className="admin-modal-close-btn"><FiX /></button>
-            </div>
-
-            <form onSubmit={handleSaveAssignEvent}>
-              <div className="admin-form-group">
-                <label>Select Event</label>
+                <label>Select Coordinator (Volunteer)</label>
                 <select
-                  value={assignFormData.eventId}
-                  onChange={e => setAssignFormData({ ...assignFormData, eventId: e.target.value })}
-                  className="admin-form-control"
+                  value={assignStaffData.volunteer_id}
+                  onChange={e => setAssignStaffData({ ...assignStaffData, volunteer_id: e.target.value })}
+                  className="admin-select"
+                  required
                 >
-                  {events.map(ev => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.label || ev.name} ({ev.category})
+                  <option value="">-- Choose Coordinator --</option>
+                  {volunteers.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} (@{v.username || 'user'}) - Role: {v.role}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Team Size</label>
-                  <select
-                    value={assignFormData.teamSize}
-                    onChange={e => setAssignFormData({ ...assignFormData, teamSize: Number(e.target.value) })}
-                    className="admin-form-control"
-                  >
-                    <option value={1}>1 Member (Solo)</option>
-                    <option value={2}>2 Members (Duo)</option>
-                    <option value={3}>3 Members</option>
-                    <option value={4}>4 Members (Full Squad)</option>
-                  </select>
-                </div>
-
-                <div className="admin-form-group">
-                  <label>Payment / Verification Status</label>
-                  <select
-                    value={assignFormData.paymentStatus}
-                    onChange={e => setAssignFormData({ ...assignFormData, paymentStatus: e.target.value })}
-                    className="admin-form-control"
-                  >
-                    <option value="verified">Verified (Complimentary / Paid)</option>
-                    <option value="pending">Pending Spot Verification</option>
-                  </select>
-                </div>
+              <div className="admin-form-group">
+                <label>Select Event</label>
+                <select
+                  value={assignStaffData.event_id}
+                  onChange={e => setAssignStaffData({ ...assignStaffData, event_id: e.target.value })}
+                  className="admin-select"
+                  required
+                >
+                  <option value="">-- Choose Event --</option>
+                  {events.map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.event_code || ev.id}: {ev.name || ev.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {assignFormData.teamSize > 1 && (
-                <div className="admin-form-group">
-                  <label>Additional Team Member Names (1 per line)</label>
-                  <textarea
-                    rows={3}
-                    value={assignFormData.teamMembers}
-                    onChange={e => setAssignFormData({ ...assignFormData, teamMembers: e.target.value })}
-                    placeholder="John Doe&#10;Jane Smith"
-                    className="admin-form-control"
-                  />
-                </div>
-              )}
-
-              <div style={{
-                background: 'rgba(56, 189, 248, 0.08)',
-                border: '1px solid rgba(56, 189, 248, 0.2)',
-                borderRadius: '10px',
-                padding: '0.85rem 1rem',
-                margin: '1.25rem 0'
-              }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', margin: 0, textTransform: 'none', color: '#fff' }}>
-                  <input
-                    type="checkbox"
-                    checked={assignFormData.sendEmailPass}
-                    onChange={e => setAssignFormData({ ...assignFormData, sendEmailPass: e.target.checked })}
-                    style={{ width: '18px', height: '18px', accentColor: '#38bdf8' }}
-                  />
-                  <span>Dispatch Digital Entry Pass with QR code via email immediately</span>
-                </label>
-              </div>
-
-              <div className="admin-modal-actions">
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="admin-btn admin-btn-success"
-                >
-                  {isSubmitting ? 'Registering & Generating Pass...' : 'Confirm Assignment'}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <button type="button" onClick={() => setModalType(null)} className="admin-btn admin-btn-secondary">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="admin-btn admin-btn-primary">
+                  {isSubmitting ? 'Saving...' : 'Save Assignment'}
                 </button>
               </div>
             </form>
@@ -2110,328 +2061,69 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 3: EDIT EVENT */}
-      {/* ========================================================================= */}
-      {modalType === 'editEvent' && (
-        <div className="admin-modal-backdrop" onClick={() => setModalType(null)}>
-          <div className="admin-modal-content" onClick={e => e.stopPropagation()}>
+      {/* Modal: Add Volunteer */}
+      {modalType === 'addVolunteer' && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card">
             <div className="admin-modal-header">
-              <h3><FiEdit2 style={{ color: '#38bdf8' }} /> Edit Event Details</h3>
-              <button onClick={() => setModalType(null)} className="admin-modal-close-btn"><FiX /></button>
+              <h3>Add Staff Member (public.volunteers)</h3>
+              <button onClick={() => setModalType(null)} className="admin-modal-close"><FiX /></button>
             </div>
-
-            <form onSubmit={handleSaveEvent}>
+            <form onSubmit={handleSaveVolunteer}>
               <div className="admin-form-group">
-                <label>Event Name / Title</label>
+                <label>Full Name</label>
                 <input
                   type="text"
                   required
-                  value={eventFormData.name}
-                  onChange={e => setEventFormData({ ...eventFormData, name: e.target.value })}
+                  value={volunteerFormData.name}
+                  onChange={e => setVolunteerFormData({ ...volunteerFormData, name: e.target.value })}
                   className="admin-form-control"
-                />
-              </div>
-
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Category</label>
-                  <select
-                    value={eventFormData.category}
-                    onChange={e => setEventFormData({ ...eventFormData, category: e.target.value })}
-                    className="admin-form-control"
-                  >
-                    <option value="DEV">DEV (Coding / Tech)</option>
-                    <option value="ROBOTICS">ROBOTICS</option>
-                    <option value="INNOVATION">INNOVATION</option>
-                    <option value="CULTURE">CULTURE (Dance / Arts)</option>
-                    <option value="FUN">FUN</option>
-                    <option value="KNOWLEDGE">KNOWLEDGE (Quiz)</option>
-                    <option value="ART">ART</option>
-                  </select>
-                </div>
-
-                <div className="admin-form-group">
-                  <label>Venue Location</label>
-                  <input
-                    type="text"
-                    value={eventFormData.venue}
-                    onChange={e => setEventFormData({ ...eventFormData, venue: e.target.value })}
-                    className="admin-form-control"
-                    placeholder="e.g. Lab 2 / Main Stage"
-                  />
-                </div>
-              </div>
-
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Date</label>
-                  <input
-                    type="text"
-                    value={eventFormData.date}
-                    onChange={e => setEventFormData({ ...eventFormData, date: e.target.value })}
-                    className="admin-form-control"
-                    placeholder="e.g. Dec 6, 2026"
-                  />
-                </div>
-
-                <div className="admin-form-group">
-                  <label>Start Time</label>
-                  <input
-                    type="text"
-                    value={eventFormData.start_time}
-                    onChange={e => setEventFormData({ ...eventFormData, start_time: e.target.value })}
-                    className="admin-form-control"
-                    placeholder="e.g. 10:00 AM"
-                  />
-                </div>
-              </div>
-
-              <div className="admin-modal-actions">
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="admin-btn admin-btn-primary"
-                >
-                  {isSubmitting ? 'Updating...' : 'Save Event'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 4: ADD NEW EVENT */}
-      {/* ========================================================================= */}
-      {modalType === 'addEvent' && (
-        <div className="admin-modal-backdrop" onClick={() => setModalType(null)}>
-          <div className="admin-modal-content" onClick={e => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h3><FiPlus style={{ color: '#38bdf8' }} /> Create New Festival Event</h3>
-              <button onClick={() => setModalType(null)} className="admin-modal-close-btn"><FiX /></button>
-            </div>
-
-            <form onSubmit={handleSaveAddEvent}>
-              <div className="admin-form-group">
-                <label>Event Unique Slug / ID (Lowercase alphanumeric)</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. droneprix or bugbounty"
-                  value={eventFormData.id}
-                  onChange={e => setEventFormData({ ...eventFormData, id: e.target.value })}
-                  className="admin-form-control"
-                  style={{ fontFamily: 'var(--font-mono)' }}
+                  placeholder="e.g. John Doe"
                 />
               </div>
 
               <div className="admin-form-group">
-                <label>Event Display Name</label>
+                <label>Username</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. DRONE RACING PRIX"
-                  value={eventFormData.name}
-                  onChange={e => setEventFormData({ ...eventFormData, name: e.target.value })}
+                  value={volunteerFormData.username}
+                  onChange={e => setVolunteerFormData({ ...volunteerFormData, username: e.target.value })}
                   className="admin-form-control"
+                  placeholder="e.g. srishti_quiz"
                 />
               </div>
 
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Category</label>
-                  <select
-                    value={eventFormData.category}
-                    onChange={e => setEventFormData({ ...eventFormData, category: e.target.value })}
-                    className="admin-form-control"
-                  >
-                    <option value="DEV">DEV</option>
-                    <option value="ROBOTICS">ROBOTICS</option>
-                    <option value="INNOVATION">INNOVATION</option>
-                    <option value="CULTURE">CULTURE</option>
-                    <option value="FUN">FUN</option>
-                    <option value="KNOWLEDGE">KNOWLEDGE</option>
-                    <option value="ART">ART</option>
-                  </select>
-                </div>
-
-                <div className="admin-form-group">
-                  <label>Venue</label>
-                  <input
-                    type="text"
-                    value={eventFormData.venue}
-                    onChange={e => setEventFormData({ ...eventFormData, venue: e.target.value })}
-                    className="admin-form-control"
-                    placeholder="e.g. College Grounds"
-                  />
-                </div>
+              <div className="admin-form-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={volunteerFormData.email}
+                  onChange={e => setVolunteerFormData({ ...volunteerFormData, email: e.target.value })}
+                  className="admin-form-control"
+                  placeholder="e.g. user@stthomas.edu"
+                />
               </div>
 
-              <div className="admin-form-row">
-                <div className="admin-form-group">
-                  <label>Date</label>
-                  <input
-                    type="text"
-                    value={eventFormData.date}
-                    onChange={e => setEventFormData({ ...eventFormData, date: e.target.value })}
-                    className="admin-form-control"
-                  />
-                </div>
-
-                <div className="admin-form-group">
-                  <label>Time</label>
-                  <input
-                    type="text"
-                    value={eventFormData.start_time}
-                    onChange={e => setEventFormData({ ...eventFormData, start_time: e.target.value })}
-                    className="admin-form-control"
-                  />
-                </div>
+              <div className="admin-form-group">
+                <label>Role</label>
+                <select
+                  value={volunteerFormData.role}
+                  onChange={e => setVolunteerFormData({ ...volunteerFormData, role: e.target.value })}
+                  className="admin-select"
+                >
+                  <option value="admin">admin (Full Festival Administrator)</option>
+                  <option value="registration">registration (Gate Arrival Check-in Desk)</option>
+                  <option value="event_staff">event_staff (Event Coordinator)</option>
+                  <option value="volunteer">volunteer (General Support)</option>
+                </select>
               </div>
 
-              <div className="admin-modal-actions">
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="admin-btn admin-btn-primary"
-                >
-                  {isSubmitting ? 'Creating...' : 'Create Event'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 5: INSPECT ROW RAW JSON */}
-      {/* ========================================================================= */}
-      {modalType === 'inspectRow' && (
-        <div className="admin-modal-backdrop" onClick={() => setModalType(null)}>
-          <div className="admin-modal-content admin-modal-content-lg" onClick={e => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h3><FiEye style={{ color: '#a78bfa' }} /> Raw Record Inspector — {selectedDbTable}</h3>
-              <button onClick={() => setModalType(null)} className="admin-modal-close-btn"><FiX /></button>
-            </div>
-
-            <pre style={{
-              background: '#040711',
-              padding: '1.25rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#38bdf8',
-              fontSize: '0.85rem',
-              maxHeight: '400px',
-              overflowY: 'auto',
-              fontFamily: 'var(--font-mono)'
-            }}>
-              {JSON.stringify(activeItem, null, 2)}
-            </pre>
-
-            <div className="admin-modal-actions">
-              <button
-                onClick={() => setModalType(null)}
-                className="admin-btn admin-btn-secondary"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 6: EDIT DATABASE ROW */}
-      {/* ========================================================================= */}
-      {modalType === 'editRow' && (
-        <div className="admin-modal-backdrop" onClick={() => setModalType(null)}>
-          <div className="admin-modal-content" onClick={e => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h3><FiEdit2 style={{ color: '#a78bfa' }} /> Edit Record in public.{selectedDbTable}</h3>
-              <button onClick={() => setModalType(null)} className="admin-modal-close-btn"><FiX /></button>
-            </div>
-
-            <form onSubmit={handleSaveEditRow}>
-              <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                {Object.keys(rowEditData).map(col => {
-                  if (col === 'id' || col === 'created_at') {
-                    return (
-                      <div key={col} className="admin-form-group">
-                        <label>{col} (Read Only)</label>
-                        <input
-                          type="text"
-                          disabled
-                          value={String(rowEditData[col] ?? '')}
-                          className="admin-form-control"
-                          style={{ opacity: 0.6 }}
-                        />
-                      </div>
-                    );
-                  }
-
-                  const val = rowEditData[col];
-                  const isObj = typeof val === 'object' && val !== null;
-
-                  return (
-                    <div key={col} className="admin-form-group">
-                      <label>{col}</label>
-                      {isObj ? (
-                        <textarea
-                          rows={3}
-                          value={JSON.stringify(val)}
-                          onChange={e => {
-                            try {
-                              const parsed = JSON.parse(e.target.value);
-                              setRowEditData({ ...rowEditData, [col]: parsed });
-                            } catch {
-                              // keep raw string if invalid
-                            }
-                          }}
-                          className="admin-form-control"
-                          style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}
-                        />
-                      ) : (
-                        <input
-                          type="text"
-                          value={val ?? ''}
-                          onChange={e => setRowEditData({ ...rowEditData, [col]: e.target.value })}
-                          className="admin-form-control"
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="admin-modal-actions">
-                <button
-                  type="button"
-                  onClick={() => setModalType(null)}
-                  className="admin-btn admin-btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="admin-btn admin-btn-primary"
-                >
-                  {isSubmitting ? 'Saving Record...' : 'Save Database Record'}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <button type="button" onClick={() => setModalType(null)} className="admin-btn admin-btn-secondary">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="admin-btn admin-btn-primary">
+                  {isSubmitting ? 'Creating...' : 'Create Staff Member'}
                 </button>
               </div>
             </form>

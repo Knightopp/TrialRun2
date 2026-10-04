@@ -33,19 +33,86 @@ import { generateCardImagePng } from './utils/cardImageGenerator';
 import { supabase } from './supabaseClient';
 import './App.css';
 
-// Events fallback - dynamically overwritten from Supabase DB on load
+// Official SRISHTI 2.7 Database Events Catalog
 let FEST_EVENTS = [
-  { id: 'tracebot', label: 'TRACE BOT', category: 'ROBOTICS', group: 'Team Events', image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', details: 'Build an autonomous line-following robot to race the tracks.', date: 'Dec 6, 2026', time: '10:00 AM' },
-  { id: 'treasurehunt', label: 'TREASURE HUNT', category: 'FUN', group: 'Popular', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'Solve cryptic clues to find the hidden technical treasures.', date: 'Dec 7, 2026', time: '01:00 PM' },
-  { id: 'codingdebugging', label: 'CODING & DEBUGGING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Test your algorithmic logic and debugging skills against time.', date: 'Dec 6, 2026', time: '11:00 AM' },
-  { id: 'aiwebsitemaking', label: 'AI WEBSITE MAKING', category: 'DEV', group: 'Popular', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Use AI tools to rapidly prototype and design stunning websites.', date: 'Dec 7, 2026', time: '09:30 AM' },
-  { id: 'blindcoding', label: 'BLIND CODING', category: 'DEV', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'Code with your monitor off! Test your syntax muscle memory.', date: 'Dec 6, 2026', time: '02:00 PM' },
-  { id: 'ideathon', label: 'IDEATHON', category: 'INNOVATION', group: 'Team Events', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'Pitch your groundbreaking tech startup ideas to the jury.', date: 'Dec 7, 2026', time: '10:30 AM' },
-  { id: 'waltz', label: 'WALTZ (DANCE)', category: 'CULTURE', group: 'Team Events', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', details: 'A spectacular dance competition combining grace and rhythm.', date: 'Dec 7, 2026', time: '04:00 PM' },
-  { id: 'mindgame', label: 'MINDGAME', category: 'PUZZLE', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', details: 'A series of logic puzzles and lateral thinking challenges.', date: 'Dec 6, 2026', time: '03:00 PM' },
-  { id: 'itquiz', label: 'IT QUIZ', category: 'KNOWLEDGE', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', details: 'Test your knowledge of the latest in tech, IT history, and trivia.', date: 'Dec 7, 2026', time: '11:30 AM' },
-  { id: 'facepainting', label: 'FACE PAINTING', category: 'ART', group: 'Solo Events', image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', details: 'Express your creativity on a human canvas with vibrant colors.', date: 'Dec 6, 2026', time: '12:00 PM' },
-  { id: 'hackathon', label: 'HACKATHON', category: 'DEV', group: 'Popular', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', details: 'A 48-hour coding marathon to build innovative solutions.', date: 'Dec 6, 2026', time: '05:00 PM' }
+  { 
+    id: 'SRI27-TREASURE', 
+    event_code: 'SRI27-TREASURE',
+    label: 'TREASURE HUNT', 
+    category: 'FUN', 
+    group: 'Popular', 
+    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=900&auto=format&fit=crop', 
+    details: 'Unravel cryptic campus riddles and hidden technical challenges.', 
+    venue: 'College Campus',
+    date: 'Dec 10, 2026', 
+    time: '10:00 AM - 12:00 PM',
+    fee: 0
+  },
+  { 
+    id: 'SRI27-WALTZ', 
+    event_code: 'SRI27-WALTZ',
+    label: 'WALTZ (DANCE)', 
+    category: 'CULTURAL', 
+    group: 'Team Events', 
+    image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900&auto=format&fit=crop', 
+    details: 'Electrifying inter-college choreography and dance competition.', 
+    venue: 'Main Auditorium',
+    date: 'Dec 10, 2026', 
+    time: '02:00 PM - 04:00 PM',
+    fee: 0
+  },
+  { 
+    id: 'SRI27-QUIZ', 
+    event_code: 'SRI27-QUIZ',
+    label: 'IT QUIZ', 
+    category: 'TECHNICAL', 
+    group: 'Solo Events', 
+    image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=900&auto=format&fit=crop', 
+    details: 'Premier IT & General Tech Quiz battle of sharpest minds.', 
+    venue: 'Seminar Hall',
+    date: 'Dec 10, 2026', 
+    time: '10:00 AM - 12:00 PM',
+    fee: 0
+  },
+  { 
+    id: 'SRI27-CODE', 
+    event_code: 'SRI27-CODE',
+    label: 'CODING & DEBUGGING', 
+    category: 'TECHNICAL', 
+    group: 'Solo Events', 
+    image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop', 
+    details: 'Test your algorithmic logic and debugging skills against time.', 
+    venue: 'Computer Lab',
+    date: 'Dec 11, 2026', 
+    time: '10:00 AM - 12:00 PM',
+    fee: 0
+  },
+  { 
+    id: 'SRI27-TRACEBOT', 
+    event_code: 'SRI27-TRACEBOT',
+    label: 'TRACE BOT', 
+    category: 'TECHNICAL', 
+    group: 'Team Events', 
+    image: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=900&auto=format&fit=crop', 
+    details: 'Build an autonomous line-following robot to race the tracks.', 
+    venue: 'CS Lab',
+    date: 'Dec 11, 2026', 
+    time: '01:00 PM - 03:00 PM',
+    fee: 0
+  },
+  { 
+    id: 'SRI27-RELAY', 
+    event_code: 'SRI27-RELAY',
+    label: 'RELAY CODING', 
+    category: 'TECHNICAL', 
+    group: 'Popular', 
+    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop', 
+    details: 'Fast-paced team tag-team programming relay challenge.', 
+    venue: 'Computer Lab',
+    date: 'Dec 11, 2026', 
+    time: '10:00 AM - 12:00 PM',
+    fee: 0
+  }
 ];
 
 const SPIRAL_MOMENTS = [
@@ -122,8 +189,20 @@ export default function App() {
     fetchLiveEvents();
   }, []);
 
-  const matchEventRoute = location.pathname.match(/^\/register\/([a-zA-Z0-9-]+)$/);
-  const activeEventData = matchEventRoute ? liveEvents.find(e => e.id === matchEventRoute[1] || e.id.toLowerCase() === matchEventRoute[1].toLowerCase() || `sri27-${e.id.toLowerCase()}` === matchEventRoute[1].toLowerCase()) : null;
+  const matchEventRoute = location.pathname.match(/^\/register\/([a-zA-Z0-9-_]+)$/);
+  const routeParam = matchEventRoute ? matchEventRoute[1].toLowerCase() : '';
+  const activeEventData = matchEventRoute ? liveEvents.find(e => {
+    const eId = (e.id || '').toLowerCase();
+    const eCode = (e.event_code || '').toLowerCase();
+    const eLabel = (e.label || '').toLowerCase();
+    return eId === routeParam || 
+           eCode === routeParam ||
+           `sri27-${routeParam}` === eCode ||
+           `sri27-${routeParam}` === eId ||
+           eId.includes(routeParam) ||
+           routeParam.includes(eId.replace('sri27-', '')) ||
+           eLabel.includes(routeParam);
+  }) : null;
 
   const sliderItems = React.useMemo(() => {
     if (!activeEventData) return [];
@@ -141,12 +220,42 @@ export default function App() {
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [eventsLoaded, setEventsLoaded] = useState(false);
 
-  // Registration form states
-  const [formName, setFormName] = useState('');
-  const [formCollege, setFormCollege] = useState('');
-  const [formEmail, setFormEmail] = useState('');
-  const [formPhone, setFormPhone] = useState('');
-  const [formRoll, setFormRoll] = useState('');
+  // Registration form states with robust instant localStorage initializers
+  const getInitialEmail = () => {
+    try {
+      return (localStorage.getItem('srishti_session') || '').replace(/['"]+/g, '').trim();
+    } catch (_) { return ''; }
+  };
+
+  const getInitialProfileField = (field, fallbackKey) => {
+    try {
+      const email = (localStorage.getItem('srishti_session') || '').replace(/['"]+/g, '').trim().toLowerCase();
+      if (email) {
+        const cachedRaw = localStorage.getItem(`srishti_profile_${email}`);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw);
+          if (parsed && parsed[field]) return parsed[field];
+        }
+      }
+      if (fallbackKey) {
+        const fb = localStorage.getItem(fallbackKey);
+        if (fb) return fb;
+      }
+      // Superadmin fallback defaults
+      if (email === 'tsrknight@gmail.com' || email === 'anselrwilliams2106@gmail.com') {
+        if (field === 'name') return 'Super Admin';
+        if (field === 'college') return 'Srishti 2.7 HQ';
+        if (field === 'phone') return '+91 99999 99999';
+      }
+      return '';
+    } catch (_) { return ''; }
+  };
+
+  const [formEmail, setFormEmail] = useState(getInitialEmail);
+  const [formName, setFormName] = useState(() => getInitialProfileField('name', 'srishti_user_name'));
+  const [formCollege, setFormCollege] = useState(() => getInitialProfileField('college', 'srishti_user_college'));
+  const [formPhone, setFormPhone] = useState(() => getInitialProfileField('phone', 'srishti_user_phone'));
+  const [formRoll, setFormRoll] = useState(() => getInitialProfileField('department', 'srishti_user_roll'));
   const [formTeamSize, setFormTeamSize] = useState(1);
   const [formStatus, setFormStatus] = useState('idle');
   const [isRegistered, setIsRegistered] = useState(false);
@@ -154,27 +263,155 @@ export default function App() {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [participantCode, setParticipantCode] = useState('');
 
-  // Auto-fill form if user is logged in
-  useEffect(() => {
-    const fetchSessionData = async () => {
-      const email = localStorage.getItem('srishti_session');
-      if (email && !isRegistered) {
-        setFormEmail(email);
+  // Helper to keep local profile cache in sync with user edits
+  const updateCachedProfile = (field, value) => {
+    try {
+      const email = (formEmail || localStorage.getItem('srishti_session') || '').replace(/['"]+/g, '').trim().toLowerCase();
+      if (email) {
+        const pKey = `srishti_profile_${email}`;
+        const existing = JSON.parse(localStorage.getItem(pKey) || '{}');
+        localStorage.setItem(pKey, JSON.stringify({ ...existing, [field]: value }));
+      }
+    } catch (_) {}
+  };
+
+  const handleNameChange = (val) => {
+    setFormName(val);
+    localStorage.setItem('srishti_user_name', val);
+    updateCachedProfile('name', val);
+  };
+
+  const handleCollegeChange = (val) => {
+    setFormCollege(val);
+    localStorage.setItem('srishti_user_college', val);
+    updateCachedProfile('college', val);
+  };
+
+  const handlePhoneChange = (val) => {
+    setFormPhone(val);
+    localStorage.setItem('srishti_user_phone', val);
+    updateCachedProfile('phone', val);
+  };
+
+  const handleRollChange = (val) => {
+    setFormRoll(val);
+    localStorage.setItem('srishti_user_roll', val);
+    updateCachedProfile('department', val);
+  };
+
+  const handleEmailChange = async (val) => {
+    setFormEmail(val);
+    localStorage.setItem('srishti_session', val);
+    const cleanEmail = val.replace(/['"]+/g, '').trim().toLowerCase();
+    
+    // Check local profile cache immediately
+    if (cleanEmail) {
+      try {
+        const cachedRaw = localStorage.getItem(`srishti_profile_${cleanEmail}`);
+        if (cachedRaw) {
+          const p = JSON.parse(cachedRaw);
+          if (p.name && !formName) { setFormName(p.name); localStorage.setItem('srishti_user_name', p.name); }
+          if (p.college && !formCollege) { setFormCollege(p.college); localStorage.setItem('srishti_user_college', p.college); }
+          if (p.phone && !formPhone) { setFormPhone(p.phone); localStorage.setItem('srishti_user_phone', p.phone); }
+          if (p.department && p.department !== 'N/A' && !formRoll) { setFormRoll(p.department); localStorage.setItem('srishti_user_roll', p.department); }
+        }
+      } catch (_) {}
+      
+      // Async query Supabase if email is complete
+      if (cleanEmail.includes('@') && cleanEmail.includes('.')) {
         try {
           const { supabase } = await import('./supabaseClient');
-          const { data } = await supabase.from('participants').select('*').eq('email', email).limit(1).maybeSingle();
+          const { data } = await supabase
+            .from('participants')
+            .select('*')
+            .ilike('email', cleanEmail)
+            .limit(1)
+            .maybeSingle();
+
           if (data) {
-            setFormName(data.name || '');
-            setFormCollege(data.college || '');
-            setFormPhone(data.phone || '');
+            if (data.name) { setFormName(data.name); localStorage.setItem('srishti_user_name', data.name); }
+            if (data.college) { setFormCollege(data.college); localStorage.setItem('srishti_user_college', data.college); }
+            if (data.phone) { setFormPhone(data.phone); localStorage.setItem('srishti_user_phone', data.phone); }
+            if (data.department && data.department !== 'N/A' && data.department !== 'General') {
+              setFormRoll(data.department);
+              localStorage.setItem('srishti_user_roll', data.department);
+            }
+            localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(data));
           }
-        } catch (e) {
-          console.error(e);
+        } catch (_) {}
+      }
+    }
+  };
+
+  // Auto-fill form whenever route or active event opens
+  useEffect(() => {
+    const fetchSessionData = async () => {
+      const email = (localStorage.getItem('srishti_session') || '').replace(/['"]+/g, '').trim();
+      const cleanEmail = email.toLowerCase();
+      if (!cleanEmail || isRegistered) return;
+
+      setFormEmail(cleanEmail);
+
+      // 1. Immediately read local profile cache for instant zero-latency fill
+      let cachedProfile = null;
+      try {
+        const cachedRaw = localStorage.getItem(`srishti_profile_${cleanEmail}`);
+        if (cachedRaw) cachedProfile = JSON.parse(cachedRaw);
+      } catch (_) {}
+
+      const localName = cachedProfile?.name || localStorage.getItem('srishti_user_name') || '';
+      const localCollege = cachedProfile?.college || localStorage.getItem('srishti_user_college') || '';
+      const localPhone = cachedProfile?.phone || localStorage.getItem('srishti_user_phone') || '';
+      const localRoll = cachedProfile?.roll || cachedProfile?.department || localStorage.getItem('srishti_user_roll') || '';
+
+      if (localName) setFormName(localName);
+      if (localCollege) setFormCollege(localCollege);
+      if (localPhone) setFormPhone(localPhone);
+      if (localRoll && localRoll !== 'N/A' && localRoll !== 'General') setFormRoll(localRoll);
+
+      // Superadmin fallback defaults
+      if (cleanEmail === 'tsrknight@gmail.com' || cleanEmail === 'anselrwilliams2106@gmail.com') {
+        if (!localName) setFormName('Super Admin');
+        if (!localCollege) setFormCollege('Srishti 2.7 HQ');
+        if (!localPhone) setFormPhone('+91 99999 99999');
+      }
+
+      // 2. Fetch fresh profile from Supabase database
+      try {
+        const { supabase } = await import('./supabaseClient');
+        const { data, error } = await supabase
+          .from('participants')
+          .select('*')
+          .ilike('email', cleanEmail)
+          .limit(1)
+          .maybeSingle();
+
+        if (data && !error) {
+          if (data.name) {
+            setFormName(data.name);
+            localStorage.setItem('srishti_user_name', data.name);
+          }
+          if (data.college) {
+            setFormCollege(data.college);
+            localStorage.setItem('srishti_user_college', data.college);
+          }
+          if (data.phone) {
+            setFormPhone(data.phone);
+            localStorage.setItem('srishti_user_phone', data.phone);
+          }
+          if (data.department && data.department !== 'General' && data.department !== 'N/A') {
+            setFormRoll(data.department);
+            localStorage.setItem('srishti_user_roll', data.department);
+          }
+          localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(data));
         }
+      } catch (e) {
+        console.warn('Autofill participant query notice:', e);
       }
     };
+
     fetchSessionData();
-  }, [isRegistered, isFormMenuOpen]);
+  }, [location.pathname, activeEventData, isRegistered]);
 
   const [activeStep, setActiveStep] = useState(1);
   
@@ -393,6 +630,78 @@ export default function App() {
         }
       } catch (err) {
         console.warn('Edge Function network notice:', err);
+      }
+
+      // Direct Database Registration Fallback if Edge function was not executed
+      if (!pData) {
+        try {
+          const cleanEmail = formEmail.trim().toLowerCase();
+          const { data: existingP } = await supabase
+            .from('participants')
+            .select('*')
+            .ilike('email', cleanEmail)
+            .maybeSingle();
+
+          if (existingP) {
+            pData = existingP;
+            participantPassCode = existingP.participant_code;
+            const updatePayload = {};
+            if (formName.trim() && formName.trim() !== existingP.name) updatePayload.name = formName.trim();
+            if (formPhone.trim() && formPhone.trim() !== existingP.phone) updatePayload.phone = formPhone.trim();
+            if (formCollege.trim() && formCollege.trim() !== existingP.college) updatePayload.college = formCollege.trim();
+            if (formRoll.trim() && formRoll.trim() !== existingP.department) updatePayload.department = formRoll.trim();
+
+            if (Object.keys(updatePayload).length > 0) {
+              const { data: updatedP } = await supabase
+                .from('participants')
+                .update(updatePayload)
+                .eq('id', existingP.id)
+                .select('*')
+                .maybeSingle();
+              if (updatedP) pData = updatedP;
+            }
+          } else {
+            const { data: newP, error: pInsErr } = await supabase
+              .from('participants')
+              .insert([{
+                participant_code: uniqueCode,
+                name: formName.trim() || 'Attendee',
+                email: cleanEmail,
+                phone: formPhone.trim() || 'N/A',
+                college: formCollege.trim() || 'Participant',
+                department: formRoll.trim() || 'General',
+                year: '2026'
+              }])
+              .select('*')
+              .maybeSingle();
+
+            if (!pInsErr && newP) {
+              pData = newP;
+              participantPassCode = newP.participant_code;
+            }
+          }
+
+          if (pData) {
+            localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(pData));
+            if (pData.name) localStorage.setItem('srishti_user_name', pData.name);
+            if (pData.college) localStorage.setItem('srishti_user_college', pData.college);
+            if (pData.phone) localStorage.setItem('srishti_user_phone', pData.phone);
+            if (pData.department) localStorage.setItem('srishti_user_roll', pData.department);
+            localStorage.setItem('srishti_session', cleanEmail);
+          }
+
+          if (pData?.id && resolvedEventId) {
+            await supabase
+              .from('registrations')
+              .insert([{
+                participant_id: pData.id,
+                event_id: resolvedEventId,
+                status: 'registered'
+              }]);
+          }
+        } catch (dbErr) {
+          console.warn('Direct database registration notice:', dbErr);
+        }
       }
 
       // Fetch all registered events for this attendee so the card reflects all enrolled events
@@ -1148,25 +1457,42 @@ export default function App() {
 
                             <Step>
                               <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                {(formEmail && (formName || formCollege || formPhone)) && (
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    marginBottom: '1rem',
+                                    padding: '0.6rem 0.85rem',
+                                    background: 'rgba(56, 189, 248, 0.08)',
+                                    border: '1px solid rgba(56, 189, 248, 0.25)',
+                                    borderRadius: '8px',
+                                    fontSize: '0.78rem',
+                                    color: '#38bdf8'
+                                  }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <span>Details autofilled from your profile. Modify below if needed.</span>
+                                  </div>
+                                )}
                                 <div className="form-group-item">
                                   <label className="field-caption" style={{ color: '#cbd5e1' }}>Primary Contact (Team Lead)</label>
-                                  <input type="text" required className="app-input" placeholder="e.g. Alex Morgan" value={formName} onChange={(e) => setFormName(e.target.value)} />
+                                  <input type="text" required className="app-input" placeholder="e.g. Alex Morgan" value={formName} onChange={(e) => handleNameChange(e.target.value)} />
                                 </div>
                                 <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
                                   <label className="field-caption" style={{ color: '#cbd5e1' }}>College / Institute</label>
-                                  <input type="text" required className="app-input" placeholder="e.g. St Thomas College" value={formCollege} onChange={(e) => setFormCollege(e.target.value)} />
+                                  <input type="text" required className="app-input" placeholder="e.g. St Thomas College" value={formCollege} onChange={(e) => handleCollegeChange(e.target.value)} />
                                 </div>
                                 <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
                                   <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
-                                  <input type="email" required className="app-input" placeholder="alex@domain.edu" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
+                                  <input type="email" required className="app-input" placeholder="alex@domain.edu" value={formEmail} onChange={(e) => handleEmailChange(e.target.value)} />
                                 </div>
                                 <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
                                   <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
-                                  <input type="tel" required className="app-input" placeholder="+1 (555) 000-0000" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} />
+                                  <input type="tel" required className="app-input" placeholder="+1 (555) 000-0000" value={formPhone} onChange={(e) => handlePhoneChange(e.target.value)} />
                                 </div>
                                 <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
                                   <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID (Optional)</label>
-                                  <input type="text" className="app-input" placeholder="e.g. 2024CS1044" value={formRoll} onChange={(e) => setFormRoll(e.target.value)} />
+                                  <input type="text" className="app-input" placeholder="e.g. 2024CS1044" value={formRoll} onChange={(e) => handleRollChange(e.target.value)} />
                                 </div>
                               </div>
                             </Step>

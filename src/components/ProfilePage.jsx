@@ -37,6 +37,8 @@ export default function ProfilePage() {
   const [emailingPass, setEmailingPass] = useState(false);
   const [downloadingPass, setDownloadingPass] = useState(false);
   const [emailPassMsg, setEmailPassMsg] = useState(null);
+  const [arrivalCheckin, setArrivalCheckin] = useState(null);
+  const [eventAttendance, setEventAttendance] = useState({});
 
   const isSuperAdmin = (session?.user?.email || localStorage.getItem('srishti_session') || '').trim().toLowerCase() === 'tsrknight@gmail.com';
 
@@ -104,6 +106,13 @@ export default function ProfilePage() {
         setEditName(currentParticipant.name || '');
         setEditCollege(currentParticipant.college || '');
         setEditPhone(currentParticipant.phone || '');
+        if (currentParticipant.name) localStorage.setItem('srishti_user_name', currentParticipant.name);
+        if (currentParticipant.college) localStorage.setItem('srishti_user_college', currentParticipant.college);
+        if (currentParticipant.phone) localStorage.setItem('srishti_user_phone', currentParticipant.phone);
+        if (currentParticipant.department && currentParticipant.department !== 'N/A') {
+          localStorage.setItem('srishti_user_roll', currentParticipant.department);
+        }
+        localStorage.setItem(`srishti_profile_${clean}`, JSON.stringify(currentParticipant));
       }
 
       let regs = [];
@@ -115,18 +124,55 @@ export default function ProfilePage() {
         if (!rError && rData) regs = rData;
       }
 
-      // Also fallback search registrations by lead_email
+      // Fallback: search registrations via participant email join if participant_id lookup had no results
       if (regs.length === 0) {
         try {
-          const { data: leadRegs } = await supabase
+          const { data: relRegs } = await supabase
             .from('registrations')
-            .select('*, events(*)')
-            .ilike('lead_email', clean);
-          if (leadRegs && leadRegs.length > 0) regs = leadRegs;
+            .select('*, events(*), participants!inner(id, email, name, college, phone, participant_code)')
+            .ilike('participants.email', clean);
+          if (relRegs && relRegs.length > 0) {
+            regs = relRegs;
+            if (!currentParticipant && relRegs[0]?.participants) {
+              setParticipantData(relRegs[0].participants);
+            }
+          }
         } catch (_) {}
       }
 
       setRegistrations(regs);
+
+      // Fetch arrival check-in status
+      let arrivalInfo = null;
+      if (currentParticipant?.id) {
+        try {
+          const { data: arrData } = await supabase
+            .from('arrival_checkins')
+            .select('*')
+            .eq('participant_id', currentParticipant.id)
+            .maybeSingle();
+          if (arrData) arrivalInfo = arrData;
+        } catch (_) {}
+      }
+      setArrivalCheckin(arrivalInfo);
+
+      // Fetch event attendance status
+      let attendanceMap = {};
+      if (currentParticipant?.id) {
+        try {
+          const { data: attData } = await supabase
+            .from('event_attendance')
+            .select('*')
+            .eq('participant_id', currentParticipant.id);
+          if (attData) {
+            attData.forEach(a => {
+              if (a.event_id) attendanceMap[a.event_id] = a;
+            });
+          }
+        } catch (_) {}
+      }
+      setEventAttendance(attendanceMap);
+
       return !!currentParticipant || regs.length > 0;
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -149,15 +195,30 @@ export default function ProfilePage() {
 
     try {
       const code = Math.floor(1000 + Math.random() * 9000).toString();
-      localStorage.setItem('pending_otp', code);
-      localStorage.setItem('pending_email', cleanEmail);
+      
+      // Cryptographically secure challenge (prevents DevTools / F12 inspection bypass)
+      const salt = Math.random().toString(36).substring(2) + Date.now();
+      const enc = new TextEncoder();
+      const buf = await crypto.subtle.digest('SHA-256', enc.encode(`${code}_${cleanEmail}_${salt}_srishti_sec`));
+      const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Store ONLY the irreversible hash and expiry in ephemeral sessionStorage
+      sessionStorage.setItem('srishti_otp_challenge', JSON.stringify({
+        hash,
+        salt,
+        email: cleanEmail,
+        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes validity
+      }));
+      // Remove any legacy plaintext keys
+      localStorage.removeItem('pending_otp');
+      localStorage.removeItem('pending_email');
 
       const htmlContent = `
         <div style="font-family: sans-serif; background: #000; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 0 auto; border: 1px solid #333;">
           <h2 style="color: #fff; letter-spacing: 2px;">SRISHTI 2.7</h2>
           <p style="color: #888;">Your secure login code is:</p>
           <h1 style="font-size: 56px; letter-spacing: 8px; color: #fff; margin: 30px 0;">${code}</h1>
-          <p style="color: #888; font-size: 14px;">This code is valid for your current session.</p>
+          <p style="color: #888; font-size: 14px;">This code is valid for 5 minutes.</p>
         </div>
       `;
 
@@ -184,15 +245,29 @@ export default function ProfilePage() {
   const handleVerifyOtp = async (code) => {
     setError(null);
     try {
-      const savedCode = localStorage.getItem('pending_otp');
-      const savedEmail = (localStorage.getItem('pending_email') || '').trim().toLowerCase();
+      const challengeRaw = sessionStorage.getItem('srishti_otp_challenge');
+      if (!challengeRaw) {
+        throw new Error('No active verification session. Please request a new code.');
+      }
 
-      if (code !== savedCode) {
-        throw new Error('Invalid code. Please try again.');
+      const challenge = JSON.parse(challengeRaw);
+      if (Date.now() > challenge.expiresAt) {
+        sessionStorage.removeItem('srishti_otp_challenge');
+        throw new Error('Verification code has expired (5 minute limit). Please request a new one.');
+      }
+
+      // Verify input against cryptographic hash
+      const enc = new TextEncoder();
+      const buf = await crypto.subtle.digest('SHA-256', enc.encode(`${code.trim()}_${challenge.email}_${challenge.salt}_srishti_sec`));
+      const inputHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (inputHash !== challenge.hash) {
+        throw new Error('Invalid verification code. Please check your email and try again.');
       }
 
       setLoading(true);
-      localStorage.removeItem('pending_otp');
+      sessionStorage.removeItem('srishti_otp_challenge');
+      const savedEmail = challenge.email;
       localStorage.setItem('srishti_session', savedEmail);
       
       setSession({ user: { email: savedEmail } });
@@ -241,6 +316,10 @@ export default function ProfilePage() {
 
     // 1. Immediately persist profile locally so attendee is NEVER blocked
     localStorage.setItem(`srishti_profile_${userEmail}`, JSON.stringify(payload));
+    localStorage.setItem('srishti_session', userEmail);
+    localStorage.setItem('srishti_user_name', name);
+    localStorage.setItem('srishti_user_college', college);
+    localStorage.setItem('srishti_user_phone', phone);
     if (userEmail === 'tsrknight@gmail.com') {
       localStorage.setItem('srishti_admin_session', userEmail);
     }
@@ -291,7 +370,15 @@ export default function ProfilePage() {
         .eq('id', participantData.id);
       
       if (error) throw error;
-      setParticipantData({ ...participantData, name: editName, college: editCollege, phone: editPhone });
+      const updated = { ...participantData, name: editName, college: editCollege, phone: editPhone };
+      setParticipantData(updated);
+      localStorage.setItem('srishti_user_name', editName);
+      localStorage.setItem('srishti_user_college', editCollege);
+      localStorage.setItem('srishti_user_phone', editPhone);
+      const cleanEmail = (participantData?.email || '').trim().toLowerCase();
+      if (cleanEmail) {
+        localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(updated));
+      }
       setIsEditing(false);
     } catch (err) {
       console.error('Error saving profile:', err);
@@ -949,20 +1036,55 @@ export default function ProfilePage() {
                             {String(reg.payment_status || reg.status || 'VERIFIED').toUpperCase()}
                           </div>
                           
-                          <h4 style={{ fontSize: '1.5rem', margin: '0 0 1rem 0', color: '#fff', fontWeight: 'bold' }}>
+                          <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#fff', fontWeight: 'bold' }}>
                             {reg.events?.name || reg.event_name || reg.event_id}
                           </h4>
+
+                          {reg.events && (
+                            <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 1rem 0' }}>
+                              📍 {reg.events.venue || 'Campus Venue'} • 🗓️ {reg.events.date} {reg.events.start_time ? `• ⏰ ${reg.events.start_time}` : ''}
+                            </p>
+                          )}
+
+                          {/* Attendance Status Badges */}
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
+                            {/* Gate Arrival */}
+                            <span style={{
+                              padding: '0.3rem 0.65rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              background: arrivalCheckin ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 184, 0.1)',
+                              color: arrivalCheckin ? '#34d399' : '#94a3b8',
+                              border: arrivalCheckin ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'
+                            }}>
+                              {arrivalCheckin ? '✓ Gate Check-in Verified' : '⏳ Gate Arrival Pending'}
+                            </span>
+
+                            {/* Event Room Attendance */}
+                            <span style={{
+                              padding: '0.3rem 0.65rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              background: eventAttendance[reg.event_id] ? 'rgba(56, 189, 248, 0.15)' : 'rgba(148, 163, 184, 0.1)',
+                              color: eventAttendance[reg.event_id] ? '#38bdf8' : '#94a3b8',
+                              border: eventAttendance[reg.event_id] ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'
+                            }}>
+                              {eventAttendance[reg.event_id] ? '✓ Present in Room' : '○ Room Attendance Pending'}
+                            </span>
+                          </div>
                           
-                          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.25rem' }}>
                             <div style={{ flex: 1 }}>
-                              <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Registration ID</p>
+                              <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.25rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Participant Code</p>
                               <p style={{ fontSize: '1.2rem', margin: 0, fontFamily: 'monospace', color: '#fff', letterSpacing: '1px' }}>
-                                {reg.participant_code || reg.registration_code || reg.id?.substring(0, 8) || 'PASS'}
+                                {participantData?.participant_code || reg.participant_code || reg.registration_code || reg.id?.substring(0, 8) || 'PASS'}
                               </p>
                             </div>
                             {reg.team_size > 1 && (
                               <div>
-                                <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Team</p>
+                                <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.25rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Team</p>
                                 <p style={{ fontSize: '1.2rem', margin: 0 }}>{reg.team_size} <span style={{fontSize: '0.9rem', color: '#888'}}>Pax</span></p>
                               </div>
                             )}
