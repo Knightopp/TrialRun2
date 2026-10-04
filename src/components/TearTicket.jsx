@@ -175,11 +175,41 @@ export default function TearTicket({
   useLayoutEffect(() => {
     const el = rootRef.current;
     if (!el) return undefined;
-    const measure = () => setFit(Math.min(1, el.clientWidth / width) || 1);
+    const measure = () => {
+      let availableWidth = 0;
+      let cur = el.parentElement;
+      while (cur && cur !== document.body) {
+        const style = window.getComputedStyle(cur);
+        const rect = cur.getBoundingClientRect();
+        const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+        const inner = rect.width - padX;
+        if (inner > 0 && (availableWidth === 0 || inner < availableWidth)) {
+          availableWidth = inner;
+        }
+        if (cur.classList.contains('tear-ticket-card-wrapper') || cur.id === 'root') {
+          break;
+        }
+        cur = cur.parentElement;
+      }
+      if (!availableWidth || availableWidth <= 0) {
+        availableWidth = el.parentElement ? el.parentElement.clientWidth : el.clientWidth;
+      }
+      if (availableWidth > 0) {
+        const calculatedFit = Math.min(1, Math.floor(availableWidth - 2) / width);
+        setFit(calculatedFit > 0 ? calculatedFit : 1);
+      }
+    };
     measure();
     const ro = new ResizeObserver(measure);
+    if (el.parentElement) ro.observe(el.parentElement);
+    const cardWrapper = el.closest?.('.tear-ticket-card-wrapper') || el.parentElement?.parentElement;
+    if (cardWrapper) ro.observe(cardWrapper);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
   }, [width]);
 
   const paint = now => {
@@ -282,26 +312,40 @@ export default function TearTicket({
       const want = clamp(wrap(a - s.a0) * s.sign * follow, 0, limit + 0.1);
       s.theta += (want - s.theta) * (1 - Math.exp(-dt / 0.035));
       const up = c.geo.vertical;
-      const away = clamp(((up ? s.point.y - s.start.y : s.point.x - s.start.x) || 0) * 0.05, -2, 4);
-      const side = clamp(((up ? s.point.x - s.start.x : s.point.y - s.start.y) || 0) * 0.05, -3, 3);
-      const px = up ? side : away;
-      const py = up ? away : side;
-      s.sx += (px - s.sx) * (1 - Math.exp(-dt / 0.05));
-      s.sy += (py - s.sy) * (1 - Math.exp(-dt / 0.05));
-      const slack = Math.hypot(s.sx, s.sy);
-      let left = 0;
-      c.geo.bridges.forEach((b, i) => {
-        if (s.snapped[i]) return;
-        const d = Math.abs(b.mid - s.hingeV);
-        if (2 * d * Math.sin(s.theta / 2) + slack > c.stretch || s.theta >= limit) {
+      const rawAway = (up ? s.point.y - s.start.y : s.point.x - s.start.x) || 0;
+      const rawSide = (up ? s.point.x - s.start.x : s.point.y - s.start.y) || 0;
+      const pullDist = Math.hypot(rawAway, rawSide);
+
+      // When pulled away by more than 16px or rotated past limit, snap all bridges and free the stub for full-page dragging
+      if (pullDist > 16 || s.theta >= limit) {
+        c.geo.bridges.forEach((b, i) => {
           s.snapped[i] = true;
           s.snapAt[i] = now;
-          s.bv -= 560 / c.geo.bridges.length;
-        } else left += 1;
-      });
-      if (left === 0) {
+        });
         s.phase = 'free';
         s.bv -= 150;
+      } else {
+        const away = clamp(rawAway * 0.15, -4, 15);
+        const side = clamp(rawSide * 0.15, -10, 10);
+        const px = up ? side : away;
+        const py = up ? away : side;
+        s.sx += (px - s.sx) * (1 - Math.exp(-dt / 0.05));
+        s.sy += (py - s.sy) * (1 - Math.exp(-dt / 0.05));
+        const slack = Math.hypot(s.sx, s.sy);
+        let left = 0;
+        c.geo.bridges.forEach((b, i) => {
+          if (s.snapped[i]) return;
+          const d = Math.abs(b.mid - s.hingeV);
+          if (2 * d * Math.sin(s.theta / 2) + slack > c.stretch || s.theta >= limit) {
+            s.snapped[i] = true;
+            s.snapAt[i] = now;
+            s.bv -= 560 / c.geo.bridges.length;
+          } else left += 1;
+        });
+        if (left === 0) {
+          s.phase = 'free';
+          s.bv -= 150;
+        }
       }
     } else if (s.phase === 'free') {
       const cos = Math.cos(s.theta * s.sign);
@@ -471,12 +515,17 @@ export default function TearTicket({
     } catch {}
     setGrabbing(false);
     if (s.phase === 'free') {
-      const still = performance.now() - s.pt > 80;
-      s.vx = still ? 0 : clamp(s.pvx, -1600, 1600);
-      s.vy = still ? 0 : clamp(s.pvy, -1600, 1200);
-      s.spin = clamp(s.vx * 0.004, -6, 6) + 1.2 * s.sign;
-      s.age = 0;
-      s.phase = 'drop';
+      const throwSpeed = Math.hypot(s.pvx || 0, s.pvy || 0);
+      if (throwSpeed > 650) {
+        s.vx = clamp(s.pvx, -1600, 1600);
+        s.vy = clamp(s.pvy, -1600, 1200);
+        s.spin = clamp(s.vx * 0.004, -6, 6) + 1.2 * s.sign;
+        s.age = 0;
+        s.phase = 'drop';
+      } else {
+        // Smooth spring return so pass isn't lost accidentally
+        s.phase = 'return';
+      }
     } else if (s.phase === 'held') {
       s.phase = 'return';
     }
@@ -529,7 +578,11 @@ export default function TearTicket({
         '--tt-span': ART_SPAN,
         '--tt-art-radius': `${imageRadius}px`,
         '--tt-fit': fit,
-        height: `${height * fit}px`
+        width: `${Math.round(width * fit)}px`,
+        height: `${Math.round(height * fit)}px`,
+        maxWidth: '100%',
+        margin: '0 auto',
+        overflow: 'visible'
       }}
     >
       <div ref={stageRef} className="tear-ticket__stage">

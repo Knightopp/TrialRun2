@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [arrivalCheckin, setArrivalCheckin] = useState(null);
   const [eventAttendance, setEventAttendance] = useState({});
   const [signedPassQr, setSignedPassQr] = useState('');
+  const [isTicketTorn, setIsTicketTorn] = useState(false);
 
   const isSuperAdmin = (session?.user?.email || localStorage.getItem('srishti_session') || '').trim().toLowerCase() === 'tsrknight@gmail.com';
 
@@ -710,7 +711,23 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Srishti Entry Pass */}
-                <div style={{ flex: '2 1 480px', padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div 
+                  className="tear-ticket-card-wrapper"
+                  style={{ 
+                    flex: '2 1 480px', 
+                    minWidth: 0, 
+                    maxWidth: '100%',
+                    padding: '2.5rem 1.5rem', 
+                    backgroundColor: '#0a0a0a', 
+                    borderRadius: '24px', 
+                    border: '1px solid #222', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    position: 'relative',
+                    overflow: 'visible'
+                  }}
+                >
                   <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <FiCalendar /> Digital Entry Pass
                   </h3>
@@ -726,9 +743,16 @@ export default function ProfilePage() {
                     const hasRegistered = (registrations && registrations.length > 0) || isSuperAdmin;
 
                     return (
-                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', width: '100%', overflowX: 'auto', padding: '0.5rem 0' }}>
+                      <div style={{ width: '100%', maxWidth: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'visible' }}>
+                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: '100%', overflow: 'visible', padding: '0.5rem 0' }}>
                           <div style={{
+                            width: '100%',
+                            maxWidth: '660px',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            position: 'relative',
+                            overflow: 'visible',
                             filter: !hasRegistered ? 'blur(4px) grayscale(0.85) opacity(0.35)' : 'none',
                             pointerEvents: !hasRegistered ? 'none' : 'auto',
                             userSelect: !hasRegistered ? 'none' : 'auto',
@@ -737,6 +761,8 @@ export default function ProfilePage() {
                           <TearTicket
                             orientation="horizontal"
                             scrim={false}
+                            torn={isTicketTorn}
+                            onTear={() => setIsTicketTorn(true)}
                             width={660}
                             height={320}
                             stubSize={185}
@@ -902,12 +928,10 @@ export default function ProfilePage() {
                           {!hasRegistered && (
                             <div style={{
                               position: 'absolute',
-                              top: '0.5rem',
-                              left: '50%',
-                              transform: 'translateX(-50%)',
+                              inset: 0,
                               width: '100%',
-                              maxWidth: '660px',
-                              height: '320px',
+                              height: '100%',
+                              minHeight: '280px',
                               background: 'rgba(5, 8, 16, 0.88)',
                               backdropFilter: 'blur(10px)',
                               WebkitBackdropFilter: 'blur(10px)',
@@ -992,6 +1016,30 @@ export default function ProfilePage() {
                         {/* Send Pass & Download Actions */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1.25rem', gap: '0.75rem' }}>
                           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            {isTicketTorn && (
+                              <button
+                                onClick={() => setIsTicketTorn(false)}
+                                title="Re-attach Pass Stub"
+                                style={{
+                                  padding: '0.7rem 1.4rem',
+                                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                                  color: '#38bdf8',
+                                  border: '1px solid rgba(56, 189, 248, 0.45)',
+                                  borderRadius: '12px',
+                                  fontWeight: '600',
+                                  fontSize: '0.88rem',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  transition: 'all 0.2s',
+                                  boxShadow: '0 0 16px rgba(56, 189, 248, 0.25)'
+                                }}
+                              >
+                                <FiRotateCcw /> Re-attach Stub
+                              </button>
+                            )}
+
                             <button
                               onClick={handleEmailPassToUser}
                               disabled={!hasRegistered || emailingPass}
