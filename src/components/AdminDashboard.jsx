@@ -121,6 +121,18 @@ export default function AdminDashboard() {
     event_id: ''
   });
 
+  // Multi-select & Danger Zone Factory Reset state
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState([]);
+  const [resetConfirmWord, setResetConfirmWord] = useState('');
+  const [resetOptions, setResetOptions] = useState({
+    participants: true,
+    registrations: true,
+    arrivals: true,
+    attendance: true,
+    events: false
+  });
+  const [isResetting, setIsResetting] = useState(false);
+
   // Toast feedback
   const [toast, setToast] = useState(null);
 
@@ -1049,6 +1061,145 @@ export default function AdminDashboard() {
     showToast(`Exported ${data.length} records to CSV!`, 'success');
   };
 
+  // -----------------------------------------------------------------------------
+  // ACTION: DANGER ZONE & BULK DELETIONS (Admin only)
+  // -----------------------------------------------------------------------------
+  const handleToggleSelectParticipant = (id) => {
+    setSelectedParticipantIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAllParticipants = () => {
+    if (selectedParticipantIds.length === filteredParticipants.length && filteredParticipants.length > 0) {
+      setSelectedParticipantIds([]);
+    } else {
+      setSelectedParticipantIds(filteredParticipants.map(p => p.id));
+    }
+  };
+
+  const handleDeleteSelectedParticipants = async () => {
+    if (selectedParticipantIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to permanently delete the ${selectedParticipantIds.length} selected participant(s)?\n\nWARNING: This will cascade-delete all their event registrations and arrival check-ins.`)) {
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('participants')
+        .delete()
+        .in('id', selectedParticipantIds);
+
+      if (error) throw error;
+      showToast(`Deleted ${selectedParticipantIds.length} participant(s)!`, 'success');
+      setSelectedParticipantIds([]);
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || 'Failed to delete selected participants', 'error');
+    }
+  };
+
+  const handleClearSingleTable = async (tableName) => {
+    if (!window.confirm(`DANGER: Are you sure you want to wipe ALL records in "${tableName}" to zero?`)) {
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (error) throw error;
+      showToast(`Table "${tableName}" cleared to zero records!`, 'success');
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || `Failed to clear table ${tableName}`, 'error');
+    }
+  };
+
+  const handleDeleteDatabaseRow = async (tableName, rowId) => {
+    if (!window.confirm(`Delete record from ${tableName}?`)) return;
+    try {
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', rowId);
+
+      if (error) throw error;
+      showToast(`Record deleted from ${tableName}!`, 'success');
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || 'Failed to delete record', 'error');
+    }
+  };
+
+  const handleResetFestivalDataToZero = async (e) => {
+    e.preventDefault();
+    if (resetConfirmWord.trim().toUpperCase() !== 'RESET') {
+      showToast('Please type RESET to confirm factory reset', 'error');
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      // 1. Delete Attendance if selected
+      if (resetOptions.attendance) {
+        await supabase
+          .from('event_attendance')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      // 2. Delete Arrival Check-ins if selected
+      if (resetOptions.arrivals) {
+        await supabase
+          .from('arrival_checkins')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      // 3. Delete Registrations if selected
+      if (resetOptions.registrations) {
+        await supabase
+          .from('registrations')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      // 4. Delete Participants if selected (cascades any leftover registrations/check-ins)
+      if (resetOptions.participants) {
+        await supabase
+          .from('participants')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      // 5. Delete Events if explicitly selected
+      if (resetOptions.events) {
+        await supabase
+          .from('events')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      // Reset local states immediately
+      if (resetOptions.attendance) setEventAttendance([]);
+      if (resetOptions.arrivals) setArrivalCheckins([]);
+      if (resetOptions.registrations) setRegistrations([]);
+      if (resetOptions.participants) setParticipants([]);
+      if (resetOptions.events) setEvents([]);
+      setSelectedParticipantIds([]);
+
+      showToast('All festival data reset to zero successfully!', 'success');
+      setModalType(null);
+      setResetConfirmWord('');
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || 'Failed to reset festival data', 'error');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   // Filtered participants
   const filteredParticipants = useMemo(() => {
     return participants.filter(p => {
@@ -1317,6 +1468,19 @@ export default function AdminDashboard() {
                 <FiArrowLeft />
                 <span>Live Site</span>
               </button>
+
+              {adminRole === 'admin' && (
+                <button 
+                  type="button"
+                  onClick={() => setModalType('resetAllData')} 
+                  className="admin-btn admin-btn-danger"
+                  style={{ border: '1px solid rgba(255, 255, 255, 0.4)', background: 'rgba(255, 255, 255, 0.08)' }}
+                  title="Reset Festival Data & Counters to Zero"
+                >
+                  <FiTrash2 />
+                  <span>Reset to Zero</span>
+                </button>
+              )}
 
               <button 
                 onClick={handleLogout} 
@@ -2369,14 +2533,67 @@ export default function AdminDashboard() {
                 >
                   <FiDownload /> Export CSV
                 </button>
+                {adminRole === 'admin' && (
+                  <button 
+                    type="button"
+                    onClick={() => setModalType('resetAllData')} 
+                    className="admin-btn admin-btn-danger"
+                    title="Reset all test participant data and turnout back to 0"
+                  >
+                    <FiTrash2 /> Reset All to Zero
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* Bulk Selection Bar */}
+            {selectedParticipantIds.length > 0 && (
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                borderRadius: '8px',
+                padding: '0.65rem 1rem',
+                marginBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem'
+              }}>
+                <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '0.88rem' }}>
+                  {selectedParticipantIds.length} participant{selectedParticipantIds.length > 1 ? 's' : ''} selected
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleDeleteSelectedParticipants}
+                    className="admin-btn admin-btn-sm admin-btn-danger"
+                  >
+                    <FiTrash2 /> Delete Selected ({selectedParticipantIds.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedParticipantIds([])}
+                    className="admin-btn admin-btn-sm admin-btn-secondary"
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="admin-table-container">
               <div className="admin-table-scroll">
                 <table className="admin-data-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '40px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={filteredParticipants.length > 0 && selectedParticipantIds.length === filteredParticipants.length}
+                          onChange={handleToggleSelectAllParticipants}
+                          title="Select All Participants"
+                        />
+                      </th>
                       <th>Participant Code</th>
                       <th>Attendee Name</th>
                       <th>College &amp; Dept</th>
@@ -2394,6 +2611,13 @@ export default function AdminDashboard() {
 
                         return (
                           <tr key={p.id}>
+                            <td style={{ textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedParticipantIds.includes(p.id)}
+                                onChange={() => handleToggleSelectParticipant(p.id)}
+                              />
+                            </td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold', color: '#ffffff' }}>
                               {p.participant_code}
                             </td>
@@ -2480,7 +2704,7 @@ export default function AdminDashboard() {
                       })
                     ) : (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#71717a' }}>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#71717a' }}>
                           No participants matching criteria found.
                         </td>
                       </tr>
@@ -2759,19 +2983,36 @@ export default function AdminDashboard() {
         {/* ========================================================================= */}
         {activeTab === 'databases' && adminRole === 'admin' && (
           <div>
-            <div className="admin-section-header">
+            <div className="admin-section-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <h2>Database Tables Explorer</h2>
                 <p style={{ color: '#a1a1aa', fontSize: '0.85rem', margin: 0 }}>
-                  Raw PostgreSQL inspection for all 7 SRISHTI 2.7 core tables
+                  Raw PostgreSQL inspection and operational controls for all 7 SRISHTI 2.7 core tables
                 </p>
               </div>
-              <button 
-                onClick={() => handleExportCsv(selectedDbTable, currentTableData)}
-                className="admin-btn admin-btn-primary"
-              >
-                <FiDownload /> Download Table (CSV)
-              </button>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <button 
+                  onClick={() => handleExportCsv(selectedDbTable, currentTableData)}
+                  className="admin-btn admin-btn-secondary"
+                >
+                  <FiDownload /> Download CSV
+                </button>
+                <button 
+                  onClick={() => handleClearSingleTable(selectedDbTable)}
+                  className="admin-btn admin-btn-danger"
+                  title={`Clear all rows from public.${selectedDbTable}`}
+                >
+                  <FiTrash2 /> Clear Table ({currentTableData.length})
+                </button>
+                <button 
+                  onClick={() => setModalType('resetAllData')}
+                  className="admin-btn admin-btn-danger"
+                  style={{ border: '1px solid rgba(255, 255, 255, 0.4)' }}
+                  title="Reset all festival operational data back to 0"
+                >
+                  <FiAlertCircle /> Reset Everything to Zero
+                </button>
+              </div>
             </div>
 
             {/* Table Selection Pills */}
@@ -2816,6 +3057,7 @@ export default function AdminDashboard() {
                         {Object.keys(filteredDbRows[0]).map(col => (
                           <th key={col}>{col}</th>
                         ))}
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2833,12 +3075,24 @@ export default function AdminDashboard() {
                               </td>
                             );
                           })}
+                          <td style={{ textAlign: 'right' }}>
+                            {row.id && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDatabaseRow(selectedDbTable, row.id)}
+                                className="admin-btn admin-btn-sm admin-btn-danger"
+                                title="Delete this record"
+                              >
+                                <FiTrash2 />
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ textAlign: 'center', color: '#71717a', padding: '2rem' }}>Table is empty.</p>
+                  <p style={{ textAlign: 'center', color: '#71717a', padding: '2rem' }}>Table is empty (0 records).</p>
                 )}
               </div>
             </div>
@@ -3557,6 +3811,219 @@ export default function AdminDashboard() {
                 <button type="button" onClick={() => setModalType(null)} className="admin-btn admin-btn-secondary">Cancel</button>
                 <button type="submit" disabled={isSubmitting} className="admin-btn admin-btn-primary">
                   {isSubmitting ? 'Saving...' : 'Save Profile Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: RESET FESTIVAL DATA TO ZERO (DANGER ZONE) */}
+      {/* ========================================================================= */}
+      {modalType === 'resetAllData' && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card" style={{ maxWidth: '580px', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+            <div className="admin-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <FiTrash2 style={{ color: '#ffffff', fontSize: '1.25rem' }} />
+                <h3 style={{ color: '#ffffff' }}>Reset Festival Data to Zero</h3>
+              </div>
+              <button onClick={() => { setModalType(null); setResetConfirmWord(''); }} className="admin-modal-close"><FiX /></button>
+            </div>
+
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              marginBottom: '1.5rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ffffff', fontWeight: 'bold', fontSize: '0.95rem', marginBottom: '0.4rem' }}>
+                <FiAlertCircle size={18} />
+                <span>CRITICAL ACTION: ZERO OUT FESTIVAL DATA</span>
+              </div>
+              <p style={{ color: '#a1a1aa', fontSize: '0.84rem', margin: 0, lineHeight: 1.5 }}>
+                This operation wipes test data and resets festival attendee records and live counters back to 0. 
+                Administrator accounts and core system configurations are preserved.
+              </p>
+            </div>
+
+            <form onSubmit={handleResetFestivalDataToZero}>
+              {/* Impact Breakdown Table */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#a1a1aa', letterSpacing: '0.05em', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
+                  Select Tables to Wipe to Zero:
+                </label>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    background: '#121214',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={resetOptions.participants}
+                        onChange={e => setResetOptions({ ...resetOptions, participants: e.target.checked })}
+                      />
+                      <div>
+                        <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '0.88rem' }}>Participants (public.participants)</div>
+                        <div style={{ color: '#a1a1aa', fontSize: '0.75rem' }}>Attendee profiles, identity codes, college metadata</div>
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: '#ffffff', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                      {participants.length} → 0
+                    </span>
+                  </label>
+
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    background: '#121214',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={resetOptions.registrations}
+                        onChange={e => setResetOptions({ ...resetOptions, registrations: e.target.checked })}
+                      />
+                      <div>
+                        <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '0.88rem' }}>Registrations (public.registrations)</div>
+                        <div style={{ color: '#a1a1aa', fontSize: '0.75rem' }}>Event enrollments, slot assignments, payment verifications</div>
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: '#ffffff', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                      {registrations.length} → 0
+                    </span>
+                  </label>
+
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    background: '#121214',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={resetOptions.arrivals}
+                        onChange={e => setResetOptions({ ...resetOptions, arrivals: e.target.checked })}
+                      />
+                      <div>
+                        <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '0.88rem' }}>Gate Check-Ins (public.arrival_checkins)</div>
+                        <div style={{ color: '#a1a1aa', fontSize: '0.75rem' }}>Main entrance arrival check-in verification log</div>
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: '#ffffff', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                      {arrivalCheckins.length} → 0
+                    </span>
+                  </label>
+
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    background: '#121214',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={resetOptions.attendance}
+                        onChange={e => setResetOptions({ ...resetOptions, attendance: e.target.checked })}
+                      />
+                      <div>
+                        <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '0.88rem' }}>Event Room Attendance (public.event_attendance)</div>
+                        <div style={{ color: '#a1a1aa', fontSize: '0.75rem' }}>In-session venue attendance marked by coordinators</div>
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: '#ffffff', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                      {eventAttendance.length} → 0
+                    </span>
+                  </label>
+
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    background: '#121214',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={resetOptions.events}
+                        onChange={e => setResetOptions({ ...resetOptions, events: e.target.checked })}
+                      />
+                      <div>
+                        <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '0.88rem' }}>Events Catalog (public.events)</div>
+                        <div style={{ color: '#71717a', fontSize: '0.75rem' }}>Leave unchecked to keep all festival competition definitions</div>
+                      </div>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: '#71717a', fontSize: '0.85rem' }}>
+                      {resetOptions.events ? `${events.length} → 0` : 'Kept safe'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Safeguard Input */}
+              <div className="admin-form-group" style={{ marginBottom: '1.5rem' }}>
+                <label style={{ color: '#ffffff', fontSize: '0.85rem' }}>
+                  To confirm, type <strong style={{ letterSpacing: '0.1em', background: 'rgba(255, 255, 255, 0.12)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>RESET</strong> below:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Type RESET"
+                  value={resetConfirmWord}
+                  onChange={e => setResetConfirmWord(e.target.value)}
+                  className="admin-form-control"
+                  style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', fontWeight: 'bold' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button 
+                  type="button" 
+                  onClick={() => { setModalType(null); setResetConfirmWord(''); }} 
+                  className="admin-btn admin-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isResetting || resetConfirmWord.trim().toUpperCase() !== 'RESET'}
+                  className="admin-btn admin-btn-danger"
+                  style={{
+                    opacity: (resetConfirmWord.trim().toUpperCase() === 'RESET' && !isResetting) ? 1 : 0.4,
+                    cursor: (resetConfirmWord.trim().toUpperCase() === 'RESET' && !isResetting) ? 'pointer' : 'not-allowed',
+                    border: '1px solid #ffffff'
+                  }}
+                >
+                  {isResetting ? 'Zeroing Out Data...' : 'RESET ALL DATA TO ZERO'}
                 </button>
               </div>
             </form>
