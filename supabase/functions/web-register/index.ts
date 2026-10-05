@@ -172,7 +172,11 @@ serve(async (req: Request) => {
       .maybeSingle();
 
     if (pFindErr) {
-      console.warn("Participant lookup notice:", pFindErr);
+      console.error("Participant lookup failed:", pFindErr);
+      return new Response(
+        JSON.stringify({ success: false, error: "Registration could not be completed. Please try again." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (existingParticipant) {
@@ -180,26 +184,16 @@ serve(async (req: Request) => {
       participantCode = existingParticipant.participant_code;
       // Note: We do NOT arbitrarily overwrite existing participant details from unauthenticated web requests.
     } else {
-      // Generate unique participant code (e.g. SRI27-XXXXXX)
-      let uniqueFound = false;
-      let candidateCode = "";
-      let attempts = 0;
-
-      while (!uniqueFound && attempts < 5) {
-        attempts++;
-        const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
-        candidateCode = `SRI27-${rand}`;
-
-        const { data: codeCheck } = await supabase
-          .from("participants")
-          .select("id")
-          .eq("participant_code", candidateCode)
-          .maybeSingle();
-
-        if (!codeCheck) uniqueFound = true;
+      // Use the database sequence so website codes match other SRISHTI clients.
+      const { data: generatedCode, error: codeErr } = await supabase.rpc("fn_generate_participant_code");
+      if (codeErr || typeof generatedCode !== "string" || !generatedCode) {
+        console.error("Participant code generation failed:", codeErr);
+        return new Response(
+          JSON.stringify({ success: false, error: "Registration could not be completed. Please try again." }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-
-      participantCode = candidateCode;
+      participantCode = generatedCode;
 
       const { data: newParticipant, error: pInsertErr } = await supabase
         .from("participants")
@@ -233,6 +227,14 @@ serve(async (req: Request) => {
       .eq("participant_id", participantId)
       .eq("event_id", event.id)
       .maybeSingle();
+
+    if (regCheckErr) {
+      console.error("Registration duplicate check failed:", regCheckErr);
+      return new Response(
+        JSON.stringify({ success: false, error: "Registration could not be completed. Please try again." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (existingReg) {
       if (existingReg.status === "registered") {
@@ -282,6 +284,12 @@ serve(async (req: Request) => {
 
     if (regInsertErr || !createdReg) {
       console.error("Failed to insert registration:", regInsertErr);
+      if (regInsertErr?.code === "23505") {
+        return new Response(
+          JSON.stringify({ success: false, code: "DUPLICATE_REGISTRATION", error: `Participant is already registered for ${event.name}.` }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       return new Response(
         JSON.stringify({ success: false, error: "Failed to record event registration.", details: regInsertErr?.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

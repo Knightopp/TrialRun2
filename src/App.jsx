@@ -744,184 +744,108 @@ export default function App() {
     }
 
     try {
-      const uniqueCode = 'SRI27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      let participantPassCode = uniqueCode;
+      const cleanEmail = formEmail.trim().toLowerCase();
+      let participantPassCode = '';
       let pData = null;
 
-      // 1. Resolve event UUID from events table if available
-      let resolvedEventId = null;
-      try {
-        const { data: dbEv } = await supabase
-          .from('events')
-          .select('id, event_code, name')
-          .or(`event_code.eq.${activeEventData.id},event_code.eq.SRI27-${activeEventData.id.toUpperCase()},name.ilike.${activeEventData.label}`)
-          .maybeSingle();
-        if (dbEv?.id) {
-          resolvedEventId = dbEv.id;
+      // Public registration must go through the server-controlled function.
+      // The browser must not read or write participant/registration tables.
+      const edgePayload = {
+        name: formName.trim(),
+        email: cleanEmail,
+        phone: formPhone.trim(),
+        college: formCollege.trim(),
+        department: formRoll.trim() || 'General',
+        year: '2026',
+        event_id: activeEventData?.dbId || undefined,
+        event_code: activeEventData.id.startsWith('SRI27-')
+          ? activeEventData.id
+          : `SRI27-${activeEventData.id.toUpperCase()}`,
+        team_members: members,
+        payment_method: 'upi',
+        payment_reference: txnId || undefined
+      };
+
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('web-register', {
+        body: edgePayload
+      });
+
+      if (edgeError || !edgeData?.success || !edgeData?.data?.participant) {
+        const message = edgeData?.error || edgeError?.message || 'Registration could not be completed.';
+        if (edgeData?.code === 'DUPLICATE_REGISTRATION') {
+          alert(`You are already registered for ${activeEventData.label}! Duplicate registrations are not permitted.`);
+          setIsRegistering(false);
+          setFormStatus('idle');
+          return;
         }
-      } catch (evErr) {
-        console.warn('Could not resolve event UUID:', evErr);
+        throw new Error(message);
       }
 
-      // Check if participant is already registered in DB for this event
-      const cleanEmail = formEmail.trim().toLowerCase();
-      try {
-        const { data: pCheck } = await supabase
-          .from('participants')
-          .select('id')
-          .ilike('email', cleanEmail)
-          .maybeSingle();
+      pData = {
+        ...edgeData.data.participant,
+        phone: formPhone.trim(),
+        college: formCollege.trim(),
+        department: formRoll.trim() || 'General'
+      };
+      participantPassCode = pData.participant_code;
+      const resolvedEventId = edgeData.data.event?.id || activeEventData?.dbId || null;
+      const registrationStatus = edgeData.data.payment_status === 'verified' ? 'VERIFIED' : 'PAYMENT PENDING';
 
-        if (pCheck?.id && resolvedEventId) {
-          const { data: dupCheck } = await supabase
-            .from('registrations')
-            .select('id')
-            .eq('participant_id', pCheck.id)
-            .eq('event_id', resolvedEventId)
-            .maybeSingle();
-          if (dupCheck) {
-            setIsRegistering(false);
-            setFormStatus('idle');
-            alert(`You are already registered for this event (${activeEventData.label})! Duplicate registrations are not permitted.`);
-            return;
-          }
-        }
-      } catch (checkErr) {
-        console.warn('Existing registration pre-check notice:', checkErr);
-      }
-      // 2. Invoke the official web-register Supabase Edge Function
-      let edgeInvokedSuccessfully = false;
-      try {
-        const edgePayload = {
-          name: formName.trim(),
-          email: formEmail.trim().toLowerCase(),
-          phone: formPhone.trim(),
-          college: formCollege.trim(),
-          department: 'N/A',
-          year: 'N/A',
-          event_id: resolvedEventId || undefined,
-          event_code: activeEventData.id.startsWith('SRI27-') ? activeEventData.id : `SRI27-${activeEventData.id.toUpperCase()}`,
-          team_members: members,
-          payment_method: 'upi',
-          payment_reference: txnId || null
-        };
-
-        const { data: edgeData, error: edgeErr } = await supabase.functions.invoke('web-register', {
-          body: edgePayload
-        });
-
-        if (!edgeErr && edgeData?.success && edgeData.data?.participant) {
-          edgeInvokedSuccessfully = true;
-          pData = edgeData.data.participant;
-          participantPassCode = edgeData.data.participant.participant_code;
-        } else {
-          const errMsg = edgeErr?.message || edgeData?.error || 'Registration failed.';
-          console.warn('web-register notice:', errMsg);
-          if (edgeData?.data?.participant_code) {
-            participantPassCode = edgeData.data.participant_code;
-          }
-        }
-      } catch (err) {
-        console.warn('Edge Function network notice:', err);
-      }
-
-      // Direct Database Registration Fallback if Edge function was not executed
-      if (!pData) {
-        try {
-          const cleanEmail = formEmail.trim().toLowerCase();
-
-          // 1. Try atomic server-side RPC (zero client manipulation, strictly enforced status)
-          try {
-            const { data: rpcRes, error: rpcErr } = await supabase.rpc('register_participant_and_event', {
-              p_name: formName.trim() || 'Attendee',
-              p_email: cleanEmail,
-              p_phone: formPhone.trim() || 'N/A',
-              p_college: formCollege.trim() || 'Participant',
-              p_department: formRoll.trim() || 'General',
-              p_year: '2026',
-              p_event_id: resolvedEventId || null
-            });
-
-            if (rpcRes && !rpcRes.success && rpcRes.is_existing) {
-              setIsRegistering(false);
-              alert(rpcRes.error || 'This email is already registered for Srishti 2.7. Please go to your Profile page and log in to manage your pass or register for more events.');
-              return;
-            }
-
-            if (!rpcErr && rpcRes?.success) {
-              let activeToken = rpcRes.pass_token || '';
-              // If pass_token was not returned because user already existed, check device vault
-              if (!activeToken) {
-                try {
-                  const { secureStorage } = await import('./utils/cryptoSecurity');
-                  activeToken = (await secureStorage.getItem(`srishti_token_${cleanEmail}`)) || '';
-                } catch (_) {}
-              } else {
-                try {
-                  const { secureStorage } = await import('./utils/cryptoSecurity');
-                  await secureStorage.setItem(`srishti_token_${cleanEmail}`, activeToken);
-                } catch (_) {}
-              }
-
-              pData = {
-                id: rpcRes.participant_id,
-                participant_code: rpcRes.participant_code || uniqueCode,
-                pass_token: activeToken,
-                name: formName.trim(),
-                email: cleanEmail,
-                college: formCollege.trim(),
-                phone: formPhone.trim(),
-                department: formRoll.trim() || 'General'
-              };
-              participantPassCode = rpcRes.participant_code || uniqueCode;
-            }
-          } catch (_) {}
-
-          if (!pData) {
-            setIsRegistering(false);
-            alert('Registration could not be completed at this time. Please try again.');
-            return;
-          }
-
-          if (pData) {
-            localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(pData));
-            if (pData.name) localStorage.setItem('srishti_user_name', pData.name);
-            if (pData.college) localStorage.setItem('srishti_user_college', pData.college);
-            if (pData.phone) localStorage.setItem('srishti_user_phone', pData.phone);
-            if (pData.department) localStorage.setItem('srishti_user_roll', pData.department);
-            localStorage.setItem('srishti_session', cleanEmail);
-          }
-        } catch (dbErr) {
-          console.warn('Direct database registration notice:', dbErr);
-        }
+      // Save user profile locally
+      if (pData) {
+        localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(pData));
+        if (pData.name) localStorage.setItem('srishti_user_name', pData.name);
+        if (pData.college) localStorage.setItem('srishti_user_college', pData.college);
+        if (pData.phone) localStorage.setItem('srishti_user_phone', pData.phone);
+        if (pData.department) localStorage.setItem('srishti_user_roll', pData.department);
+        localStorage.setItem('srishti_session', cleanEmail);
       }
 
       // Fetch all registered events for this attendee so the card reflects all enrolled events
       let allEventsList = [activeEventData.label];
+      let userAllRegs = [];
       if (pData?.id) {
-        const { data: userAllRegs } = await supabase
-          .from('registrations')
-          .select('*, events(*)')
-          .eq('participant_id', pData.id);
+        try {
+          const { data: dbUserRegs } = await supabase
+            .from('registrations')
+            .select('*, events(*)')
+            .eq('participant_id', pData.id);
 
-        if (userAllRegs && userAllRegs.length > 0) {
-          setUserRegistrations(userAllRegs);
-          try {
-            localStorage.setItem(`srishti_user_registrations_${cleanEmail}`, JSON.stringify(userAllRegs));
-          } catch (_) {}
-          const mapped = userAllRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
-          if (mapped.length > 0) {
-            allEventsList = [...new Set(mapped)];
+          if (dbUserRegs && dbUserRegs.length > 0) {
+            userAllRegs = dbUserRegs;
+            setUserRegistrations(dbUserRegs);
+            const mapped = dbUserRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
+            if (mapped.length > 0) {
+              allEventsList = [...new Set(mapped)];
+            }
           }
-        }
-      } else {
+        } catch (_) {}
+      }
+
+      // Fallback if DB fetch is empty or participant has no id yet
+      if (userAllRegs.length === 0) {
         const addedReg = {
           event_id: resolvedEventId,
           event_code: activeEventData.id,
-          event_name: activeEventData.label
+          event_name: activeEventData.label,
+          status: 'registered',
+          payment_status: 'verified',
+          events: {
+            name: activeEventData.label,
+            event_code: activeEventData.id,
+            venue: activeEventData.venue || 'Campus Venue',
+            date: activeEventData.date || 'Dec 10, 2026',
+            start_time: activeEventData.time || '10:00 AM'
+          }
         };
+        userAllRegs = [addedReg];
         setUserRegistrations(prev => [...prev.filter(r => r.event_id !== resolvedEventId), addedReg]);
       }
+
+      try {
+        localStorage.setItem(`srishti_user_registrations_${cleanEmail}`, JSON.stringify(userAllRegs));
+      } catch (_) {}
+
 
       // Server-authoritative QR code with cryptographic pass token
       let qrCodeString = participantPassCode;
@@ -948,8 +872,8 @@ export default function App() {
           passCode: participantPassCode,
           passToken: pData?.pass_token || '',
           events: allEventsList,
-          isVerified: true,
-          statusText: 'VERIFIED'
+          isVerified: registrationStatus === 'VERIFIED',
+          statusText: registrationStatus
         });
       } catch (pngErr) {
         console.warn('PNG card generation notice:', pngErr);
@@ -961,7 +885,7 @@ export default function App() {
         college: formCollege,
         passCode: participantPassCode,
         eventName: activeEventData.label,
-        status: 'VERIFIED'
+        status: registrationStatus
       });
 
       // Admin notification email
@@ -975,6 +899,7 @@ export default function App() {
           <p><strong>Phone:</strong> ${formPhone}</p>
           <p><strong>Email:</strong> ${formEmail}</p>
           <p><strong>Team Size:</strong> ${formTeamSize}</p>
+          <p><strong>Registration status:</strong> ${registrationStatus}</p>
           <div style="background: #f0fdf4; border: 1px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 8px;">
             <h3 style="margin: 0; color: #047857;">Expected Payment</h3>
             <p style="font-size: 24px; margin: 10px 0; font-weight: bold;">₹${amountPaid}</p>
