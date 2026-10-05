@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
@@ -75,228 +74,29 @@ export default function ProfilePage() {
   }, []);
 
   const fetchUserData = async (userEmail) => {
+    const clean = (userEmail || '').trim().toLowerCase();
+    let currentParticipant = null;
+    let regs = [];
     try {
-      const clean = (userEmail || '').trim().toLowerCase();
-      let currentParticipant = null;
+      const cachedProfile = localStorage.getItem(`srishti_profile_${clean}`);
+      if (cachedProfile) currentParticipant = JSON.parse(cachedProfile);
+    } catch (_) {}
+    try {
+      const cachedRegs = JSON.parse(localStorage.getItem(`srishti_user_registrations_${clean}`) || '[]');
+      if (Array.isArray(cachedRegs)) regs = cachedRegs;
+    } catch (_) {}
 
-      // 1. Direct Supabase participants query (authoritative source)
-      try {
-        const { data: dbPart } = await supabase
-          .from('participants')
-          .select('*')
-          .ilike('email', clean)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (dbPart) currentParticipant = dbPart;
-      } catch (_) {}
-
-      // 2. Authenticated RPC get_my_participant
-      if (!currentParticipant) {
-        try {
-          const { data: myRows } = await supabase.rpc('get_my_participant');
-          if (myRows && myRows.length > 0) currentParticipant = myRows[0];
-        } catch (_) {}
-      }
-
-      // 3. Staff lookup fallback
-      if (!currentParticipant) {
-        try {
-          const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: clean });
-          if (rpcRows && rpcRows.length > 0) currentParticipant = rpcRows[0];
-        } catch (_) {}
-      }
-
-      // 4. Local profile fallback if offline or RLS limits select
-      if (!currentParticipant) {
-        const cached = localStorage.getItem(`srishti_profile_${clean}`);
-        if (cached) {
-          try {
-            currentParticipant = JSON.parse(cached);
-          } catch (_) {}
-        }
-      }
-
-      if (currentParticipant) {
-        // Retrieve pass_token via authenticated credential or local encrypted vault
-        if (!currentParticipant.pass_token) {
-          try {
-            const { data: credRows } = await supabase.rpc('get_my_pass_credential');
-            if (credRows && credRows.length > 0 && credRows[0].pass_token) {
-              currentParticipant.pass_token = credRows[0].pass_token;
-            }
-          } catch (_) {}
-
-          if (!currentParticipant.pass_token) {
-            try {
-              const { secureStorage } = await import('../utils/cryptoSecurity');
-              const localToken = await secureStorage.getItem(`srishti_token_${clean}`);
-              if (localToken) currentParticipant.pass_token = localToken;
-            } catch (_) {}
-          }
-        }
-      }
-
+    if (currentParticipant) {
       setParticipantData(currentParticipant);
-      
-      if (currentParticipant) {
-        setEditName(currentParticipant.name || '');
-        setEditCollege(currentParticipant.college || '');
-        setEditPhone(currentParticipant.phone || '');
-        if (currentParticipant.name) localStorage.setItem('srishti_user_name', currentParticipant.name);
-        if (currentParticipant.college) localStorage.setItem('srishti_user_college', currentParticipant.college);
-        if (currentParticipant.phone) localStorage.setItem('srishti_user_phone', currentParticipant.phone);
-        if (currentParticipant.department && currentParticipant.department !== 'N/A') {
-          localStorage.setItem('srishti_user_roll', currentParticipant.department);
-        }
-        localStorage.setItem(`srishti_profile_${clean}`, JSON.stringify(currentParticipant));
-      }
-
-      let regs = [];
-
-      // Find all participant IDs associated with this email (handles legacy duplicate accounts)
-      let pIds = [currentParticipant?.id].filter(Boolean);
-      try {
-        const { data: allUserParts } = await supabase
-          .from('participants')
-          .select('id')
-          .ilike('email', clean);
-        if (allUserParts && allUserParts.length > 0) {
-          pIds = [...new Set([...pIds, ...allUserParts.map(p => p.id)])];
-        }
-      } catch (_) {}
-
-      // 1. Direct query from registrations joined with events table
-      if (pIds.length > 0) {
-        try {
-          const { data: dbRegs } = await supabase
-            .from('registrations')
-            .select('*, events(*)')
-            .in('participant_id', pIds)
-            .order('registered_at', { ascending: false });
-
-          if (dbRegs && dbRegs.length > 0) {
-            regs = dbRegs;
-          }
-        } catch (_) {}
-      }
-
-      // 2. Identity-based authenticated RPC get_my_registrations
-      if (regs.length === 0) {
-        try {
-          const { data: myRegs } = await supabase.rpc('get_my_registrations');
-          if (myRegs && myRegs.length > 0) {
-            regs = myRegs.map(r => ({
-              ...r,
-              events: {
-                name: r.event_name,
-                event_code: r.event_code,
-                venue: r.event_venue,
-                date: r.event_date,
-                start_time: r.event_time
-              }
-            }));
-          }
-        } catch (_) {}
-      }
-
-      // 3. Staff lookup RPC fallback
-      if (regs.length === 0) {
-        try {
-          const { data: rpcRegs } = await supabase.rpc('get_registrations_by_email', { lookup_email: clean });
-          if (rpcRegs && rpcRegs.length > 0) {
-            regs = rpcRegs.map(r => ({
-              ...r,
-              events: {
-                name: r.event_name,
-                event_code: r.event_code,
-                venue: r.event_venue,
-                date: r.event_date,
-                start_time: r.event_time
-              }
-            }));
-          }
-        } catch (_) {}
-      }
-
-      // 4. Local storage fallback for instant offline/cached event retrieval
-      if (regs.length === 0) {
-        const cachedRegs = localStorage.getItem(`srishti_user_registrations_${clean}`);
-        if (cachedRegs) {
-          try {
-            const parsed = JSON.parse(cachedRegs);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              regs = parsed;
-            }
-          } catch (_) {}
-        }
-      }
-
-      // Ensure every registration has complete event info (fallback if events join was null)
-      regs = regs.map(r => {
-        const evName = r.events?.name || r.event_name || 'Festival Event';
-        const evCode = r.events?.event_code || r.event_code || 'SRI27';
-        const evVenue = r.events?.venue || r.event_venue || 'College Campus';
-        const evDate = r.events?.date || r.event_date || 'Dec 10-11, 2026';
-        const evTime = r.events?.start_time || r.event_time || '10:00 AM';
-
-        return {
-          ...r,
-          event_name: evName,
-          events: {
-            name: evName,
-            event_code: evCode,
-            venue: evVenue,
-            date: evDate,
-            start_time: evTime
-          }
-        };
-      });
-
-      setRegistrations(regs);
-      try {
-        localStorage.setItem(`srishti_user_registrations_${clean}`, JSON.stringify(regs));
-      } catch (_) {}
-
-      // Fetch arrival check-in status across any of user's participant IDs
-      let arrivalInfo = null;
-      if (pIds.length > 0) {
-        try {
-          const { data: arrData } = await supabase
-            .from('arrival_checkins')
-            .select('*')
-            .in('participant_id', pIds)
-            .maybeSingle();
-          if (arrData) arrivalInfo = arrData;
-        } catch (_) {}
-      }
-      setArrivalCheckin(arrivalInfo);
-
-      // Fetch event attendance status
-      let attendanceMap = {};
-      if (pIds.length > 0) {
-        try {
-          const { data: attData } = await supabase
-            .from('event_attendance')
-            .select('*')
-            .in('participant_id', pIds);
-          if (attData) {
-            attData.forEach(a => {
-              if (a.event_id) attendanceMap[a.event_id] = a;
-            });
-          }
-        } catch (_) {}
-      }
-      setEventAttendance(attendanceMap);
-
-      return !!currentParticipant || regs.length > 0;
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      return false;
+      setEditName(currentParticipant.name || '');
+      setEditCollege(currentParticipant.college || '');
+      setEditPhone(currentParticipant.phone || '');
     }
+    setRegistrations(regs);
+    setArrivalCheckin(null);
+    setEventAttendance({});
+    return !!currentParticipant || regs.length > 0;
   };
-
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -1111,7 +911,7 @@ export default function ProfilePage() {
                           setLoading(false);
                         }
                       }}
-                      title="Sync registrations with database"
+                      title="Refresh tickets saved on this device"
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: 'rgba(255,255,255,0.06)',
@@ -1125,7 +925,7 @@ export default function ProfilePage() {
                         gap: '0.4rem'
                       }}
                     >
-                      <FiRotateCcw size={14} /> Refresh / Sync Events
+                      <FiRotateCcw size={14} /> Refresh Tickets
                     </button>
                   </div>
 
@@ -1152,7 +952,7 @@ export default function ProfilePage() {
                           }}
                           style={{ padding: '0.9rem 1.8rem', backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid #333', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                         >
-                          <FiRotateCcw size={16} /> Sync My Registrations
+                          <FiRotateCcw size={16} /> Reload Saved Tickets
                         </button>
                       </div>
                     </div>

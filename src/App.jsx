@@ -398,57 +398,24 @@ export default function App() {
 
   const handleEmailChange = async (val) => {
     setFormEmail(val);
-    localStorage.setItem('srishti_session', val);
-    const cleanEmail = val.replace(/['"]+/g, '').trim().toLowerCase();
-    
-    // Check local profile cache immediately
-    if (cleanEmail) {
-      try {
-        const cachedRaw = localStorage.getItem(`srishti_profile_${cleanEmail}`);
-        if (cachedRaw) {
-          const p = JSON.parse(cachedRaw);
-          if (p.name && !formName) { setFormName(p.name); localStorage.setItem('srishti_user_name', p.name); }
-          if (p.college && !formCollege) { setFormCollege(p.college); localStorage.setItem('srishti_user_college', p.college); }
-          if (p.phone && !formPhone) { setFormPhone(p.phone); localStorage.setItem('srishti_user_phone', p.phone); }
-          if (p.department && p.department !== 'N/A' && !formRoll) { setFormRoll(p.department); localStorage.setItem('srishti_user_roll', p.department); }
-        }
-      } catch (_) {}
-      
-      // Async query Supabase via secure RPC if email is complete
-      if (cleanEmail.includes('@') && cleanEmail.includes('.')) {
-        try {
-          const { supabase } = await import('./supabaseClient');
-          let data = null;
-          try {
-            const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
-            if (rpcRows && rpcRows.length > 0) data = rpcRows[0];
-          } catch (_) {}
+    const cleanEmail = val.replace(/[\'"]+/g, '').trim().toLowerCase();
+    if (!cleanEmail) return;
 
-          if (!data) {
-            try {
-              const { data: directData } = await supabase.from('participants').select('*').ilike('email', cleanEmail).limit(1).maybeSingle();
-              if (directData) data = directData;
-            } catch (_) {}
-          }
-
-          if (data) {
-            if (data.name) { setFormName(data.name); localStorage.setItem('srishti_user_name', data.name); }
-            if (data.college) { setFormCollege(data.college); localStorage.setItem('srishti_user_college', data.college); }
-            if (data.phone) { setFormPhone(data.phone); localStorage.setItem('srishti_user_phone', data.phone); }
-            if (data.department && data.department !== 'N/A' && data.department !== 'General') {
-              setFormRoll(data.department);
-              localStorage.setItem('srishti_user_roll', data.department);
-            }
-            localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(data));
-            fetchUserRegistrations(cleanEmail, data.id);
-          } else {
-            fetchUserRegistrations(cleanEmail);
-          }
-        } catch (_) {}
+    try {
+      const cachedRaw = localStorage.getItem(`srishti_profile_${cleanEmail}`);
+      if (cachedRaw) {
+        const profile = JSON.parse(cachedRaw);
+        if (profile.name && !formName) setFormName(profile.name);
+        if (profile.college && !formCollege) setFormCollege(profile.college);
+        if (profile.phone && !formPhone) setFormPhone(profile.phone);
+        if (profile.department && profile.department !== 'N/A' && !formRoll) setFormRoll(profile.department);
       }
+    } catch (_) {}
+
+    if (cleanEmail.includes('@') && cleanEmail.includes('.')) {
+      await fetchUserRegistrations(cleanEmail);
     }
   };
-
   // Auto-fill form whenever route or active event opens
   useEffect(() => {
     const fetchSessionData = async () => {
@@ -475,52 +442,7 @@ export default function App() {
       if (localPhone) setFormPhone(localPhone);
       if (localRoll && localRoll !== 'N/A' && localRoll !== 'General') setFormRoll(localRoll);
 
-      // 2. Fetch fresh profile from Supabase database (RPC first, fallback to direct)
-      try {
-        const { supabase } = await import('./supabaseClient');
-        let data = null;
-        try {
-          const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: cleanEmail });
-          if (rpcRows && rpcRows.length > 0) data = rpcRows[0];
-        } catch (_) {}
-
-        if (!data) {
-          try {
-            const { data: directData } = await supabase
-              .from('participants')
-              .select('*')
-              .ilike('email', cleanEmail)
-              .limit(1)
-              .maybeSingle();
-            if (directData) data = directData;
-          } catch (_) {}
-        }
-
-        if (data) {
-          if (data.name) {
-            setFormName(data.name);
-            localStorage.setItem('srishti_user_name', data.name);
-          }
-          if (data.college) {
-            setFormCollege(data.college);
-            localStorage.setItem('srishti_user_college', data.college);
-          }
-          if (data.phone) {
-            setFormPhone(data.phone);
-            localStorage.setItem('srishti_user_phone', data.phone);
-          }
-          if (data.department && data.department !== 'General' && data.department !== 'N/A') {
-            setFormRoll(data.department);
-            localStorage.setItem('srishti_user_roll', data.department);
-          }
-          localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(data));
-          fetchUserRegistrations(cleanEmail, data.id);
-        } else {
-          fetchUserRegistrations(cleanEmail);
-        }
-      } catch (e) {
-        console.warn('Autofill participant query notice:', e);
-      }
+      await fetchUserRegistrations(cleanEmail);
     };
 
     fetchSessionData();
