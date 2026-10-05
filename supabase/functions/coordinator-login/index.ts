@@ -44,20 +44,27 @@ serve(async (req: Request) => {
     return json({ success: false, error: "Username and password are required" }, 400);
   }
 
-  const username = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
+  // The mobile UI currently labels this field "Username", but operators may
+  // enter either their volunteer username or the email on their volunteer profile.
+  const identifier = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password : "";
-  if (!username || !password || username.length > 100 || password.length > 1024) {
+  if (!identifier || !password || identifier.length > 254 || password.length > 1024) {
     return json({ success: false, error: "Username and password are required" }, 400);
   }
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data: volunteer, error: volunteerError } = await admin
+  let volunteerQuery = admin
     .from("volunteers")
-    .select("email, role, status")
-    .ilike("username", username)
-    .maybeSingle();
+    .select("email, role, status");
+  if (identifier.includes("@")) {
+    // Escape PostgREST ilike wildcards so the address is always matched exactly.
+    volunteerQuery = volunteerQuery.ilike("email", identifier.replace(/[\\%_]/g, "\\$&"));
+  } else {
+    volunteerQuery = volunteerQuery.ilike("username", identifier.replace(/[\\%_]/g, "\\$&"));
+  }
+  const { data: volunteer, error: volunteerError } = await volunteerQuery.maybeSingle();
 
   const allowedRoles = new Set(["admin", "registration", "event_staff", "volunteer"]);
   if (
