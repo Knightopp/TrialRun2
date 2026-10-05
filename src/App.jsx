@@ -263,6 +263,8 @@ export default function App() {
            routeParam.includes(eId.replace('sri27-', '')) ||
            eLabel.includes(routeParam);
   }) : null;
+  const eventRegistrationFee = Math.max(0, Number(activeEventData?.fee) || 0);
+  const requiresPayment = eventRegistrationFee > 0;
 
   const sliderItems = React.useMemo(() => {
     if (!activeEventData) return [];
@@ -458,13 +460,32 @@ export default function App() {
   });
 
   const updateTeamMember = (id, field, value) => {
-    setTeamMembers(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+    setTeamMembers(prev => ({
+      ...prev,
+      [id]: { name: '', email: '', phone: '', roll: '', ...(prev[id] || {}), [field]: value }
+    }));
   };
 
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
   const [paymentFraction, setPaymentFraction] = useState(0);
+  const paymentVerificationGeneration = useRef(0);
+  const expectedPaymentAmount = Number((eventRegistrationFee + paymentFraction).toFixed(2));
+
+  useEffect(() => {
+    paymentVerificationGeneration.current += 1;
+    setPaymentVerified(false);
+    setIsVerifying(false);
+    setPaymentError(null);
+    setPaymentFraction(0);
+    setTeamMembers({
+      2: { name: '', email: '', phone: '', roll: '' },
+      3: { name: '', email: '', phone: '', roll: '' },
+      4: { name: '', email: '', phone: '', roll: '' },
+      5: { name: '', email: '', phone: '', roll: '' },
+    });
+  }, [activeEventData?.dbId]);
 
   useEffect(() => {
     if (activeEventData) {
@@ -480,16 +501,16 @@ export default function App() {
 
   useEffect(() => {
     // Generate a stable random fraction between 0.01 and 0.49 for verification when arriving at step
-    if (activeStep === formTeamSize + 2 && paymentFraction === 0) {
+    if (requiresPayment && activeStep === formTeamSize + 2 && paymentFraction === 0) {
        const randomCents = Math.floor(Math.random() * 49) + 1;
        setPaymentFraction(randomCents / 100);
     }
-  }, [activeStep, formTeamSize, paymentFraction]);
+  }, [activeStep, formTeamSize, paymentFraction, requiresPayment]);
 
   // Auto-polling for payment verification
   useEffect(() => {
     let intervalId;
-    if (activeStep === formTeamSize + 2 && paymentFraction > 0 && !paymentVerified && !isVerifying) {
+    if (requiresPayment && activeStep === formTeamSize + 2 && paymentFraction > 0 && !paymentVerified && !isVerifying) {
       intervalId = setInterval(() => {
         verifyPayment();
       }, 8000); // Poll every 8 seconds
@@ -497,28 +518,31 @@ export default function App() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [activeStep, formTeamSize, paymentFraction, paymentVerified, isVerifying]);
+  }, [activeStep, formTeamSize, paymentFraction, paymentVerified, isVerifying, requiresPayment]);
 
   const verifyPayment = async () => {
+    const generation = paymentVerificationGeneration.current;
     setIsVerifying(true);
     setPaymentError(null);
     try {
-      const expectedAmount = (formTeamSize * 10) + paymentFraction;
+      const expectedAmount = expectedPaymentAmount;
       const res = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: expectedAmount })
       });
       const data = await res.json();
-      if (res.ok && data.verified) {
+      if (generation === paymentVerificationGeneration.current && res.ok && data.verified) {
         setPaymentVerified(true);
-      } else {
+      } else if (generation === paymentVerificationGeneration.current) {
         setPaymentError(data.message || 'Payment not found. Try again in a minute.');
       }
     } catch (err) {
-      setPaymentError('Network error. Please try again.');
+      if (generation === paymentVerificationGeneration.current) {
+        setPaymentError('Network error. Please try again.');
+      }
     } finally {
-      setIsVerifying(false);
+      if (generation === paymentVerificationGeneration.current) setIsVerifying(false);
     }
   };
 
@@ -537,7 +561,7 @@ export default function App() {
        return member.name.trim() !== '' && member.email.trim() !== '' && member.phone.trim() !== '';
     }
     
-    if (step === formTeamSize + 2) return paymentVerified;
+    if (requiresPayment && step === formTeamSize + 2) return paymentVerified;
     
     return true;
   };
@@ -642,8 +666,7 @@ export default function App() {
           ? activeEventData.id
           : `SRI27-${activeEventData.id.toUpperCase()}`,
         team_members: members,
-        payment_method: 'upi',
-        payment_reference: txnId || undefined
+        payment_method: 'upi'
       };
 
       const { data: edgeData, error: edgeError } = await supabase.functions.invoke('web-register', {
@@ -699,7 +722,7 @@ export default function App() {
           event_code: activeEventData.id,
           event_name: activeEventData.label,
           status: 'registered',
-          payment_status: 'verified',
+          payment_status: edgeData.data.payment_status,
           events: {
             name: activeEventData.label,
             event_code: activeEventData.id,
@@ -759,7 +782,7 @@ export default function App() {
       });
 
       // Admin notification email
-      const amountPaid = ((formTeamSize * 10) + paymentFraction).toFixed(2);
+      const amountPaid = expectedPaymentAmount.toFixed(2);
       const adminHtml = `
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
           <h2 style="color: #10b981;">New Registration Received!</h2>
@@ -1565,6 +1588,7 @@ export default function App() {
                             </div>
                           ) : (
                           <Stepper
+                            key={activeEventData?.dbId || activeEventData?.id}
                             initialStep={1}
                             onStepChange={setActiveStep}
                             onFinalStepCompleted={handleRegisterSubmit}
@@ -1652,109 +1676,40 @@ export default function App() {
                               </div>
                             </Step>
 
-                            {formTeamSize >= 2 && (
-                              <Step>
-                                <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
-                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 2</div>
-                                  <div className="form-group-item">
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
-                                    <input type="text" required className="app-input" placeholder="Full Name" value={teamMembers[2].name} onChange={(e) => updateTeamMember(2, 'name', e.target.value)} />
+                            {Array.from({ length: Math.max(0, formTeamSize - 1) }, (_, index) => index + 2).map((memberIndex) => {
+                              const member = teamMembers[memberIndex] || { name: '', email: '', phone: '', roll: '' };
+                              return (
+                                <Step key={memberIndex}>
+                                  <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
+                                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER {memberIndex}</div>
+                                    <div className="form-group-item">
+                                      <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
+                                      <input type="text" required className="app-input" placeholder="Full Name" value={member.name} onChange={(e) => updateTeamMember(memberIndex, 'name', e.target.value)} />
+                                    </div>
+                                    <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                      <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
+                                      <input type="email" required className="app-input" placeholder="Email Address" value={member.email} onChange={(e) => updateTeamMember(memberIndex, 'email', e.target.value)} />
+                                    </div>
+                                    <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                      <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
+                                      <input type="tel" required className="app-input" placeholder="Phone Number" value={member.phone} onChange={(e) => updateTeamMember(memberIndex, 'phone', e.target.value)} />
+                                    </div>
+                                    <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
+                                      <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
+                                      <input type="text" className="app-input" placeholder="Roll / Register ID" value={member.roll} onChange={(e) => updateTeamMember(memberIndex, 'roll', e.target.value)} />
+                                    </div>
                                   </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
-                                    <input type="email" required className="app-input" placeholder="Email Address" value={teamMembers[2].email} onChange={(e) => updateTeamMember(2, 'email', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
-                                    <input type="tel" required className="app-input" placeholder="Phone Number" value={teamMembers[2].phone} onChange={(e) => updateTeamMember(2, 'phone', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
-                                    <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[2].roll} onChange={(e) => updateTeamMember(2, 'roll', e.target.value)} />
-                                  </div>
-                                </div>
-                              </Step>
-                            )}
-
-                            {formTeamSize >= 3 && (
-                              <Step>
-                                <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
-                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 3</div>
-                                  <div className="form-group-item">
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
-                                    <input type="text" required className="app-input" placeholder="Full Name" value={teamMembers[3].name} onChange={(e) => updateTeamMember(3, 'name', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
-                                    <input type="email" required className="app-input" placeholder="Email Address" value={teamMembers[3].email} onChange={(e) => updateTeamMember(3, 'email', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
-                                    <input type="tel" required className="app-input" placeholder="Phone Number" value={teamMembers[3].phone} onChange={(e) => updateTeamMember(3, 'phone', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
-                                    <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[3].roll} onChange={(e) => updateTeamMember(3, 'roll', e.target.value)} />
-                                  </div>
-                                </div>
-                              </Step>
-                            )}
-
-                            {formTeamSize >= 4 && (
-                              <Step>
-                                <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
-                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 4</div>
-                                  <div className="form-group-item">
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
-                                    <input type="text" required className="app-input" placeholder="Full Name" value={teamMembers[4].name} onChange={(e) => updateTeamMember(4, 'name', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
-                                    <input type="email" required className="app-input" placeholder="Email Address" value={teamMembers[4].email} onChange={(e) => updateTeamMember(4, 'email', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
-                                    <input type="tel" required className="app-input" placeholder="Phone Number" value={teamMembers[4].phone} onChange={(e) => updateTeamMember(4, 'phone', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
-                                    <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[4].roll} onChange={(e) => updateTeamMember(4, 'roll', e.target.value)} />
-                                  </div>
-                                </div>
-                              </Step>
-                            )}
-                            
-                            {formTeamSize >= 5 && (
-                              <Step>
-                                <div style={{ maxHeight: isMobile ? 'none' : '55vh', overflowY: 'auto', paddingRight: '0.5rem' }} className="reg-form-fields">
-                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: '#38bdf8', marginBottom: '1rem' }}>TEAM MEMBER 5</div>
-                                  <div className="form-group-item">
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Full Name</label>
-                                    <input type="text" required className="app-input" placeholder="Full Name" value={teamMembers[5].name} onChange={(e) => updateTeamMember(5, 'name', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Email Address</label>
-                                    <input type="email" required className="app-input" placeholder="Email Address" value={teamMembers[5].email} onChange={(e) => updateTeamMember(5, 'email', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Phone Number</label>
-                                    <input type="tel" required className="app-input" placeholder="Phone Number" value={teamMembers[5].phone} onChange={(e) => updateTeamMember(5, 'phone', e.target.value)} />
-                                  </div>
-                                  <div className="form-group-item" style={{ marginTop: '1.25rem' }}>
-                                    <label className="field-caption" style={{ color: '#cbd5e1' }}>Roll / Register ID</label>
-                                    <input type="text" className="app-input" placeholder="Roll / Register ID" value={teamMembers[5].roll} onChange={(e) => updateTeamMember(5, 'roll', e.target.value)} />
-                                  </div>
-                                </div>
-                              </Step>
-                            )}
-
+                                </Step>
+                              );
+                            })}
+                            {requiresPayment && (
                             <Step>
                               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                                 <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Payment Verification</h4>
                                 <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>Scan the QR code to pay the exact verification amount below:</p>
                                 
                                 <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'var(--font-mono)', marginBottom: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', padding: '0.5rem 1.5rem', borderRadius: '12px', display: 'inline-block' }}>
-                                  ₹{((formTeamSize * 10) + paymentFraction).toFixed(2)}
+                                  ₹{expectedPaymentAmount.toFixed(2)}
                                 </div>
                                 <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>The random fraction ensures instant automatic verification.</p>
                                 
@@ -1767,7 +1722,7 @@ export default function App() {
                                     
                                     <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block' }}>
                                       {(() => {
-                                        const amount = ((formTeamSize * 10) + paymentFraction).toFixed(2);
+                                        const amount = expectedPaymentAmount.toFixed(2);
                                         const upiId = import.meta.env.VITE_UPI_ID || '9188811692@fam';
                                         
                                         // Clean the strings so they are safe for the URI
@@ -1815,6 +1770,7 @@ export default function App() {
                                 )}
                               </div>
                             </Step>
+                            )}
                           </Stepper>
                           )
                         ) : (
@@ -1974,7 +1930,6 @@ export default function App() {
       {/* Selected Event Details Modal - StaggeredMenu Side Panel */}
       <StaggeredMenu
         position="right"
-        isFixed={true}
         hideToggleButton={true}
         isOpen={!!selectedEventDetails}
         onClose={() => setSelectedEventDetails(null)}

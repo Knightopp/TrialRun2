@@ -28,6 +28,17 @@ interface WebRegisterPayload {
   payment_reference?: string;
 }
 
+function getServiceKey(): string | null {
+  const legacyKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacyKey) return legacyKey;
+  try {
+    const keys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}") as Record<string, string>;
+    return Object.values(keys).find((value) => typeof value === "string") ?? null;
+  } catch {
+    return null;
+  }
+}
+
 serve(async (req: Request) => {
   // 1. Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -44,8 +55,8 @@ serve(async (req: Request) => {
     }
 
     // 3. Initialize Supabase Admin Client using server-side service role key
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceRoleKey = getServiceKey();
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
       console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in Edge Function environment.");
@@ -62,7 +73,21 @@ serve(async (req: Request) => {
     // 4. Parse request body
     let body: WebRegisterPayload;
     try {
-      body = await req.json();
+      const rawBody = await req.text();
+      if (rawBody.length > 64_000) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Registration request is too large." }),
+          { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const parsed = JSON.parse(rawBody);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return new Response(
+          JSON.stringify({ success: false, error: "A registration object is required." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      body = parsed as WebRegisterPayload;
     } catch {
       return new Response(
         JSON.stringify({ success: false, error: "Invalid JSON body." }),
@@ -93,7 +118,7 @@ serve(async (req: Request) => {
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const cleanEmail = email?.trim().toLowerCase();
+    const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
     if (!cleanEmail || cleanEmail.length > 120 || !emailRegex.test(cleanEmail)) {
       return new Response(
         JSON.stringify({ success: false, error: "A valid email address is required." }),
@@ -141,6 +166,12 @@ serve(async (req: Request) => {
     }
 
     // Team validation
+    if (team_members !== undefined && !Array.isArray(team_members)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Team members must be provided as a list." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const teamArray = Array.isArray(team_members) ? team_members : [];
     const totalTeamSize = 1 + teamArray.length;
 
@@ -168,7 +199,7 @@ serve(async (req: Request) => {
     const { data: existingParticipant, error: pFindErr } = await supabase
       .from("participants")
       .select("id, participant_code, name, email, phone, college")
-      .ilike("email", cleanEmail)
+      .ilike("email", cleanEmail.replace(/[\\%_]/g, "\\$&"))
       .maybeSingle();
 
     if (pFindErr) {
@@ -212,7 +243,7 @@ serve(async (req: Request) => {
       if (pInsertErr || !newParticipant) {
         console.error("Failed to create participant:", pInsertErr);
         return new Response(
-          JSON.stringify({ success: false, error: "Failed to create participant profile.", details: pInsertErr?.message }),
+          JSON.stringify({ success: false, error: "Failed to create participant profile. Please try again." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -291,7 +322,7 @@ serve(async (req: Request) => {
         );
       }
       return new Response(
-        JSON.stringify({ success: false, error: "Failed to record event registration.", details: regInsertErr?.message }),
+          JSON.stringify({ success: false, error: "Failed to record event registration. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -326,10 +357,9 @@ serve(async (req: Request) => {
     );
 
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal server error";
     console.error("Unexpected error in web-register:", err);
     return new Response(
-      JSON.stringify({ success: false, error: message }),
+      JSON.stringify({ success: false, error: "Registration could not be completed. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
