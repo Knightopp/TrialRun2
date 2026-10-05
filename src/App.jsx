@@ -301,12 +301,6 @@ export default function App() {
         const fb = localStorage.getItem(fallbackKey);
         if (fb) return fb;
       }
-      // Superadmin fallback defaults
-      if (email === 'tsrknight@gmail.com' || email === 'anselrwilliams2106@gmail.com') {
-        if (field === 'name') return 'Super Admin';
-        if (field === 'college') return 'Srishti 2.7 HQ';
-        if (field === 'phone') return '+91 99999 99999';
-      }
       return '';
     } catch (_) { return ''; }
   };
@@ -335,48 +329,19 @@ export default function App() {
     return [];
   });
 
-  const fetchUserRegistrations = async (emailToFetch, participantId) => {
-    const cleanEmail = (emailToFetch || formEmail || localStorage.getItem('srishti_session') || '').replace(/['"]+/g, '').trim().toLowerCase();
+  const fetchUserRegistrations = async (emailToFetch) => {
+    const cleanEmail = (emailToFetch || formEmail || localStorage.getItem('srishti_session') || '').replace(/[\'"]+/g, '').trim().toLowerCase();
     if (!cleanEmail) return [];
     try {
-      const { supabase } = await import('./supabaseClient');
-      let pId = participantId;
-      if (!pId) {
-        const { data: pData } = await supabase.from('participants').select('id').ilike('email', cleanEmail).maybeSingle();
-        if (pData?.id) pId = pData.id;
-      }
-
-      let regs = [];
-      if (pId) {
-        const { data: rData } = await supabase
-          .from('registrations')
-          .select('id, event_id, event_code, event_name, status, events(id, event_code, name)')
-          .eq('participant_id', pId);
-        if (rData && rData.length > 0) regs = rData;
-      }
-      if (regs.length === 0) {
-        try {
-          const { data: rpcRegs } = await supabase.rpc('get_registrations_by_email', { lookup_email: cleanEmail });
-          if (rpcRegs && rpcRegs.length > 0) {
-            regs = rpcRegs.map(r => ({
-              ...r,
-              events: { id: r.event_id, event_code: r.event_code, name: r.event_name }
-            }));
-          }
-        } catch (_) {}
-      }
-
+      const cached = JSON.parse(localStorage.getItem(`srishti_user_registrations_${cleanEmail}`) || '[]');
+      const regs = Array.isArray(cached) ? cached : [];
       setUserRegistrations(regs);
-      try {
-        localStorage.setItem(`srishti_user_registrations_${cleanEmail}`, JSON.stringify(regs));
-      } catch (_) {}
       return regs;
-    } catch (err) {
-      console.warn('Error fetching user registrations in App:', err);
+    } catch (_) {
+      setUserRegistrations([]);
       return [];
     }
   };
-
   const isEventAlreadyRegistered = (ev) => {
     if (!ev || !userRegistrations || userRegistrations.length === 0) return false;
     const evId = String(ev.id || '').toLowerCase();
@@ -509,13 +474,6 @@ export default function App() {
       if (localCollege) setFormCollege(localCollege);
       if (localPhone) setFormPhone(localPhone);
       if (localRoll && localRoll !== 'N/A' && localRoll !== 'General') setFormRoll(localRoll);
-
-      // Superadmin fallback defaults
-      if (cleanEmail === 'tsrknight@gmail.com' || cleanEmail === 'anselrwilliams2106@gmail.com') {
-        if (!localName) setFormName('Super Admin');
-        if (!localCollege) setFormCollege('Srishti 2.7 HQ');
-        if (!localPhone) setFormPhone('+91 99999 99999');
-      }
 
       // 2. Fetch fresh profile from Supabase database (RPC first, fallback to direct)
       try {
@@ -801,29 +759,19 @@ export default function App() {
         localStorage.setItem('srishti_session', cleanEmail);
       }
 
-      // Fetch all registered events for this attendee so the card reflects all enrolled events
+      // Keep this device's ticket cache in sync. Private registration rows are read by
+      // authenticated users or admins, never by an anonymous email lookup.
       let allEventsList = [activeEventData.label];
       let userAllRegs = [];
-      if (pData?.id) {
-        try {
-          const { data: dbUserRegs } = await supabase
-            .from('registrations')
-            .select('*, events(*)')
-            .eq('participant_id', pData.id);
-
-          if (dbUserRegs && dbUserRegs.length > 0) {
-            userAllRegs = dbUserRegs;
-            setUserRegistrations(dbUserRegs);
-            const mapped = dbUserRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
-            if (mapped.length > 0) {
-              allEventsList = [...new Set(mapped)];
-            }
-          }
-        } catch (_) {}
+      try {
+        const cached = JSON.parse(localStorage.getItem(`srishti_user_registrations_${cleanEmail}`) || '[]');
+        if (Array.isArray(cached)) userAllRegs = cached;
+      } catch (_) {}
+      if (userAllRegs.length > 0) {
+        const mapped = userAllRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
+        allEventsList = [...new Set([...mapped, ...allEventsList])];
       }
-
-      // Fallback if DB fetch is empty or participant has no id yet
-      if (userAllRegs.length === 0) {
+      {
         const addedReg = {
           event_id: resolvedEventId,
           event_code: activeEventData.id,
@@ -838,8 +786,8 @@ export default function App() {
             start_time: activeEventData.time || '10:00 AM'
           }
         };
-        userAllRegs = [addedReg];
-        setUserRegistrations(prev => [...prev.filter(r => r.event_id !== resolvedEventId), addedReg]);
+        userAllRegs = [...userAllRegs.filter(r => r.event_id !== resolvedEventId), addedReg];
+        setUserRegistrations(userAllRegs);
       }
 
       try {

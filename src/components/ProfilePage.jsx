@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
@@ -42,38 +42,29 @@ export default function ProfilePage() {
   const [signedPassQr, setSignedPassQr] = useState('');
   const [isTicketTorn, setIsTicketTorn] = useState(false);
 
-  const isSuperAdmin = (session?.user?.email || localStorage.getItem('srishti_session') || '').trim().toLowerCase() === 'tsrknight@gmail.com';
-
   useEffect(() => {
-    const code = participantData?.participant_code || (isSuperAdmin ? 'ADMIN-PASS' : null);
+    const code = participantData?.participant_code || null;
     if (code) {
       import('../utils/cryptoSecurity').then(({ generatePassPayload }) => {
         const payload = generatePassPayload(
           code,
           participantData?.pass_token || registrations?.[0]?.pass_token || '',
-          participantData?.name || (isSuperAdmin ? 'Master Superadmin' : '')
+          participantData?.name || ''
         );
         setSignedPassQr(payload);
       });
     }
-  }, [participantData, registrations, isSuperAdmin]);
+  }, [participantData, registrations]);
 
   useEffect(() => {
     const rawEmail = localStorage.getItem('srishti_session');
     if (rawEmail) {
       const savedEmail = rawEmail.trim().toLowerCase();
       setSession({ user: { email: savedEmail } });
-      const isAdmin = savedEmail === 'tsrknight@gmail.com';
-      if (isAdmin) {
-        localStorage.setItem('srishti_admin_session', savedEmail);
-      }
       fetchUserData(savedEmail).then(found => {
-        if (!found && !isAdmin) {
+        if (!found) {
           setStep('onboarding');
         } else {
-          if (!found && isAdmin) {
-            setParticipantData({ name: 'Master Superadmin', college: 'Srishti 2.7 HQ', participant_code: 'ADMIN-PASS', email: savedEmail });
-          }
           setStep('dashboard');
         }
         setLoading(false);
@@ -88,13 +79,28 @@ export default function ProfilePage() {
       const clean = (userEmail || '').trim().toLowerCase();
       let currentParticipant = null;
 
-      // 1. Try identity-based authenticated RPC get_my_participant
+      // 1. Direct Supabase participants query (authoritative source)
       try {
-        const { data: myRows } = await supabase.rpc('get_my_participant');
-        if (myRows && myRows.length > 0) currentParticipant = myRows[0];
+        const { data: dbPart } = await supabase
+          .from('participants')
+          .select('*')
+          .ilike('email', clean)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (dbPart) currentParticipant = dbPart;
       } catch (_) {}
 
-      // 2. Staff lookup fallback
+      // 2. Authenticated RPC get_my_participant
+      if (!currentParticipant) {
+        try {
+          const { data: myRows } = await supabase.rpc('get_my_participant');
+          if (myRows && myRows.length > 0) currentParticipant = myRows[0];
+        } catch (_) {}
+      }
+
+      // 3. Staff lookup fallback
       if (!currentParticipant) {
         try {
           const { data: rpcRows } = await supabase.rpc('get_participant_by_email', { lookup_email: clean });
@@ -102,7 +108,7 @@ export default function ProfilePage() {
         } catch (_) {}
       }
 
-      // 3. Local profile fallback if Supabase RLS limits select
+      // 4. Local profile fallback if offline or RLS limits select
       if (!currentParticipant) {
         const cached = localStorage.getItem(`srishti_profile_${clean}`);
         if (cached) {
@@ -112,17 +118,8 @@ export default function ProfilePage() {
         }
       }
 
-      if (!currentParticipant && clean === 'tsrknight@gmail.com') {
-        currentParticipant = {
-          name: 'Master Superadmin',
-          college: 'Srishti 2.7 HQ',
-          participant_code: 'ADMIN-PASS',
-          email: clean
-        };
-      }
-
       if (currentParticipant) {
-        // Retrieve pass_token ONLY via authenticated credential or local encrypted vault
+        // Retrieve pass_token via authenticated credential or local encrypted vault
         if (!currentParticipant.pass_token) {
           try {
             const { data: credRows } = await supabase.rpc('get_my_pass_credential');
@@ -157,24 +154,54 @@ export default function ProfilePage() {
       }
 
       let regs = [];
-      // 1. Try identity-based authenticated RPC get_my_registrations
+
+      // Find all participant IDs associated with this email (handles legacy duplicate accounts)
+      let pIds = [currentParticipant?.id].filter(Boolean);
       try {
-        const { data: myRegs } = await supabase.rpc('get_my_registrations');
-        if (myRegs && myRegs.length > 0) {
-          regs = myRegs.map(r => ({
-            ...r,
-            events: {
-              name: r.event_name,
-              event_code: r.event_code,
-              venue: r.event_venue,
-              date: r.event_date,
-              start_time: r.event_time
-            }
-          }));
+        const { data: allUserParts } = await supabase
+          .from('participants')
+          .select('id')
+          .ilike('email', clean);
+        if (allUserParts && allUserParts.length > 0) {
+          pIds = [...new Set([...pIds, ...allUserParts.map(p => p.id)])];
         }
       } catch (_) {}
 
-      // 2. Staff lookup fallback
+      // 1. Direct query from registrations joined with events table
+      if (pIds.length > 0) {
+        try {
+          const { data: dbRegs } = await supabase
+            .from('registrations')
+            .select('*, events(*)')
+            .in('participant_id', pIds)
+            .order('registered_at', { ascending: false });
+
+          if (dbRegs && dbRegs.length > 0) {
+            regs = dbRegs;
+          }
+        } catch (_) {}
+      }
+
+      // 2. Identity-based authenticated RPC get_my_registrations
+      if (regs.length === 0) {
+        try {
+          const { data: myRegs } = await supabase.rpc('get_my_registrations');
+          if (myRegs && myRegs.length > 0) {
+            regs = myRegs.map(r => ({
+              ...r,
+              events: {
+                name: r.event_name,
+                event_code: r.event_code,
+                venue: r.event_venue,
+                date: r.event_date,
+                start_time: r.event_time
+              }
+            }));
+          }
+        } catch (_) {}
+      }
+
+      // 3. Staff lookup RPC fallback
       if (regs.length === 0) {
         try {
           const { data: rpcRegs } = await supabase.rpc('get_registrations_by_email', { lookup_email: clean });
@@ -193,27 +220,53 @@ export default function ProfilePage() {
         } catch (_) {}
       }
 
-      // 2. Direct query fallback
-      if (regs.length === 0 && currentParticipant?.id) {
-        try {
-          const { data: rData } = await supabase
-            .from('registrations')
-            .select('*, events(*)')
-            .eq('participant_id', currentParticipant.id);
-          if (rData) regs = rData;
-        } catch (_) {}
+      // 4. Local storage fallback for instant offline/cached event retrieval
+      if (regs.length === 0) {
+        const cachedRegs = localStorage.getItem(`srishti_user_registrations_${clean}`);
+        if (cachedRegs) {
+          try {
+            const parsed = JSON.parse(cachedRegs);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              regs = parsed;
+            }
+          } catch (_) {}
+        }
       }
 
-      setRegistrations(regs);
+      // Ensure every registration has complete event info (fallback if events join was null)
+      regs = regs.map(r => {
+        const evName = r.events?.name || r.event_name || 'Festival Event';
+        const evCode = r.events?.event_code || r.event_code || 'SRI27';
+        const evVenue = r.events?.venue || r.event_venue || 'College Campus';
+        const evDate = r.events?.date || r.event_date || 'Dec 10-11, 2026';
+        const evTime = r.events?.start_time || r.event_time || '10:00 AM';
 
-      // Fetch arrival check-in status
+        return {
+          ...r,
+          event_name: evName,
+          events: {
+            name: evName,
+            event_code: evCode,
+            venue: evVenue,
+            date: evDate,
+            start_time: evTime
+          }
+        };
+      });
+
+      setRegistrations(regs);
+      try {
+        localStorage.setItem(`srishti_user_registrations_${clean}`, JSON.stringify(regs));
+      } catch (_) {}
+
+      // Fetch arrival check-in status across any of user's participant IDs
       let arrivalInfo = null;
-      if (currentParticipant?.id) {
+      if (pIds.length > 0) {
         try {
           const { data: arrData } = await supabase
             .from('arrival_checkins')
             .select('*')
-            .eq('participant_id', currentParticipant.id)
+            .in('participant_id', pIds)
             .maybeSingle();
           if (arrData) arrivalInfo = arrData;
         } catch (_) {}
@@ -222,12 +275,12 @@ export default function ProfilePage() {
 
       // Fetch event attendance status
       let attendanceMap = {};
-      if (currentParticipant?.id) {
+      if (pIds.length > 0) {
         try {
           const { data: attData } = await supabase
             .from('event_attendance')
             .select('*')
-            .eq('participant_id', currentParticipant.id);
+            .in('participant_id', pIds);
           if (attData) {
             attData.forEach(a => {
               if (a.event_id) attendanceMap[a.event_id] = a;
@@ -335,19 +388,10 @@ export default function ProfilePage() {
       localStorage.setItem('srishti_session', savedEmail);
       
       setSession({ user: { email: savedEmail } });
-      const isAdmin = savedEmail === 'tsrknight@gmail.com';
-      if (isAdmin) {
-        localStorage.setItem('srishti_admin_session', savedEmail);
-      }
-
       const found = await fetchUserData(savedEmail);
-      
-      if (!found && !isAdmin) {
+      if (!found) {
         setStep('onboarding');
       } else {
-        if (!found && isAdmin) {
-          setParticipantData({ name: 'Master Superadmin', college: 'Srishti 2.7 HQ', participant_code: 'ADMIN-PASS', email: savedEmail });
-        }
         setStep('dashboard');
       }
     } catch (error) {
@@ -360,61 +404,26 @@ export default function ProfilePage() {
   const handleOnboardingComplete = async () => {
     setLoading(true);
     setError(null);
-    const rawEmail = session?.user?.email || localStorage.getItem('srishti_session') || '';
-    const userEmail = rawEmail.replace(/['"]+/g, '').trim().toLowerCase();
-
-    const name = onboardingName.trim() || 'Attendee';
-    const phone = onboardingPhone.trim() || 'N/A';
-    const college = onboardingCollege.trim() || 'Participant';
-
-    const uniqueCode = 'SRI27-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-    const payload = {
-      participant_code: uniqueCode,
-      name: name,
+    const userEmail = (session?.user?.email || localStorage.getItem('srishti_session') || '').replace(/[\'"]+/g, '').trim().toLowerCase();
+    const activeParticipant = {
+      participant_code: `SRI27-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      name: onboardingName.trim() || 'Attendee',
       email: userEmail,
-      phone: phone,
-      college: college,
+      phone: onboardingPhone.trim() || 'N/A',
+      college: onboardingCollege.trim() || 'Participant',
       department: 'N/A',
-      year: 'N/A'
+      year: '2026'
     };
-
-    // 1. Immediately persist profile locally so attendee is NEVER blocked
-    localStorage.setItem(`srishti_profile_${userEmail}`, JSON.stringify(payload));
+    localStorage.setItem(`srishti_profile_${userEmail}`, JSON.stringify(activeParticipant));
     localStorage.setItem('srishti_session', userEmail);
-    localStorage.setItem('srishti_user_name', name);
-    localStorage.setItem('srishti_user_college', college);
-    localStorage.setItem('srishti_user_phone', phone);
-    if (userEmail === 'tsrknight@gmail.com') {
-      localStorage.setItem('srishti_admin_session', userEmail);
-    }
-
-    // 2. Attempt sync to Supabase without letting RLS errors block the user
-    try {
-      await supabase
-        .from('participants')
-        .insert([payload]);
-
-      try {
-        const { data: createdRows } = await supabase.rpc('get_participant_by_email', { lookup_email: userEmail });
-        if (createdRows && createdRows.length > 0) {
-          setParticipantData(createdRows[0]);
-          localStorage.setItem(`srishti_profile_${userEmail}`, JSON.stringify(createdRows[0]));
-        } else {
-          setParticipantData(payload);
-        }
-      } catch (_) {
-        setParticipantData(payload);
-      }
-    } catch (err) {
-      console.warn('Participant sync notice:', err);
-      setParticipantData(payload);
-    }
-
-    // 3. Seamlessly transition to dashboard
+    localStorage.setItem('srishti_user_name', activeParticipant.name);
+    localStorage.setItem('srishti_user_college', activeParticipant.college);
+    localStorage.setItem('srishti_user_phone', activeParticipant.phone);
+    setParticipantData(activeParticipant);
+    await fetchUserData(userEmail);
     setStep('dashboard');
     setLoading(false);
   };
-
   const handleLogout = () => {
     localStorage.removeItem('srishti_session');
     setSession(null);
@@ -430,12 +439,6 @@ export default function ProfilePage() {
     if (!editName.trim()) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('participants')
-        .update({ name: editName, college: editCollege, phone: editPhone })
-        .eq('id', participantData.id);
-      
-      if (error) throw error;
       const updated = { ...participantData, name: editName, college: editCollege, phone: editPhone };
       setParticipantData(updated);
       localStorage.setItem('srishti_user_name', editName);
@@ -446,29 +449,28 @@ export default function ProfilePage() {
         localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(updated));
       }
       setIsEditing(false);
+      setMessage('Profile changes saved on this device.');
     } catch (err) {
       console.error('Error saving profile:', err);
-      alert('Failed to update profile.');
+      alert('Failed to save profile on this device.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const getPassData = () => {
-    const attendeeName = participantData?.name || (isSuperAdmin ? 'Master Superadmin' : 'Participant');
-    const college = participantData?.college || (isSuperAdmin ? 'Srishti 2.7 HQ' : 'St Thomas College Thrissur');
-    const passCode = participantData?.participant_code || registrations[0]?.participant_code || (isSuperAdmin ? 'ADMIN-PASS' : 'SRI27-PASS');
+    const attendeeName = participantData?.name || 'Participant';
+    const college = participantData?.college || 'St Thomas College Thrissur';
+    const passCode = participantData?.participant_code || registrations[0]?.participant_code || 'SRI27-PASS';
     const passToken = participantData?.pass_token || registrations[0]?.pass_token || '';
-    const events = isSuperAdmin 
-      ? ['FULL ALL-ACCESS PASS', 'ADMIN COMMAND CENTER']
-      : registrations.map(r => r.events?.name || r.event_name).filter(Boolean);
-    const isVerified = isSuperAdmin || registrations.some(r => r.payment_status === 'verified' || r.status === 'verified') || !!participantData?.id;
-    const statusText = isSuperAdmin ? 'SUPERADMIN' : (isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING'));
+    const events = registrations.map(r => r.events?.name || r.event_name).filter(Boolean);
+    const isVerified = registrations.some(r => r.payment_status === 'verified' || r.status === 'verified') || !!participantData?.id;
+    const statusText = isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING');
     return { attendeeName, college, passCode, passToken, events, isVerified, statusText };
   };
 
   const handleEmailPassToUser = async () => {
-    const hasRegistered = (registrations && registrations.length > 0) || isSuperAdmin;
+    const hasRegistered = registrations.length > 0;
     if (!hasRegistered) {
       alert('Your delegate pass is locked. Please register for at least one festival event to unlock your pass.');
       return;
@@ -528,7 +530,7 @@ export default function ProfilePage() {
   };
 
   const handleDownloadPassPng = async () => {
-    const hasRegistered = (registrations && registrations.length > 0) || isSuperAdmin;
+    const hasRegistered = registrations.length > 0;
     if (!hasRegistered) {
       alert('Your delegate pass is locked. Please register for at least one event first.');
       return;
@@ -609,25 +611,6 @@ export default function ProfilePage() {
                 </h1>
                 <p style={{ color: '#888', fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                   <span>Logged in as <span style={{ color: '#fff', fontWeight: '600' }}>{session?.user?.email}</span></span>
-                  {isSuperAdmin && (
-                    <button 
-                      onClick={() => {
-                        localStorage.setItem('srishti_admin_session', 'tsrknight@gmail.com');
-                        navigate('/admin');
-                      }}
-                      style={{ 
-                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                        color: '#38bdf8', fontSize: '0.85rem', cursor: 'pointer', fontWeight: '700', 
-                        padding: '0.35rem 0.85rem', background: 'rgba(56,189,248,0.15)', 
-                        borderRadius: '8px', border: '1px solid rgba(56,189,248,0.3)',
-                        transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.5px'
-                      }}
-                      onMouseOver={e => e.currentTarget.style.background = 'rgba(56,189,248,0.25)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'rgba(56,189,248,0.15)'}
-                    >
-                      <FiLock size={13} /> Admin Command Center →
-                    </button>
-                  )}
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -740,7 +723,7 @@ export default function ProfilePage() {
                     const statusText = passData.statusText;
                     const eventsList = passData.events;
 
-                    const hasRegistered = (registrations && registrations.length > 0) || isSuperAdmin;
+                    const hasRegistered = registrations.length > 0;
 
                     return (
                       <div style={{ width: '100%', maxWidth: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'visible' }}>
@@ -1112,17 +1095,66 @@ export default function ProfilePage() {
 
                 {/* Events List */}
                 <div style={{ flex: '1 1 100%', marginTop: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <FiCalendar style={{ color: '#00f2fe' }} />
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff', margin: 0 }}>
+                        My Registered Competitions {registrations.length > 0 && <span style={{ fontSize: '0.85rem', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.3)', marginLeft: '0.4rem' }}>{registrations.length} Active</span>}
+                      </h3>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const em = session?.user?.email || localStorage.getItem('srishti_session');
+                        if (em) {
+                          setLoading(true);
+                          await fetchUserData(em);
+                          setLoading(false);
+                        }
+                      }}
+                      title="Sync registrations with database"
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '8px',
+                        color: '#cbd5e1',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem'
+                      }}
+                    >
+                      <FiRotateCcw size={14} /> Refresh / Sync Events
+                    </button>
+                  </div>
+
                   {registrations.length === 0 ? (
-                    <div style={{ padding: '4rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', textAlign: 'center' }}>
+                    <div style={{ padding: '4rem 2rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', textAlign: 'center' }}>
                       <FiCalendar size={48} color="#444" style={{ marginBottom: '1.5rem' }} />
                       <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>No Tickets Yet</h2>
-                      <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '2rem' }}>You haven't registered for any events yet.</p>
-                      <button 
-                        onClick={() => navigate('/register')}
-                        style={{ padding: '1rem 2rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }}
-                      >
-                        Explore Events
-                      </button>
+                      <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '2rem' }}>You haven't registered for any events yet or your registration is syncing.</p>
+                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button 
+                          onClick={() => navigate('/register')}
+                          style={{ padding: '0.9rem 1.8rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
+                        >
+                          Explore Events
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const em = session?.user?.email || localStorage.getItem('srishti_session');
+                            if (em) {
+                              setLoading(true);
+                              await fetchUserData(em);
+                              setLoading(false);
+                            }
+                          }}
+                          style={{ padding: '0.9rem 1.8rem', backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid #333', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        >
+                          <FiRotateCcw size={16} /> Sync My Registrations
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
