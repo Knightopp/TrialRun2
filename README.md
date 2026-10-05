@@ -67,7 +67,9 @@ The website's canonical database is the Supabase project with ref `sdkadflrxjdhx
 
 Server-side integrations must set `SUPABASE_URL` to this same project and keep any secret key in server-only environment settings. The website's client does not read URL overrides from Vite or Vercel.
 
-The legacy SQL files `supabase_setup.sql` and `setup_web_admin.sql` still name an older project. Do not run them against the shared project; use a reviewed migration specific to the shared project's current schema.
+The administrator dashboard requires Supabase Auth email/password sign-in and an active `admin` profile in `volunteers`. Anonymous users can view the public event catalogue only; attendee, staff, registration, check-in, and audit-log data is protected by row-level security. The shared-project security migration is in `supabase/migrations/20261005000000_admin_only_rls_remediation.sql`.
+
+Legacy setup scripts with unsafe anonymous policies or a plaintext admin password, plus ad-hoc database scripts that issue writes against the configured project, have been removed. Apply reviewed migrations through the project's migration workflow. Keep `SUPABASE_SERVICE_ROLE_KEY` only in server-side deployment settings; the audit endpoint requires it for persistent writes.
 
 ## 🚀 Getting Started
 

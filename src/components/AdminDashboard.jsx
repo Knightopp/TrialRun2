@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { generateCardImagePng } from '../utils/cardImageGenerator';
 import SideRays from './SideRays';
 import AdminAnalytics from './AdminAnalytics';
+import { getAuditLogs, clearAuditLogs, exportLogsAsCsv, exportLogsAsJson, logActivity, parseLocationTelemetryPayload } from '../utils/auditLogger';
 import './AdminDashboard.css';
 
 // Official SRISHTI 2.7 Database Events Catalog
@@ -25,18 +26,6 @@ const DEFAULT_FEST_EVENTS = [
   { id: 'TEST-EV-02', event_code: 'TEST-EV-02', label: 'HACKAI 24H HACKATHON', name: 'HackAI 24h Hackathon', category: 'TECHNICAL', date: '2026-12-10', start_time: '10:00', end_time: '10:00', venue: 'Main Auditorium', status: 'upcoming', capacity: 80, registration_type: 'team', max_team_size: 4 },
   { id: 'TEST-EV-01', event_code: 'TEST-EV-01', label: 'CODE SPRINT (SPEED CODING)', name: 'Code Sprint (Speed Coding)', category: 'TECHNICAL', date: '2026-12-11', start_time: '10:00', end_time: '12:00', venue: 'CS Lab 3', status: 'upcoming', capacity: 60, registration_type: 'individual', max_team_size: 1 },
   { id: 'SRI27-BOMB', event_code: 'SRI27-BOMB', label: 'BOMB SQUAD', name: 'bomb squad', category: 'TECHNICAL', date: '2026-12-10', start_time: '10:00', end_time: '12:00', venue: 'Campus Venue', status: 'upcoming', capacity: 60, registration_type: 'team', max_team_size: 4 }
-];
-
-// Presets for fast role testing matching exact database records
-const DEMO_STAFF_PRESETS = [
-  { username: 'admin', email: 'anselrwilliams2106@gmail.com', name: 'SRISHTI Admin', role: 'admin', assignedEventCode: null },
-  { username: 'srishti_registration', email: 'srishti_registration@auth.srishti.internal', name: 'SRISHTI Registration', role: 'registration', assignedEventCode: null },
-  { username: 'srishti_quiz', email: 'quiz123@auth.srishti.internal', name: 'Quiz Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-QUIZ' },
-  { username: 'srishti_treasure', email: 'srishti_treasure@auth.srishti.internal', name: 'Treasure Hunt Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-TREASURE' },
-  { username: 'srishti_code', email: 'srishti_code@auth.srishti.internal', name: 'Coding Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-CODE' },
-  { username: 'srishti_tracebot', email: 'srishti_tracebot@auth.srishti.internal', name: 'Tracebot Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-TRACEBOT' },
-  { username: 'srishti_relay', email: 'srishti_relay@auth.srishti.internal', name: 'Relay Coding Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-RELAY' },
-  { username: 'srishti_waltz', email: 'srishti_waltz@auth.srishti.internal', name: 'Waltz Coordinator', role: 'event_staff', assignedEventCode: 'SRI27-WALTZ' }
 ];
 
 export default function AdminDashboard() {
@@ -57,7 +46,13 @@ export default function AdminDashboard() {
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState('overview'); 
-  // Tabs: 'overview', 'checkin', 'attendance', 'events', 'participants', 'registrations', 'staff', 'databases'
+  // Tabs: 'overview', 'checkin', 'attendance', 'events', 'participants', 'registrations', 'staff', 'databases', 'logs'
+
+  // Audit & Location logs state
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [logFilterAction, setLogFilterAction] = useState('all');
+  const [selectedLogForInspect, setSelectedLogForInspect] = useState(null);
+  const [isTestingLocation, setIsTestingLocation] = useState(false);
 
   // Primary database tables
   const [events, setEvents] = useState(DEFAULT_FEST_EVENTS);
@@ -251,6 +246,12 @@ export default function AdminDashboard() {
         if (attData) setEventAttendance(attData);
       } catch (_) {}
 
+      // 8. Fetch Security Audit & Location Logs
+      try {
+        const logs = await getAuditLogs();
+        if (logs) setAuditLogs(logs);
+      } catch (_) {}
+
     } catch (err) {
       console.error('Error fetching admin data:', err);
       showToast('Notice: Synced with available tables', 'info');
@@ -262,101 +263,51 @@ export default function AdminDashboard() {
   // -----------------------------------------------------------------------------
   // AUTHENTICATION & LOGIN
   // -----------------------------------------------------------------------------
-  const authenticateStaff = useCallback(async (userQuery) => {
+  const authenticateStaff = useCallback(async (authUser) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const clean = userQuery.trim().toLowerCase();
-      let matchedStaff = null;
-
-      // 1. Try finding in Supabase volunteers table by username or email
-      try {
-        const { data: volData } = await supabase
-          .from('volunteers')
-          .select('*')
-          .or(`email.ilike.${clean},username.ilike.${clean}`)
-          .maybeSingle();
-
-        if (volData) {
-          matchedStaff = volData;
-        }
-      } catch (_) {}
-
-      // 2. Demo Presets fallback if offline or mock account
-      if (!matchedStaff) {
-        const preset = DEMO_STAFF_PRESETS.find(p => 
-          p.username.toLowerCase() === clean || p.email.toLowerCase() === clean
-        );
-        if (preset) {
-          matchedStaff = {
-            id: `mock-${preset.username}`,
-            auth_user_id: `mock-auth-${preset.username}`,
-            username: preset.username,
-            name: preset.name,
-            email: preset.email,
-            role: preset.role,
-            status: 'active'
-          };
-        }
+      if (!authUser?.id) throw new Error('Sign in with your administrator account.');
+      const { data: matchedStaff, error } = await supabase
+        .from('volunteers')
+        .select('id, auth_user_id, username, name, email, role, status')
+        .eq('auth_user_id', authUser.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (error) throw error;
+      if (!matchedStaff || matchedStaff.role !== 'admin') {
+        await supabase.auth.signOut();
+        throw new Error('This account is not an active SRISHTI administrator.');
       }
-
-      // 3. Fallback for Master Superadmin
-      if (!matchedStaff && (clean === 'tsrknight@gmail.com' || clean === 'tsrknight_admin' || clean === 'anselrwilliams2106@gmail.com' || clean === 'admin')) {
-        matchedStaff = {
-          id: '2d7c07-9014-4ce3-88d2-3d899f0e',
-          auth_user_id: '8c78f36f-a47f-4837-8106-d06380aada14',
-          username: 'admin',
-          name: 'SRISHTI Admin',
-          email: clean.includes('tsrknight') ? 'tsrknight@gmail.com' : 'anselrwilliams2106@gmail.com',
-          role: 'admin',
-          status: 'active'
-        };
-      }
-
-      if (!matchedStaff) {
-        throw new Error('Access Denied: No active staff profile found with this username or email.');
-      }
-
-      const role = matchedStaff.role || 'volunteer';
       setCurrentStaff(matchedStaff);
-      setAdminRole(role);
-      localStorage.setItem('srishti_staff_session', JSON.stringify(matchedStaff));
-
-      // Set initial tab based on role
-      if (role === 'registration') {
-        setActiveTab('checkin');
-      } else if (role === 'event_staff') {
-        setActiveTab('attendance');
-      } else {
-        setActiveTab('overview');
-      }
-
+      setAdminRole('admin');
+      setActiveTab('overview');
       setStep('dashboard');
-      showToast(`Welcome back, ${matchedStaff.name} (${role.toUpperCase()})`, 'success');
-
-      // Hydrate all database data
-      fetchAllData(role, matchedStaff.id);
-
+      showToast(`Welcome back, ${matchedStaff.name || matchedStaff.email}`, 'success');
+      await fetchAllData('admin', matchedStaff.id);
     } catch (err) {
-      setAuthError(err.message);
+      setAuthError(err.message || 'Unable to verify administrator access.');
     } finally {
       setAuthLoading(false);
     }
   }, [fetchAllData, showToast]);
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (!identifier.trim()) return;
-    authenticateStaff(identifier);
+    if (!identifier.trim() || !password) return;
+    setAuthLoading(true);
+    setAuthError(null);
+    const { error } = await supabase.auth.signInWithPassword({ email: identifier.trim(), password });
+    if (error) {
+      setAuthLoading(false);
+      setAuthError('Email or password is incorrect.');
+      return;
+    }
+    // The auth state listener below verifies the newly signed-in identity.
   };
 
-  const handleQuickPresetLogin = (preset) => {
-    setIdentifier(preset.username);
-    authenticateStaff(preset.username);
-  };
-
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('srishti_staff_session');
+  const handleLogout = useCallback(async () => {
+    await supabase.auth.signOut();
     setStep('login');
     setCurrentStaff(null);
     setAdminRole(null);
@@ -364,15 +315,19 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem('srishti_staff_session');
-    if (saved) {
-      try {
-        const staffObj = JSON.parse(saved);
-        if (staffObj?.email || staffObj?.username) {
-          authenticateStaff(staffObj.username || staffObj.email);
-        }
-      } catch (_) {}
-    }
+    let alive = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (alive && session?.user) authenticateStaff(session.user);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (alive && _event === 'SIGNED_IN' && session?.user) authenticateStaff(session.user);
+      if (alive && _event === 'SIGNED_OUT') {
+        setCurrentStaff(null);
+        setAdminRole(null);
+        setStep('login');
+      }
+    });
+    return () => { alive = false; subscription.unsubscribe(); };
   }, [authenticateStaff]);
 
   // -----------------------------------------------------------------------------
@@ -1301,13 +1256,13 @@ export default function AdminDashboard() {
 
         <div className="admin-auth-card" style={{ maxWidth: '500px' }}>
           <div className="admin-auth-header">
-            <span className="admin-auth-badge">SRISHTI 2.7 • MULTI-ROLE PORTAL</span>
+            <span className="admin-auth-badge">SRISHTI 2.7 • ADMIN ACCESS</span>
             <h1>
               <FiShield style={{ color: '#ffffff' }} />
               Staff Command Center
             </h1>
             <p className="admin-auth-subtitle">
-              Role-Based Authentication: Admin • Registration • Event Staff • Volunteer
+              Administrator sign-in
             </p>
           </div>
 
@@ -1329,55 +1284,34 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Preset Roles Quick Switch for Examiners / Reviewers */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ fontSize: '0.75rem', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.5rem' }}>
-              Quick-Select Staff Role (One-Click Demo Login):
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-              {DEMO_STAFF_PRESETS.map(preset => (
-                <button
-                  key={preset.username}
-                  type="button"
-                  onClick={() => handleQuickPresetLogin(preset)}
-                  className="admin-quick-pill-btn"
-                  style={{
-                    padding: '0.55rem 0.65rem',
-                    textAlign: 'left',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.2rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <span style={{ fontWeight: '700', color: '#ffffff', fontSize: '0.8rem' }}>{preset.name}</span>
-                  <span style={{ fontSize: '0.7rem', color: '#a1a1aa' }}>
-                    {preset.role.toUpperCase()} {preset.assignedEventCode ? `• ${preset.assignedEventCode}` : ''}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <form onSubmit={handleLoginSubmit}>
             <div className="admin-form-group">
-              <label>Staff Username or Email</label>
+              <label>Administrator Email</label>
               <div style={{ position: 'relative' }}>
                 <FiMail style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#71717a' }} />
                 <input
-                  type="text"
+              type="email"
                   value={identifier}
                   onChange={e => setIdentifier(e.target.value)}
                   required
-                  placeholder="e.g. srishti_quiz or tsrknight@gmail.com"
+                  placeholder="admin@example.com"
                   className="admin-form-control"
                   style={{ paddingLeft: '2.5rem' }}
                   autoFocus
                 />
               </div>
+            </div>
+
+            <div className="admin-form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className="admin-form-control"
+              />
             </div>
 
             <button
@@ -1386,7 +1320,7 @@ export default function AdminDashboard() {
               className="admin-btn admin-btn-primary"
               style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem' }}
             >
-              {authLoading ? 'Verifying Credentials...' : 'Authenticate & Enter Portal'}
+              {authLoading ? 'Verifying...' : 'Sign in'}
             </button>
           </form>
 
@@ -1603,6 +1537,18 @@ export default function AdminDashboard() {
               >
                 <FiDatabase />
                 <span>Database (7 Tables)</span>
+              </button>
+            )}
+
+            {/* Audit & Location Logs (Admin only) */}
+            {adminRole === 'admin' && (
+              <button
+                onClick={() => { setActiveTab('logs'); setSearchQuery(''); }}
+                className={`admin-tab-item ${activeTab === 'logs' ? 'active' : ''}`}
+              >
+                <FiMapPin />
+                <span>Audit & Location Logs</span>
+                <span className="admin-tab-counter">{auditLogs.length}</span>
               </button>
             )}
           </nav>
@@ -3118,11 +3064,465 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* TAB 9: AUDIT & LOCATION LOGS */}
+        {/* ========================================================================= */}
+        {activeTab === 'logs' && adminRole === 'admin' && (
+          <div>
+            <div className="admin-section-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2>Security Audit & Location Logs</h2>
+                <p style={{ color: '#a1a1aa', fontSize: '0.85rem', margin: 0 }}>
+                  Real-time client IP network geo-resolution, GPS coordinates, device fingerprints, and activity tracing.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsTestingLocation(true);
+                    try {
+                      const newLog = await logActivity('LOCATION_TEST_PROBE', {
+                        email: currentStaff?.email || 'admin@srishti.live',
+                        name: currentStaff?.name || 'Administrator',
+                        status: 'SUCCESS',
+                        metadata: { probe: 'Manual Test from Admin Panel' },
+                        requestGps: true
+                      });
+                      showToast(`Tracked: ${newLog.city || 'Local'}, ${newLog.country || 'IN'} (${newLog.client_ip})`, 'success');
+                      const updated = await getAuditLogs();
+                      setAuditLogs(updated);
+                    } catch (err) {
+                      showToast('Test failed: ' + err.message, 'error');
+                    } finally {
+                      setIsTestingLocation(false);
+                    }
+                  }}
+                  disabled={isTestingLocation}
+                  className="admin-btn admin-btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <FiMapPin /> {isTestingLocation ? 'Detecting Location...' : 'Test My Current Location'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={async () => {
+                    setIsDataLoading(true);
+                    try {
+                      const l = await getAuditLogs();
+                      setAuditLogs(l);
+                      showToast(`Refreshed ${l.length} audit logs`, 'info');
+                    } catch (err) {
+                      showToast(err.message || 'Unable to load audit logs', 'error');
+                    } finally {
+                      setIsDataLoading(false);
+                    }
+                  }}
+                  className="admin-btn admin-btn-secondary"
+                >
+                  <FiRefreshCw /> Refresh Logs
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => exportLogsAsCsv(auditLogs)}
+                  className="admin-btn admin-btn-secondary"
+                  disabled={auditLogs.length === 0}
+                >
+                  <FiDownload /> Export CSV
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => exportLogsAsJson(auditLogs)}
+                  className="admin-btn admin-btn-secondary"
+                  disabled={auditLogs.length === 0}
+                >
+                  <FiDownload /> Export JSON
+                </button>
+                <button 
+                  type="button"
+                  onClick={async () => {
+                    if (window.confirm('Clear all audit logs? This removes the stored audit history.')) {
+                      try {
+                        await clearAuditLogs();
+                        setAuditLogs([]);
+                        showToast('Audit logs cleared', 'success');
+                      } catch (err) {
+                        showToast(err.message || 'Unable to clear audit logs', 'error');
+                      }
+                    }
+                  }}
+                  className="admin-btn admin-btn-danger"
+                  disabled={auditLogs.length === 0}
+                >
+                  <FiTrash2 /> Clear Logs
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="admin-stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '1.5rem' }}>
+              <div className="admin-stat-card">
+                <div className="admin-stat-header">
+                  <span className="admin-stat-title">Total Logs</span>
+                  <div className="admin-stat-icon"><FiActivity /></div>
+                </div>
+                <div className="admin-stat-value">{auditLogs.length}</div>
+                <div className="admin-stat-sub">Actions & visits recorded</div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-header">
+                  <span className="admin-stat-title">Unique IPs</span>
+                  <div className="admin-stat-icon"><FiShield /></div>
+                </div>
+                <div className="admin-stat-value">
+                  {new Set(auditLogs.map(l => l.client_ip).filter(ip => ip && ip !== 'Client Local')).size}
+                </div>
+                <div className="admin-stat-sub">Distinct client addresses</div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-header">
+                  <span className="admin-stat-title">Tracked Cities</span>
+                  <div className="admin-stat-icon"><FiMapPin /></div>
+                </div>
+                <div className="admin-stat-value">
+                  {new Set(auditLogs.map(l => l.city).filter(Boolean)).size}
+                </div>
+                <div className="admin-stat-sub">Geographic origin nodes</div>
+              </div>
+
+              <div className="admin-stat-card">
+                <div className="admin-stat-header">
+                  <span className="admin-stat-title">Security Warnings</span>
+                  <div className="admin-stat-icon" style={{ color: '#ef4444' }}><FiAlertCircle /></div>
+                </div>
+                <div className="admin-stat-value" style={{ color: '#ef4444' }}>
+                  {auditLogs.filter(l => l.status === 'WARNING' || l.status === 'DANGER' || l.action?.includes('FAIL') || l.action?.includes('INVALID')).length}
+                </div>
+                <div className="admin-stat-sub">Failed logins / exceptions</div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="admin-table-controls" style={{ marginBottom: '1.25rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div className="admin-search-wrapper" style={{ flex: '1 1 300px' }}>
+                <FiSearch className="admin-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search by IP, email, participant code, city, device..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="admin-search-input"
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <select
+                  value={logFilterAction}
+                  onChange={(e) => setLogFilterAction(e.target.value)}
+                  className="admin-select"
+                  style={{ width: 'auto' }}
+                >
+                  <option value="all">All Action Types ({auditLogs.length})</option>
+                  <option value="EVENT_REGISTRATION">Event Registrations</option>
+                  <option value="LOGIN">OTP Logins</option>
+                  <option value="GATE">Gate Arrivals</option>
+                  <option value="PASS">Pass Downloads & Emails</option>
+                  <option value="SECURITY">Warnings & Security Events</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Logs Table */}
+            {(() => {
+              const filteredLogs = auditLogs.filter(l => {
+                // Filter by action
+                if (logFilterAction === 'EVENT_REGISTRATION' && !l.action?.includes('REGISTRATION')) return false;
+                if (logFilterAction === 'LOGIN' && !l.action?.includes('LOGIN')) return false;
+                if (logFilterAction === 'GATE' && !l.action?.includes('GATE')) return false;
+                if (logFilterAction === 'PASS' && !l.action?.includes('PASS')) return false;
+                if (logFilterAction === 'SECURITY' && l.status !== 'WARNING' && l.status !== 'DANGER' && !l.action?.includes('FAIL') && !l.action?.includes('INVALID')) return false;
+
+                // Search query
+                if (searchQuery.trim()) {
+                  const q = searchQuery.toLowerCase();
+                  const match = (
+                    l.client_ip?.toLowerCase().includes(q) ||
+                    l.user_email?.toLowerCase().includes(q) ||
+                    l.participant_code?.toLowerCase().includes(q) ||
+                    l.participant_name?.toLowerCase().includes(q) ||
+                    l.city?.toLowerCase().includes(q) ||
+                    l.country?.toLowerCase().includes(q) ||
+                    l.action?.toLowerCase().includes(q) ||
+                    l.device?.os?.toLowerCase().includes(q) ||
+                    l.device?.browser?.toLowerCase().includes(q)
+                  );
+                  if (!match) return false;
+                }
+                return true;
+              });
+
+              return (
+                <div className="admin-table-container">
+                  {filteredLogs.length > 0 ? (
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Timestamp</th>
+                          <th>Action</th>
+                          <th>Attendee / User</th>
+                          <th>Location / IP</th>
+                          <th>GPS Coordinates</th>
+                          <th>Device & Client</th>
+                          <th>Status</th>
+                          <th style={{ textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredLogs.map(log => {
+                          const isWarning = log.status === 'WARNING' || log.status === 'DANGER' || log.action?.includes('FAIL') || log.action?.includes('INVALID');
+                          const hasCoords = log.latitude !== null && log.latitude !== undefined && log.longitude !== null && log.longitude !== undefined;
+                          const mapsLink = log.maps_url || (hasCoords ? `https://www.google.com/maps?q=${log.latitude},${log.longitude}` : null);
+
+                          return (
+                            <tr key={log.id} style={{ backgroundColor: isWarning ? 'rgba(239, 68, 68, 0.05)' : undefined }}>
+                              <td style={{ whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: '0.82rem', color: '#ffffff', fontWeight: '600' }}>
+                                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#71717a' }}>
+                                  {new Date(log.timestamp).toLocaleDateString()}
+                                </div>
+                              </td>
+
+                              <td>
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '0.25rem 0.6rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.72rem',
+                                  fontFamily: 'var(--font-mono, monospace)',
+                                  fontWeight: '700',
+                                  letterSpacing: '0.04em',
+                                  background: isWarning 
+                                    ? 'rgba(239, 68, 68, 0.15)' 
+                                    : (log.action?.includes('REGISTRATION') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(56, 189, 248, 0.15)'),
+                                  color: isWarning 
+                                    ? '#f87171' 
+                                    : (log.action?.includes('REGISTRATION') ? '#34d399' : '#38bdf8'),
+                                  border: isWarning 
+                                    ? '1px solid rgba(239, 68, 68, 0.3)' 
+                                    : (log.action?.includes('REGISTRATION') ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(56, 189, 248, 0.3)')
+                                }}>
+                                  {log.action}
+                                </span>
+                              </td>
+
+                              <td>
+                                <div style={{ fontWeight: '600', color: '#ffffff', fontSize: '0.85rem' }}>
+                                  {log.participant_name || 'Attendee'}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                  {log.user_email || 'anonymous'}
+                                </div>
+                                {log.participant_code && log.participant_code !== 'N/A' && (
+                                  <div style={{ fontSize: '0.7rem', color: '#00f2fe', fontFamily: 'monospace' }}>
+                                    {log.participant_code}
+                                  </div>
+                                )}
+                              </td>
+
+                              <td>
+                                <div style={{ fontWeight: '600', color: '#ffffff', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                  <FiMapPin size={12} color="#00f2fe" />
+                                  <span>{log.city || 'Local Area'}{log.country ? `, ${log.country}` : ''}</span>
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#a1a1aa', fontFamily: 'monospace' }}>
+                                  IP: {log.client_ip || 'N/A'}
+                                </div>
+                                {log.isp && (
+                                  <div style={{ fontSize: '0.7rem', color: '#71717a' }}>
+                                    {log.isp}
+                                  </div>
+                                )}
+                              </td>
+
+                              <td>
+                                {hasCoords ? (
+                                  <div>
+                                    <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#38bdf8' }}>
+                                      {Number(log.latitude).toFixed(4)}, {Number(log.longitude).toFixed(4)}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.2rem', alignItems: 'center' }}>
+                                      {mapsLink && (
+                                        <a
+                                          href={mapsLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{
+                                            fontSize: '0.7rem',
+                                            color: '#00f2fe',
+                                            textDecoration: 'underline',
+                                            fontWeight: '600'
+                                          }}
+                                        >
+                                          📍 View on Maps
+                                        </a>
+                                      )}
+                                      <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                                        ({log.location_source === 'browser_gps' ? 'GPS' : 'IP Geo'})
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '0.75rem', color: '#71717a' }}>No GPS Fix</span>
+                                )}
+                              </td>
+
+                              <td>
+                                <div style={{ fontSize: '0.8rem', color: '#ffffff' }}>
+                                  {log.device?.os || 'OS'} • {log.device?.browser || 'Browser'}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: '#71717a' }}>
+                                  {log.device?.screen || 'Screen'} {log.device?.isMobile ? '• Mobile' : '• Desktop'}
+                                </div>
+                              </td>
+
+                              <td>
+                                <span style={{
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '700',
+                                  background: isWarning ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                                  color: isWarning ? '#f87171' : '#34d399'
+                                }}>
+                                  {log.status || 'OK'}
+                                </span>
+                              </td>
+
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedLogForInspect(log)}
+                                  className="admin-btn admin-btn-sm admin-btn-secondary"
+                                  title="Inspect full telemetry & location metadata"
+                                >
+                                  <FiEye /> Inspect
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#71717a' }}>
+                      <FiMapPin size={36} color="#444" style={{ marginBottom: '1rem' }} />
+                      <p style={{ margin: 0, fontSize: '1rem' }}>No activity or location logs match your filter criteria.</p>
+                      <button
+                        type="button"
+                        onClick={() => { setSearchQuery(''); setLogFilterAction('all'); }}
+                        style={{ marginTop: '0.75rem', background: 'transparent', border: '1px solid #333', color: '#cbd5e1', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
+                      >
+                        Reset Filters
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </main>
 
       {/* ========================================================================= */}
       {/* MODALS */}
       {/* ========================================================================= */}
+
+      {/* Modal: Inspect Audit Log & Telemetry */}
+      {selectedLogForInspect && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card" style={{ maxWidth: '640px' }}>
+            <div className="admin-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FiMapPin style={{ color: '#00f2fe' }} />
+                <h3>Telemetry & Location Inspection</h3>
+              </div>
+              <button onClick={() => setSelectedLogForInspect(null)} className="admin-modal-close"><FiX /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <div style={{ background: '#0a0a0a', padding: '1rem', borderRadius: '8px', border: '1px solid #222' }}>
+                <div style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase' }}>Action & User</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#fff', marginTop: '0.2rem' }}>
+                  {selectedLogForInspect.action}
+                </div>
+                <div style={{ color: '#00f2fe', fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                  {selectedLogForInspect.participant_name} ({selectedLogForInspect.user_email})
+                </div>
+                {selectedLogForInspect.participant_code && (
+                  <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                    Code: {selectedLogForInspect.participant_code}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ background: '#0a0a0a', padding: '1rem', borderRadius: '8px', border: '1px solid #222' }}>
+                <div style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase' }}>Network & Geolocation</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                  <div><strong style={{ color: '#94a3b8' }}>IP Address:</strong> <span style={{ color: '#fff' }}>{selectedLogForInspect.client_ip}</span></div>
+                  <div><strong style={{ color: '#94a3b8' }}>City:</strong> <span style={{ color: '#fff' }}>{selectedLogForInspect.city || 'Unknown'}</span></div>
+                  <div><strong style={{ color: '#94a3b8' }}>Country:</strong> <span style={{ color: '#fff' }}>{selectedLogForInspect.country || 'Unknown'}</span></div>
+                  <div><strong style={{ color: '#94a3b8' }}>ISP:</strong> <span style={{ color: '#fff' }}>{selectedLogForInspect.isp || 'N/A'}</span></div>
+                  <div><strong style={{ color: '#94a3b8' }}>Latitude:</strong> <span style={{ color: '#38bdf8' }}>{selectedLogForInspect.latitude ?? 'N/A'}</span></div>
+                  <div><strong style={{ color: '#94a3b8' }}>Longitude:</strong> <span style={{ color: '#38bdf8' }}>{selectedLogForInspect.longitude ?? 'N/A'}</span></div>
+                  <div><strong style={{ color: '#94a3b8' }}>Source:</strong> <span style={{ color: '#fff' }}>{selectedLogForInspect.location_source || 'ip'}</span></div>
+                  <div><strong style={{ color: '#94a3b8' }}>Accuracy:</strong> <span style={{ color: '#fff' }}>{selectedLogForInspect.accuracy_meters ? `${selectedLogForInspect.accuracy_meters}m` : 'N/A'}</span></div>
+                </div>
+
+                {selectedLogForInspect.maps_url && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <a
+                      href={selectedLogForInspect.maps_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="admin-btn admin-btn-sm admin-btn-primary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}
+                    >
+                      <FiMapPin /> Open Coordinates on Google Maps
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ background: '#0a0a0a', padding: '1rem', borderRadius: '8px', border: '1px solid #222' }}>
+                <div style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase' }}>Device & Raw Metadata</div>
+                <pre style={{ margin: '0.5rem 0 0 0', padding: '0.75rem', background: '#000', borderRadius: '6px', fontSize: '0.75rem', color: '#34d399', overflowX: 'auto', border: '1px solid #1f2937' }}>
+                  {JSON.stringify({
+                    device: selectedLogForInspect.device,
+                    user_agent: selectedLogForInspect.user_agent,
+                    metadata: selectedLogForInspect.metadata,
+                    timestamp: selectedLogForInspect.timestamp
+                  }, null, 2)}
+                </pre>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLogForInspect(null)}
+                  className="admin-btn admin-btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Assign Staff to Event */}
       {modalType === 'assignEventStaff' && (
