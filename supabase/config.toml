@@ -1,0 +1,8 @@
+[functions.coordinator-login]
+verify_jwt = false
+
+[functions.spot-register]
+verify_jwt = true
+
+[functions.web-register]
+verify_jwt = false
