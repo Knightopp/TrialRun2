@@ -63,16 +63,9 @@ The website showcases a variety of technical and cultural events. Here is a brea
 
 ## Shared Supabase project
 
-The website's canonical database is the Supabase project with ref `sdkadflrxjdhxduwvrsz` (`https://sdkadflrxjdhxduwvrsz.supabase.co`). The Flutter app and website share data only when both clients use this same project URL. The browser uses a publishable key and relies on database row-level security; never put a secret or service-role key in either app.
+The website's canonical database is the Supabase project with ref `sdkadflrxjdhxduwvrsz` (`https://sdkadflrxjdhxduwvrsz.supabase.co`). Its client pins that URL so a stale Vercel `VITE_SUPABASE_URL` cannot silently split website traffic. Configure the Flutter app with this same project URL and the project's publishable key. The browser uses a publishable key and relies on database row-level security; never put a secret or service-role key in either app.
 
-Configure the website's Vite environment with:
-
-```env
-VITE_SUPABASE_URL=https://sdkadflrxjdhxduwvrsz.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<the project's publishable key>
-```
-
-`VITE_SUPABASE_ANON_KEY` remains accepted for existing deployments. Server-side integrations must set `SUPABASE_URL` to the same project and keep any secret key in server-only environment settings. The client rejects a URL for another project to prevent the browser silently connecting to a different database.
+Server-side integrations must set `SUPABASE_URL` to this same project and keep any secret key in server-only environment settings. The website's client does not read URL overrides from Vite or Vercel.
 
 The legacy SQL files `supabase_setup.sql` and `setup_web_admin.sql` still name an older project. Do not run them against the shared project; use a reviewed migration specific to the shared project's current schema.
 
