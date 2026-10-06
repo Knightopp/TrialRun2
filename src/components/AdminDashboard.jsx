@@ -171,6 +171,9 @@ export default function AdminDashboard() {
 
       if (!pErr && pData) {
         setParticipants(pData);
+      } else if (pErr) {
+        console.error('Failed to load participants:', pErr);
+        showToast(`Could not load participants: ${pErr.message}`, 'error');
       }
 
       // 3. Fetch Registrations joined with participants and events

@@ -51,7 +51,7 @@ serve(async (req: Request) => {
 
     let { data: participant, error: participantError } = await admin
       .from("participants")
-      .select("id, participant_code, name, email, phone, college, department, year, pass_token")
+      .select("id, participant_code, name, email, phone, college, department, year")
       .ilike("email", email.replace(/[\\%_]/g, "\\$&"))
       .maybeSingle();
     if (participantError) {
@@ -73,7 +73,7 @@ serve(async (req: Request) => {
           .from("participants")
           .update({ name, phone, college })
           .eq("id", participant.id)
-          .select("id, participant_code, name, email, phone, college, department, year, pass_token")
+          .select("id, participant_code, name, email, phone, college, department, year")
           .single();
         if (error) {
           console.error("Participant profile update failed:", error);
@@ -97,7 +97,7 @@ serve(async (req: Request) => {
             department: "N/A",
             year: "2026",
           })
-          .select("id, participant_code, name, email, phone, college, department, year, pass_token")
+          .select("id, participant_code, name, email, phone, college, department, year")
           .single();
         if (error) {
           console.error("Participant profile creation failed:", error);

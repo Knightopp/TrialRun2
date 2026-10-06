@@ -231,7 +231,7 @@ serve(async (req: Request) => {
             year: cleanYear
           })
           .eq("id", existingParticipant.id)
-          .select("id, participant_code, name, email, phone, college, department, year, pass_token")
+          .select("id, participant_code, name, email, phone, college, department, year")
           .single();
         if (pUpdateErr || !updatedParticipant) {
           console.error("Failed to update participant:", pUpdateErr);
@@ -265,7 +265,7 @@ serve(async (req: Request) => {
           department: cleanDept,
           year: cleanYear
         }])
-        .select("id, participant_code, name, email, phone, college, department, year, pass_token")
+        .select("id, participant_code, name, email, phone, college, department, year")
         .single();
 
       if (pInsertErr || !newParticipant) {
@@ -372,8 +372,7 @@ serve(async (req: Request) => {
             phone: existingParticipant?.phone || cleanPhone,
             college: existingParticipant?.college || cleanCollege,
             department: existingParticipant?.department || cleanDept,
-            year: existingParticipant?.year || cleanYear,
-            pass_token: existingParticipant?.pass_token || null
+            year: existingParticipant?.year || cleanYear
           },
           event: {
             id: event.id,
