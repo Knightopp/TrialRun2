@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import './ColorBends.css';
 
@@ -109,6 +109,19 @@ void main() {
 }
 `;
 
+const isWebGLAvailable = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch {
+    return false;
+  }
+};
+
 export default function ColorBends({
   className,
   style,
@@ -137,65 +150,93 @@ export default function ColorBends({
   const pointerTargetRef = useRef(new THREE.Vector2(0, 0));
   const pointerCurrentRef = useRef(new THREE.Vector2(0, 0));
   const pointerSmoothRef = useRef(8);
+  const [hasWebGL, setHasWebGL] = useState(() => isWebGLAvailable());
 
   useEffect(() => {
     const container = containerRef.current;
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    if (!container) return undefined;
 
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const uColorsArray = Array.from({ length: MAX_COLORS }, () => new THREE.Vector3(0, 0, 0));
-    const material = new THREE.ShaderMaterial({
-      vertexShader: vert,
-      fragmentShader: frag,
-      uniforms: {
-        uCanvas: { value: new THREE.Vector2(1, 1) },
-        uTime: { value: 0 },
-        uSpeed: { value: speed },
-        uRot: { value: new THREE.Vector2(1, 0) },
-        uColorCount: { value: 0 },
-        uColors: { value: uColorsArray },
-        uTransparent: { value: transparent ? 1 : 0 },
-        uScale: { value: scale },
-        uFrequency: { value: frequency },
-        uWarpStrength: { value: warpStrength },
-        uPointer: { value: new THREE.Vector2(0, 0) },
-        uMouseInfluence: { value: mouseInfluence },
-        uParallax: { value: parallax },
-        uNoise: { value: noise },
-        uIterations: { value: iterations },
-        uIntensity: { value: intensity },
-        uBandWidth: { value: bandWidth }
-      },
-      premultipliedAlpha: true,
-      transparent: true
-    });
-    materialRef.current = material;
+    // Fast pre-check: if WebGL is unavailable, do not instantiate Three.js renderer
+    if (!isWebGLAvailable()) {
+      setHasWebGL(false);
+      return undefined;
+    }
 
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
+    let renderer = null;
+    let scene = null;
+    let camera = null;
+    let geometry = null;
+    let material = null;
+    let mesh = null;
 
-    const renderer = new THREE.WebGLRenderer({
-      antialias: false,
-      powerPreference: 'high-performance',
-      alpha: true
-    });
-    rendererRef.current = renderer;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setClearColor(0x000000, transparent ? 0 : 1);
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    renderer.domElement.style.display = 'block';
-    container.appendChild(renderer.domElement);
+    try {
+      scene = new THREE.Scene();
+      camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      geometry = new THREE.PlaneGeometry(2, 2);
+      const uColorsArray = Array.from({ length: MAX_COLORS }, () => new THREE.Vector3(0, 0, 0));
+      material = new THREE.ShaderMaterial({
+        vertexShader: vert,
+        fragmentShader: frag,
+        uniforms: {
+          uCanvas: { value: new THREE.Vector2(1, 1) },
+          uTime: { value: 0 },
+          uSpeed: { value: speed },
+          uRot: { value: new THREE.Vector2(1, 0) },
+          uColorCount: { value: 0 },
+          uColors: { value: uColorsArray },
+          uTransparent: { value: transparent ? 1 : 0 },
+          uScale: { value: scale },
+          uFrequency: { value: frequency },
+          uWarpStrength: { value: warpStrength },
+          uPointer: { value: new THREE.Vector2(0, 0) },
+          uMouseInfluence: { value: mouseInfluence },
+          uParallax: { value: parallax },
+          uNoise: { value: noise },
+          uIterations: { value: iterations },
+          uIntensity: { value: intensity },
+          uBandWidth: { value: bandWidth }
+        },
+        premultipliedAlpha: true,
+        transparent: true
+      });
+      materialRef.current = material;
+
+      mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      renderer = new THREE.WebGLRenderer({
+        antialias: false,
+        powerPreference: 'high-performance',
+        alpha: true
+      });
+      rendererRef.current = renderer;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setClearColor(0x000000, transparent ? 0 : 1);
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+      renderer.domElement.style.display = 'block';
+      container.appendChild(renderer.domElement);
+    } catch (err) {
+      console.warn('ColorBends: WebGL context creation failed, falling back to CSS background.', err);
+      geometry?.dispose();
+      material?.dispose();
+      renderer?.dispose();
+      rendererRef.current = null;
+      materialRef.current = null;
+      setHasWebGL(false);
+      return undefined;
+    }
 
     const clock = new THREE.Clock();
 
     const handleResize = () => {
+      if (!renderer || !materialRef.current) return;
       const w = container.clientWidth || 1;
       const h = container.clientHeight || 1;
       renderer.setSize(w, h, false);
-      material.uniforms.uCanvas.value.set(w, h);
+      materialRef.current.uniforms.uCanvas.value.set(w, h);
     };
 
     handleResize();
@@ -209,36 +250,49 @@ export default function ColorBends({
     }
 
     const loop = () => {
+      if (!renderer || !materialRef.current) return;
       const dt = clock.getDelta();
       const elapsed = clock.elapsedTime;
-      material.uniforms.uTime.value = elapsed;
+      materialRef.current.uniforms.uTime.value = elapsed;
 
       const deg = (rotationRef.current % 360) + autoRotateRef.current * elapsed;
       const rad = (deg * Math.PI) / 180;
       const c = Math.cos(rad);
       const s = Math.sin(rad);
-      material.uniforms.uRot.value.set(c, s);
+      materialRef.current.uniforms.uRot.value.set(c, s);
 
       const cur = pointerCurrentRef.current;
       const tgt = pointerTargetRef.current;
       const amt = Math.min(1, dt * pointerSmoothRef.current);
       cur.lerp(tgt, amt);
-      material.uniforms.uPointer.value.copy(cur);
+      materialRef.current.uniforms.uPointer.value.copy(cur);
       renderer.render(scene, camera);
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
 
     return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      if (resizeObserverRef.current) resizeObserverRef.current.disconnect();
-      else window.removeEventListener('resize', handleResize);
-      geometry.dispose();
-      material.dispose();
-      renderer.dispose();
-      renderer.forceContextLoss();
-      if (renderer.domElement && renderer.domElement.parentElement === container) {
-        container.removeChild(renderer.domElement);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
+      geometry?.dispose();
+      material?.dispose();
+      if (renderer) {
+        renderer.dispose();
+        try {
+          renderer.forceContextLoss();
+        } catch {}
+        if (renderer.domElement && renderer.domElement.parentElement === container) {
+          container.removeChild(renderer.domElement);
+        }
+        rendererRef.current = null;
       }
     };
   }, [bandWidth, frequency, intensity, iterations, mouseInfluence, noise, parallax, scale, speed, transparent, warpStrength]);
@@ -315,5 +369,23 @@ export default function ColorBends({
     };
   }, []);
 
-  return <div ref={containerRef} className={`color-bends-container ${className}`} style={style} />;
+  const fallbackStyle = useMemo(() => {
+    if (hasWebGL) return style;
+    const c1 = colors[0] || '#0036ff';
+    const c2 = colors[1] || '#38bdf8';
+    const c3 = colors[2] || '#0ea5e9';
+    return {
+      background: `radial-gradient(ellipse 90% 70% at 30% 20%, ${c2}22 0%, transparent 60%), radial-gradient(ellipse 80% 60% at 80% 80%, ${c1}26 0%, transparent 60%), radial-gradient(circle at 50% 50%, ${c3}15 0%, transparent 70%), #020617`,
+      ...style
+    };
+  }, [hasWebGL, colors, style]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`color-bends-container ${!hasWebGL ? 'color-bends--fallback' : ''} ${className || ''}`.trim()}
+      style={fallbackStyle}
+      aria-hidden="true"
+    />
+  );
 }

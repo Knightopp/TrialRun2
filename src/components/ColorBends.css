@@ -7,3 +7,7 @@
   overflow: hidden;
   z-index: -1;
 }
+
+.color-bends--fallback {
+  background-color: #020617;
+}
