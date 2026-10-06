@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Renderer, Program, Mesh, Triangle, RenderTarget, Texture } from 'ogl';
 
 import './PatternWaves.css';
@@ -416,6 +416,21 @@ void main() {
 }
 `;
 
+const isWebGL2Supported = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    if (!window.WebGL2RenderingContext) return false;
+    const gl = canvas.getContext('webgl2', { alpha: true, depth: false });
+    if (!gl) return false;
+    const loseContext = gl.getExtension('WEBGL_lose_context');
+    loseContext?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const PatternWaves = ({
   preset = 'silk',
   pattern,
@@ -446,6 +461,7 @@ const PatternWaves = ({
   const containerRef = useRef(null);
   const settingsRef = useRef(null);
   const wakeRef = useRef(null);
+  const [hasWebGL, setHasWebGL] = useState(() => isWebGL2Supported());
 
   const base = SURFACE_PRESETS[preset] || SURFACE_PRESETS.silk;
   const pick = (value, key) => (value === undefined || value === null ? base[key] : value);
@@ -496,10 +512,25 @@ const PatternWaves = ({
     const container = containerRef.current;
     if (!container) return undefined;
 
-    const renderer = new Renderer({ alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
-    const gl = renderer.gl;
-    if (!renderer.isWebgl2) {
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
+    // Fast pre-check: if WebGL2 is not supported, avoid creating OGL Renderer
+    if (!isWebGL2Supported()) {
+      setHasWebGL(false);
+      return undefined;
+    }
+
+    let renderer;
+    let gl;
+    try {
+      renderer = new Renderer({ alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
+      gl = renderer?.gl;
+      if (!gl || !renderer.isWebgl2) {
+        gl?.getExtension('WEBGL_lose_context')?.loseContext();
+        setHasWebGL(false);
+        return undefined;
+      }
+    } catch (err) {
+      console.warn('PatternWaves: WebGL2 context creation failed or was blocked, falling back to CSS.', err);
+      setHasWebGL(false);
       return undefined;
     }
     gl.clearColor(0, 0, 0, 0);
@@ -879,9 +910,9 @@ const PatternWaves = ({
     return () => {
       alive = false;
       visible = false;
-      cancelAnimationFrame(raf);
-      resizeObserver.disconnect();
-      intersectionObserver.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+      resizeObserver?.disconnect();
+      intersectionObserver?.disconnect();
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointerout', onPointerOut);
@@ -893,14 +924,38 @@ const PatternWaves = ({
         dispose(ripple.read);
         dispose(ripple.write);
       }
-      dispose(fieldTarget);
-      gl.deleteTexture(atlasTexture.texture);
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
-      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      if (fieldTarget) {
+        dispose(fieldTarget);
+      }
+      if (atlasTexture?.texture) {
+        gl?.deleteTexture(atlasTexture.texture);
+      }
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+      if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
     };
   }, []);
 
-  return <div ref={containerRef} className={`pattern-waves ${className}`.trim()} style={style} />;
+  const fallbackStyle = useMemo(() => {
+    if (hasWebGL) return style;
+    const [r, g, b] = colors.color;
+    const [br, bg, bb] = colors.background;
+    const primaryRgba = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, 0.14)`;
+    const bgRgb = `rgb(${Math.round(br * 255)}, ${Math.round(bg * 255)}, ${Math.round(bb * 255)})`;
+    return {
+      background: `radial-gradient(ellipse 85% 65% at 50% 40%, ${primaryRgba} 0%, transparent 70%), ${bgRgb}`,
+      ...style
+    };
+  }, [hasWebGL, colors, style]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`pattern-waves ${!hasWebGL ? 'pattern-waves--fallback' : ''} ${className}`.trim()}
+      style={fallbackStyle}
+    >
+      {!hasWebGL && <div className="pattern-waves__fallback-texture" aria-hidden="true" />}
+    </div>
+  );
 };
 
 export default PatternWaves;
