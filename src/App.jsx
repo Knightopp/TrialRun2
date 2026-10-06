@@ -685,10 +685,7 @@ export default function App() {
       }
 
       pData = {
-        ...edgeData.data.participant,
-        phone: formPhone.trim(),
-        college: formCollege.trim(),
-        department: formRoll.trim() || 'General'
+        ...edgeData.data.participant
       };
       participantPassCode = pData.participant_code;
       const resolvedEventId = edgeData.data.event?.id || activeEventData?.dbId || null;

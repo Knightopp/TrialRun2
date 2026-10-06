@@ -6,3 +6,6 @@ verify_jwt = true
 
 [functions.web-register]
 verify_jwt = false
+
+[functions.participant-profile]
+verify_jwt = false

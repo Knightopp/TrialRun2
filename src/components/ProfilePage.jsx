@@ -7,6 +7,7 @@ import TearTicket from './TearTicket';
 import { QRCodeSVG } from 'qrcode.react';
 import { generateEntryPassEmailHtml } from '../utils/entryPassEmail';
 import { generateCardImagePng, downloadPngFromDataUrl } from '../utils/cardImageGenerator';
+import { supabase } from '../supabaseClient';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -56,35 +57,40 @@ export default function ProfilePage() {
   }, [participantData, registrations]);
 
   useEffect(() => {
-    const rawEmail = localStorage.getItem('srishti_session');
-    if (rawEmail) {
-      const savedEmail = rawEmail.trim().toLowerCase();
-      setSession({ user: { email: savedEmail } });
-      fetchUserData(savedEmail).then(found => {
-        if (!found) {
-          setStep('onboarding');
-        } else {
-          setStep('dashboard');
-        }
+    let alive = true;
+    supabase.auth.getSession().then(async ({ data: { session: authSession } }) => {
+      if (!alive) return;
+      if (!authSession?.user?.email) {
+        localStorage.removeItem('srishti_session');
         setLoading(false);
-      });
-    } else {
-      setLoading(false);
-    }
+        return;
+      }
+      const savedEmail = authSession.user.email.trim().toLowerCase();
+      setSession(authSession);
+      localStorage.setItem('srishti_session', savedEmail);
+      try {
+        const found = await fetchUserData(savedEmail);
+        if (!alive) return;
+        setStep(found ? 'dashboard' : 'onboarding');
+      } catch (err) {
+        if (alive) setError(err.message || 'Could not load your profile. Please try again.');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    });
+    return () => { alive = false; };
   }, []);
 
-  const fetchUserData = async (userEmail) => {
+  async function fetchUserData(userEmail) {
     const clean = (userEmail || '').trim().toLowerCase();
-    let currentParticipant = null;
-    let regs = [];
-    try {
-      const cachedProfile = localStorage.getItem(`srishti_profile_${clean}`);
-      if (cachedProfile) currentParticipant = JSON.parse(cachedProfile);
-    } catch (_) {}
-    try {
-      const cachedRegs = JSON.parse(localStorage.getItem(`srishti_user_registrations_${clean}`) || '[]');
-      if (Array.isArray(cachedRegs)) regs = cachedRegs;
-    } catch (_) {}
+    const { data, error: profileError } = await supabase.functions.invoke('participant-profile', {
+      body: { action: 'get' }
+    });
+    if (profileError || !data?.success) {
+      throw new Error(data?.error || profileError?.message || 'Could not load your profile.');
+    }
+    const currentParticipant = data.participant || null;
+    const regs = Array.isArray(data.registrations) ? data.registrations : [];
 
     if (currentParticipant) {
       setParticipantData(currentParticipant);
@@ -93,10 +99,14 @@ export default function ProfilePage() {
       setEditPhone(currentParticipant.phone || '');
     }
     setRegistrations(regs);
+    if (currentParticipant) {
+      localStorage.setItem(`srishti_profile_${clean}`, JSON.stringify(currentParticipant));
+    }
+    localStorage.setItem(`srishti_user_registrations_${clean}`, JSON.stringify(regs));
     setArrivalCheckin(null);
     setEventAttendance({});
     return !!currentParticipant || regs.length > 0;
-  };
+  }
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -111,46 +121,12 @@ export default function ProfilePage() {
     }
 
     try {
-      const code = Math.floor(1000 + Math.random() * 9000).toString();
-      
-      // Cryptographically secure challenge (prevents DevTools / F12 inspection bypass)
-      const salt = Math.random().toString(36).substring(2) + Date.now();
-      const enc = new TextEncoder();
-      const buf = await crypto.subtle.digest('SHA-256', enc.encode(`${code}_${cleanEmail}_${salt}_srishti_sec`));
-      const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      // Store ONLY the irreversible hash and expiry in ephemeral sessionStorage
-      sessionStorage.setItem('srishti_otp_challenge', JSON.stringify({
-        hash,
-        salt,
+      const { error: otpError } = await supabase.auth.signInWithOtp({
         email: cleanEmail,
-        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes validity
-      }));
-      // Remove any legacy plaintext keys
-      localStorage.removeItem('pending_otp');
-      localStorage.removeItem('pending_email');
-
-      const htmlContent = `
-        <div style="font-family: sans-serif; background: #000; color: white; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px; margin: 0 auto; border: 1px solid #333;">
-          <h2 style="color: #fff; letter-spacing: 2px;">SRISHTI 2.7</h2>
-          <p style="color: #888;">Your secure login code is:</p>
-          <h1 style="font-size: 56px; letter-spacing: 8px; color: #fff; margin: 30px 0;">${code}</h1>
-          <p style="color: #888; font-size: 14px;">This code is valid for 5 minutes.</p>
-        </div>
-      `;
-
-      const response = await fetch('/api/send_email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: cleanEmail,
-          subject: 'Srishti 2.7 - Login Code',
-          html: htmlContent
-        })
+        options: { shouldCreateUser: true }
       });
-
-      if (!response.ok) throw new Error('Failed to send email. Please verify your email and try again.');
-
+      if (otpError) throw otpError;
+      setEmail(cleanEmail);
       setStep('otp');
     } catch (error) {
       setError(error.message);
@@ -162,32 +138,18 @@ export default function ProfilePage() {
   const handleVerifyOtp = async (code) => {
     setError(null);
     try {
-      const challengeRaw = sessionStorage.getItem('srishti_otp_challenge');
-      if (!challengeRaw) {
-        throw new Error('No active verification session. Please request a new code.');
-      }
-
-      const challenge = JSON.parse(challengeRaw);
-      if (Date.now() > challenge.expiresAt) {
-        sessionStorage.removeItem('srishti_otp_challenge');
-        throw new Error('Verification code has expired (5 minute limit). Please request a new one.');
-      }
-
-      // Verify input against cryptographic hash
-      const enc = new TextEncoder();
-      const buf = await crypto.subtle.digest('SHA-256', enc.encode(`${code.trim()}_${challenge.email}_${challenge.salt}_srishti_sec`));
-      const inputHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-      if (inputHash !== challenge.hash) {
-        throw new Error('Invalid verification code. Please check your email and try again.');
-      }
-
       setLoading(true);
-      sessionStorage.removeItem('srishti_otp_challenge');
-      const savedEmail = challenge.email;
+      const savedEmail = email.trim().toLowerCase();
+      const { data: verified, error: otpError } = await supabase.auth.verifyOtp({
+        email: savedEmail,
+        token: code.trim(),
+        type: 'email'
+      });
+      if (otpError) throw otpError;
+      if (!verified.session) throw new Error('Email verification did not create a session. Please try again.');
       localStorage.setItem('srishti_session', savedEmail);
-      
-      setSession({ user: { email: savedEmail } });
+      setSession(verified.session);
+      setStep('dashboard');
       const found = await fetchUserData(savedEmail);
       if (!found) {
         setStep('onboarding');
@@ -205,15 +167,22 @@ export default function ProfilePage() {
     setLoading(true);
     setError(null);
     const userEmail = (session?.user?.email || localStorage.getItem('srishti_session') || '').replace(/[\'"]+/g, '').trim().toLowerCase();
-    const activeParticipant = {
-      participant_code: `SRI27-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      name: onboardingName.trim() || 'Attendee',
-      email: userEmail,
-      phone: onboardingPhone.trim() || 'N/A',
-      college: onboardingCollege.trim() || 'Participant',
-      department: 'N/A',
-      year: '2026'
-    };
+    const { data, error } = await supabase.functions.invoke('participant-profile', {
+      body: {
+        action: 'save',
+        profile: {
+          name: onboardingName.trim(),
+          phone: onboardingPhone.trim(),
+          college: onboardingCollege.trim()
+        }
+      }
+    });
+    if (error || !data?.success || !data.participant) {
+      setError(data?.error || error?.message || 'Could not save your profile. Please try again.');
+      setLoading(false);
+      return;
+    }
+    const activeParticipant = data.participant;
     localStorage.setItem(`srishti_profile_${userEmail}`, JSON.stringify(activeParticipant));
     localStorage.setItem('srishti_session', userEmail);
     localStorage.setItem('srishti_user_name', activeParticipant.name);
@@ -225,6 +194,7 @@ export default function ProfilePage() {
     setLoading(false);
   };
   const handleLogout = () => {
+    supabase.auth.signOut();
     localStorage.removeItem('srishti_session');
     setSession(null);
     setStep('email');
@@ -238,8 +208,16 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     if (!editName.trim()) return;
     setIsSaving(true);
+    setError(null);
+    setMessage(null);
     try {
-      const updated = { ...participantData, name: editName, college: editCollege, phone: editPhone };
+      const { data, error } = await supabase.functions.invoke('participant-profile', {
+        body: { action: 'save', profile: { name: editName, college: editCollege, phone: editPhone } }
+      });
+      if (error || !data?.success || !data.participant) {
+        throw new Error(data?.error || error?.message || 'Failed to save your profile.');
+      }
+      const updated = data.participant;
       setParticipantData(updated);
       localStorage.setItem('srishti_user_name', editName);
       localStorage.setItem('srishti_user_college', editCollege);
@@ -249,10 +227,10 @@ export default function ProfilePage() {
         localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(updated));
       }
       setIsEditing(false);
-      setMessage('Profile changes saved on this device.');
+      setMessage('Profile changes saved.');
     } catch (err) {
       console.error('Error saving profile:', err);
-      alert('Failed to save profile on this device.');
+      setError(err.message || 'Failed to save profile.');
     } finally {
       setIsSaving(false);
     }
@@ -430,6 +408,19 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
+
+            {(error || message) && (
+              <div style={{
+                marginTop: '1.5rem',
+                padding: '0.9rem 1.1rem',
+                borderRadius: '12px',
+                color: error ? '#ff8b8b' : '#86efac',
+                background: error ? 'rgba(255,59,48,0.1)' : 'rgba(16,185,129,0.1)',
+                border: `1px solid ${error ? 'rgba(255,59,48,0.25)' : 'rgba(16,185,129,0.25)'}`
+              }}>
+                {error || message}
+              </div>
+            )}
 
             {loading ? (
               <div style={{ marginTop: '4rem', textAlign: 'center' }}>Loading your data...</div>
@@ -907,11 +898,17 @@ export default function ProfilePage() {
                         const em = session?.user?.email || localStorage.getItem('srishti_session');
                         if (em) {
                           setLoading(true);
-                          await fetchUserData(em);
+                          setError(null);
+                          try {
+                            await fetchUserData(em);
+                            setMessage('Profile and tickets refreshed from the database.');
+                          } catch (err) {
+                            setError(err.message || 'Could not refresh your profile.');
+                          }
                           setLoading(false);
                         }
                       }}
-                      title="Refresh tickets saved on this device"
+                      title="Refresh profile and tickets from the database"
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: 'rgba(255,255,255,0.06)',

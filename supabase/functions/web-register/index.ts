@@ -69,6 +69,13 @@ serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false }
     });
+    const bearerToken = req.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+    const { data: callerData } = bearerToken
+      ? await supabase.auth.getUser(bearerToken)
+      : { data: { user: null } };
+    const verifiedCallerEmail = callerData.user?.email_confirmed_at && callerData.user.email
+      ? callerData.user.email.trim().toLowerCase()
+      : null;
 
     // 4. Parse request body
     let body: WebRegisterPayload;
@@ -213,7 +220,28 @@ serve(async (req: Request) => {
     if (existingParticipant) {
       participantId = existingParticipant.id;
       participantCode = existingParticipant.participant_code;
-      // Note: We do NOT arbitrarily overwrite existing participant details from unauthenticated web requests.
+      if (verifiedCallerEmail === cleanEmail) {
+        const { data: updatedParticipant, error: pUpdateErr } = await supabase
+          .from("participants")
+          .update({
+            name: name.trim(),
+            phone: cleanPhone,
+            college: cleanCollege,
+            department: cleanDept,
+            year: cleanYear
+          })
+          .eq("id", existingParticipant.id)
+          .select("id, participant_code, name, email, phone, college, department, year, pass_token")
+          .single();
+        if (pUpdateErr || !updatedParticipant) {
+          console.error("Failed to update participant:", pUpdateErr);
+          return new Response(
+            JSON.stringify({ success: false, error: "Failed to save participant profile. Please try again." }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        Object.assign(existingParticipant, updatedParticipant);
+      }
     } else {
       // Use the database sequence so website codes match other SRISHTI clients.
       const { data: generatedCode, error: codeErr } = await supabase.rpc("fn_generate_participant_code");
@@ -237,7 +265,7 @@ serve(async (req: Request) => {
           department: cleanDept,
           year: cleanYear
         }])
-        .select("id, participant_code")
+        .select("id, participant_code, name, email, phone, college, department, year, pass_token")
         .single();
 
       if (pInsertErr || !newParticipant) {
@@ -339,8 +367,13 @@ serve(async (req: Request) => {
           participant: {
             id: participantId,
             participant_code: participantCode,
-            name: name.trim(),
-            email: cleanEmail
+            name: existingParticipant?.name || name.trim(),
+            email: cleanEmail,
+            phone: existingParticipant?.phone || cleanPhone,
+            college: existingParticipant?.college || cleanCollege,
+            department: existingParticipant?.department || cleanDept,
+            year: existingParticipant?.year || cleanYear,
+            pass_token: existingParticipant?.pass_token || null
           },
           event: {
             id: event.id,
