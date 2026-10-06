@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
@@ -27,11 +27,15 @@ export default function ProfilePage() {
   const [onboardingName, setOnboardingName] = useState('');
   const [onboardingPhone, setOnboardingPhone] = useState('');
   const [onboardingCollege, setOnboardingCollege] = useState('');
+  const [onboardingDepartment, setOnboardingDepartment] = useState('');
+  const [onboardingYear, setOnboardingYear] = useState('');
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editCollege, setEditCollege] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editYear, setEditYear] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [emailingPass, setEmailingPass] = useState(false);
@@ -41,20 +45,28 @@ export default function ProfilePage() {
   const [eventAttendance, setEventAttendance] = useState({});
   const [signedPassQr, setSignedPassQr] = useState('');
   const [isTicketTorn, setIsTicketTorn] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // 60-second cooldown timer for resending OTP
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
 
   useEffect(() => {
     const code = participantData?.participant_code || null;
     if (code) {
       import('../utils/cryptoSecurity').then(({ generatePassPayload }) => {
-        const payload = generatePassPayload(
-          code,
-          participantData?.pass_token || registrations?.[0]?.pass_token || '',
-          participantData?.name || ''
-        );
+        // Generates plain participant code string for 100% Flutter scanner compatibility
+        const payload = generatePassPayload(code);
         setSignedPassQr(payload);
       });
     }
-  }, [participantData, registrations]);
+  }, [participantData]);
 
   useEffect(() => {
     let alive = true;
@@ -71,9 +83,12 @@ export default function ProfilePage() {
       try {
         const found = await fetchUserData(savedEmail);
         if (!alive) return;
-        setStep(found ? 'dashboard' : 'onboarding');
+        setStep(found ? 'dashboard' : 'not_registered');
       } catch (err) {
-        if (alive) setError(err.message || 'Could not load your profile. Please try again.');
+        if (alive) {
+          setError(err.message || 'Could not load your profile. Please try again.');
+          setStep('not_registered');
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -97,67 +112,155 @@ export default function ProfilePage() {
       setEditName(currentParticipant.name || '');
       setEditCollege(currentParticipant.college || '');
       setEditPhone(currentParticipant.phone || '');
+      setEditDepartment(currentParticipant.department || '');
+      setEditYear(currentParticipant.year || '');
     }
     setRegistrations(regs);
     if (currentParticipant) {
       localStorage.setItem(`srishti_profile_${clean}`, JSON.stringify(currentParticipant));
     }
     localStorage.setItem(`srishti_user_registrations_${clean}`, JSON.stringify(regs));
-    setArrivalCheckin(null);
-    setEventAttendance({});
+    setArrivalCheckin(data.arrival_checkin || null);
+    if (Array.isArray(data.attendance_logs)) {
+      const attMap = {};
+      data.attendance_logs.forEach((log) => {
+        if (log.event_id) attMap[log.event_id] = log;
+      });
+      setEventAttendance(attMap);
+    } else {
+      setEventAttendance({});
+    }
     return !!currentParticipant || regs.length > 0;
   }
   const handleSendOtp = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    if (e) e.preventDefault();
+    if (loading) return;
     setError(null);
     setMessage(null);
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
       setError('Please enter a valid email address.');
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
+
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: cleanEmail,
-        options: { shouldCreateUser: true }
+      // 1. Request secure 6-digit numeric OTP via server-side Edge Function
+      const { data: sendData, error: sendError } = await supabase.functions.invoke('participant-profile', {
+        body: { action: 'send-otp', email: cleanEmail }
       });
-      if (otpError) throw otpError;
+
+      if (sendError || !sendData?.success) {
+        if (sendData?.not_registered) {
+          setError('No registered participant found with this email. Please register for an event first.');
+        } else if (sendData?.cooldown_remaining) {
+          setResendCooldown(sendData.cooldown_remaining);
+          setError(sendData?.error || 'Please wait before requesting another code.');
+        } else {
+          setError(sendData?.error || sendError?.message || 'Failed to send OTP. Please try again.');
+        }
+        setLoading(false);
+        return;
+      }
+
+      // 2. Transition to numeric OTP verification step
       setEmail(cleanEmail);
+      setOtpCode('');
       setStep('otp');
-    } catch (error) {
-      setError(error.message);
+      setMessage('OTP sent to your email.');
+      setResendCooldown(60);
+    } catch (err) {
+      console.error('Send OTP error:', err);
+      setError(err.message || 'Network error while sending OTP. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async (code) => {
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || loading) return;
     setError(null);
+    setMessage(null);
+    setLoading(true);
+
+    const cleanEmail = email.trim().toLowerCase();
     try {
-      setLoading(true);
-      const savedEmail = email.trim().toLowerCase();
-      const { data: verified, error: otpError } = await supabase.auth.verifyOtp({
-        email: savedEmail,
-        token: code.trim(),
-        type: 'email'
+      const { data: resendData, error: resendError } = await supabase.functions.invoke('participant-profile', {
+        body: { action: 'send-otp', email: cleanEmail }
       });
-      if (otpError) throw otpError;
-      if (!verified.session) throw new Error('Email verification did not create a session. Please try again.');
+
+      if (resendError || !resendData?.success) {
+        setError(resendData?.error || resendError?.message || 'Failed to resend code.');
+        if (resendData?.cooldown_remaining) setResendCooldown(resendData.cooldown_remaining);
+        setLoading(false);
+        return;
+      }
+
+      setMessage('A new 6-digit OTP has been sent to your email.');
+      setResendCooldown(60);
+    } catch (err) {
+      setError(err.message || 'Network error resending code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (codeToVerify) => {
+    const cleanToken = (codeToVerify || otpCode || '').trim();
+    if (!cleanToken) {
+      setError('Please enter the verification code.');
+      return;
+    }
+    if (cleanToken.length !== 6) {
+      setError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const savedEmail = email.trim().toLowerCase();
+      // 1. Verify numeric OTP server-side
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('participant-profile', {
+        body: { action: 'verify-otp', email: savedEmail, otp: cleanToken }
+      });
+
+      if (verifyError || !verifyData?.success) {
+        setError(verifyData?.error || verifyError?.message || 'Incorrect verification code. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Establish official Supabase session in browser using verified token_hash
+      if (verifyData.token_hash) {
+        try {
+          const { data: authResult } = await supabase.auth.verifyOtp({
+            token_hash: verifyData.token_hash,
+            type: 'email'
+          });
+          if (authResult?.session) {
+            setSession(authResult.session);
+          }
+        } catch (_) {}
+      }
+
       localStorage.setItem('srishti_session', savedEmail);
-      setSession(verified.session);
-      setStep('dashboard');
+
+      // 3. Load participant profile and pass
       const found = await fetchUserData(savedEmail);
       if (!found) {
-        setStep('onboarding');
+        setStep('not_registered');
       } else {
         setStep('dashboard');
       }
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      console.error('Verify OTP error:', err);
+      setError(err.message || 'Verification error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -173,7 +276,9 @@ export default function ProfilePage() {
         profile: {
           name: onboardingName.trim(),
           phone: onboardingPhone.trim(),
-          college: onboardingCollege.trim()
+          college: onboardingCollege.trim(),
+          department: onboardingDepartment.trim(),
+          year: onboardingYear.trim()
         }
       }
     });
@@ -212,7 +317,16 @@ export default function ProfilePage() {
     setMessage(null);
     try {
       const { data, error } = await supabase.functions.invoke('participant-profile', {
-        body: { action: 'save', profile: { name: editName, college: editCollege, phone: editPhone } }
+        body: {
+          action: 'save',
+          profile: {
+            name: editName,
+            college: editCollege,
+            phone: editPhone,
+            department: editDepartment,
+            year: editYear
+          }
+        }
       });
       if (error || !data?.success || !data.participant) {
         throw new Error(data?.error || error?.message || 'Failed to save your profile.');
@@ -284,23 +398,21 @@ export default function ProfilePage() {
         status: data.statusText
       });
 
-      const response = await fetch('/api/send_email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: targetEmail,
+      const { data: passRes, error: passErr } = await supabase.functions.invoke('participant-profile', {
+        body: {
+          action: 'email-pass',
           subject: `Your Srishti 2.7 Digital Entry Pass — ${data.attendeeName}`,
           html: ticketHtml,
           image: cardPng // Attached as inline image and PNG file!
-        })
+        }
       });
 
-      if (!response.ok) throw new Error('Failed to send pass email.');
+      if (passErr || !passRes?.success) throw new Error(passRes?.error || passErr?.message || 'Failed to send pass email.');
       setEmailPassMsg({ type: 'success', text: `Pass sent to ${targetEmail} with full-res card!` });
       setTimeout(() => setEmailPassMsg(null), 5000);
     } catch (err) {
       console.error(err);
-      setEmailPassMsg({ type: 'error', text: 'Could not send email. Please try again.' });
+      setEmailPassMsg({ type: 'error', text: err.message || 'Could not send email. Please try again.' });
       setTimeout(() => setEmailPassMsg(null), 5000);
     } finally {
       setEmailingPass(false);
@@ -354,8 +466,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       backgroundColor: '#000',
       color: '#fff',
       fontFamily: 'var(--font-sans)',
@@ -363,14 +475,14 @@ export default function ProfilePage() {
       position: 'relative',
       overflowX: 'hidden'
     }}>
-      
+
       <div style={{ position: 'relative', zIndex: 1, maxWidth: '1000px', margin: '0 auto', paddingTop: '4rem' }}>
-        
-        <button 
+
+        <button
           onClick={() => navigate('/')}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.5rem', 
-            background: 'none', border: 'none', color: '#888', 
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            background: 'none', border: 'none', color: '#888',
             cursor: 'pointer', marginBottom: '2rem', fontSize: '1rem',
             padding: '0', transition: 'color 0.2s'
           }}
@@ -392,9 +504,9 @@ export default function ProfilePage() {
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <button 
+                <button
                   onClick={handleLogout}
-                  style={{ 
+                  style={{
                     display: 'flex', alignItems: 'center', gap: '0.5rem',
                     padding: '0.75rem 1.5rem', backgroundColor: 'transparent',
                     color: '#888', border: '1px solid #333',
@@ -426,7 +538,7 @@ export default function ProfilePage() {
               <div style={{ marginTop: '4rem', textAlign: 'center' }}>Loading your data...</div>
             ) : (
               <div style={{ marginTop: '4rem', display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
-                
+
                 {/* Profile Card */}
                 <div style={{ flex: '1 1 300px', maxWidth: '100%', padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -434,7 +546,7 @@ export default function ProfilePage() {
                       <FiUser /> Profile Overview
                     </h3>
                     {!isEditing && (
-                      <button 
+                      <button
                         onClick={() => setIsEditing(true)}
                         style={{ background: 'none', border: '1px solid #333', color: '#fff', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
                       >
@@ -442,7 +554,7 @@ export default function ProfilePage() {
                       </button>
                     )}
                   </div>
-                  
+
                   {isEditing ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       <div>
@@ -450,8 +562,22 @@ export default function ProfilePage() {
                         <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
                       </div>
                       <div>
+                        <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Email (Account Bound)</label>
+                        <input type="email" value={participantData?.email || session?.user?.email || ''} disabled style={{ width: '100%', padding: '0.75rem', background: '#181818', border: '1px solid #282828', color: '#888', borderRadius: '8px', marginTop: '0.25rem', cursor: 'not-allowed' }} />
+                      </div>
+                      <div>
                         <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>College</label>
                         <input type="text" value={editCollege} onChange={e => setEditCollege(e.target.value)} style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Department</label>
+                          <input type="text" value={editDepartment} onChange={e => setEditDepartment(e.target.value)} placeholder="e.g. CSE" style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Year</label>
+                          <input type="text" value={editYear} onChange={e => setEditYear(e.target.value)} placeholder="e.g. 2nd Year" style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
+                        </div>
                       </div>
                       <div>
                         <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Phone</label>
@@ -467,36 +593,50 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div>
-                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Name</p>
-                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData?.name || 'Admin'}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div>
+                        <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Name</p>
+                        <p style={{ fontSize: '1.2rem', margin: 0, fontWeight: '500' }}>{participantData?.name || 'Participant'}</p>
+                      </div>
+                      <div>
+                        <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Email</p>
+                        <p style={{ fontSize: '1rem', margin: 0, fontWeight: '500', color: '#aaa' }}>{participantData?.email || session?.user?.email || '-'}</p>
+                      </div>
+                      <div>
+                        <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>College</p>
+                        <p style={{ fontSize: '1.1rem', margin: 0, fontWeight: '500' }}>{participantData?.college || '-'}</p>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Department</p>
+                          <p style={{ fontSize: '1.05rem', margin: 0, fontWeight: '500' }}>{participantData?.department || '-'}</p>
+                        </div>
+                        <div>
+                          <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Year</p>
+                          <p style={{ fontSize: '1.05rem', margin: 0, fontWeight: '500' }}>{participantData?.year || '-'}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Phone</p>
+                        <p style={{ fontSize: '1.1rem', margin: 0, fontWeight: '500' }}>{participantData?.phone || '-'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>College</p>
-                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData?.college || '-'}</p>
-                    </div>
-                    <div>
-                      <p style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Phone</p>
-                      <p style={{ fontSize: '1.25rem', margin: 0, fontWeight: '500' }}>{participantData?.phone || '-'}</p>
-                    </div>
-                  </div>
                   )}
                 </div>
 
                 {/* Srishti Entry Pass */}
-                <div 
+                <div
                   className="tear-ticket-card-wrapper"
-                  style={{ 
-                    flex: '2 1 480px', 
-                    minWidth: 0, 
+                  style={{
+                    flex: '2 1 480px',
+                    minWidth: 0,
                     maxWidth: '100%',
-                    padding: '2.5rem 1.5rem', 
-                    backgroundColor: '#0a0a0a', 
-                    borderRadius: '24px', 
-                    border: '1px solid #222', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
+                    padding: '2.5rem 1.5rem',
+                    backgroundColor: '#0a0a0a',
+                    borderRadius: '24px',
+                    border: '1px solid #222',
+                    display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     position: 'relative',
                     overflow: 'visible'
@@ -560,7 +700,7 @@ export default function ProfilePage() {
                               <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1rem', background: '#fff', overflow: 'hidden', boxSizing: 'border-box' }}>
                                 <div style={{ position: 'absolute', top: '-25px', right: '-25px', width: '110px', height: '110px', background: 'linear-gradient(225deg, rgba(56,189,248,0.7) 0%, rgba(165,243,252,0.8) 35%, transparent 36%)', zIndex: 0 }}></div>
                                 <div style={{ position: 'absolute', bottom: '-20px', right: '-20px', width: '120px', height: '120px', background: 'linear-gradient(135deg, transparent 40%, #38bdf8 40%, #38bdf8 60%, #1d4ed8 60%, #1d4ed8 100%)', zIndex: 0 }}></div>
-                                
+
                                 {/* Bottom-left dot matrix */}
                                 <div style={{ position: 'absolute', bottom: '16px', left: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, 4px)', gap: '4px', opacity: 0.35, zIndex: 1 }}>
                                   {[...Array(9)].map((_, i) => (
@@ -570,13 +710,13 @@ export default function ProfilePage() {
 
                                 <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                                   <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '1.05rem', margin: '0 0 0.85rem 0', letterSpacing: '0.05em' }}>SCAN ME</h4>
-                                  
+
                                   <div style={{ position: 'relative', padding: '10px' }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, width: '16px', height: '16px', borderTop: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '4px 0 0 0' }}></div>
                                     <div style={{ position: 'absolute', top: 0, right: 0, width: '16px', height: '16px', borderTop: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 4px 0 0' }}></div>
                                     <div style={{ position: 'absolute', bottom: 0, left: 0, width: '16px', height: '16px', borderBottom: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '0 0 0 4px' }}></div>
                                     <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', borderBottom: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 0 4px 0' }}></div>
-                                    
+
                                     <QRCodeSVG
                                       value={signedPassQr || passCode}
                                       size={115}
@@ -591,7 +731,7 @@ export default function ProfilePage() {
                                       }}
                                     />
                                   </div>
-                                  
+
                                   <span style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.85rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold', letterSpacing: '0.05em' }}>{passCode}</span>
                                 </div>
                               </div>
@@ -615,13 +755,13 @@ export default function ProfilePage() {
                                   </div>
                                   <div style={{ height: '2px', width: '60px', background: 'linear-gradient(90deg, #38bdf8, transparent)' }}></div>
                                 </div>
-                                
-                                <h3 style={{ 
-                                  fontFamily: 'var(--font-akira)', 
-                                  fontSize: attendeeName.length > 20 ? '1.5rem' : attendeeName.length > 14 ? '1.85rem' : '2.2rem', 
-                                  margin: '0 0 0.45rem 0', 
-                                  lineHeight: 1.05, 
-                                  textTransform: 'uppercase', 
+
+                                <h3 style={{
+                                  fontFamily: 'var(--font-akira)',
+                                  fontSize: attendeeName.length > 20 ? '1.5rem' : attendeeName.length > 14 ? '1.85rem' : '2.2rem',
+                                  margin: '0 0 0.45rem 0',
+                                  lineHeight: 1.05,
+                                  textTransform: 'uppercase',
                                   letterSpacing: '-0.02em',
                                   background: 'linear-gradient(180deg, #ffffff 40%, #38bdf8 100%)',
                                   WebkitBackgroundClip: 'text',
@@ -630,7 +770,7 @@ export default function ProfilePage() {
                                 }}>
                                   {attendeeName}
                                 </h3>
-                                
+
                                 <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', marginBottom: '0.65rem' }}>
                                   <div style={{ width: '4px', height: '22px', background: '#38bdf8', borderRadius: '2px', boxShadow: '0 0 10px #38bdf8' }}></div>
                                   <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>
@@ -676,7 +816,7 @@ export default function ProfilePage() {
                                   )}
                                 </div>
                               </div>
-                              
+
                               <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingTop: '0.4rem' }}>
                                 <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', padding: '0.55rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(56,189,248,0.3)', display: 'inline-flex', flexDirection: 'column', gap: '0.2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
                                   <span style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.1em' }}>STATUS</span>
@@ -689,7 +829,7 @@ export default function ProfilePage() {
                                     </span>
                                   </div>
                                 </div>
-                                
+
                                 <div style={{ textAlign: 'right' }}>
                                   <span style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>EVENTS ENROLLED</span>
                                   <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.25rem' }}>{eventsList.length || 1} Event(s)</span>
@@ -870,10 +1010,10 @@ export default function ProfilePage() {
                           )}
 
                           {emailPassMsg && (
-                            <span style={{ 
-                              fontSize: '0.85rem', 
-                              color: emailPassMsg.type === 'success' ? '#10b981' : '#ef4444', 
-                              fontWeight: '600' 
+                            <span style={{
+                              fontSize: '0.85rem',
+                              color: emailPassMsg.type === 'success' ? '#10b981' : '#ef4444',
+                              fontWeight: '600'
                             }}>
                               {emailPassMsg.text}
                             </span>
@@ -932,13 +1072,13 @@ export default function ProfilePage() {
                       <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>No Tickets Yet</h2>
                       <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '2rem' }}>You haven't registered for any events yet or your registration is syncing.</p>
                       <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button 
+                        <button
                           onClick={() => navigate('/register')}
                           style={{ padding: '0.9rem 1.8rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
                         >
                           Explore Events
                         </button>
-                        <button 
+                        <button
                           onClick={async () => {
                             const em = session?.user?.email || localStorage.getItem('srishti_session');
                             if (em) {
@@ -956,31 +1096,31 @@ export default function ProfilePage() {
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
                       {registrations.map(reg => (
-                        <div key={reg.id} style={{ 
-                          padding: '2rem', 
+                        <div key={reg.id} style={{
+                          padding: '2rem',
                           backgroundColor: '#0a0a0a',
-                          borderRadius: '24px', 
+                          borderRadius: '24px',
                           border: '1px solid #222',
                           position: 'relative',
                           overflow: 'hidden'
                         }}>
-                          <div style={{ 
-                            position: 'absolute', 
-                            top: 0, 
-                            right: 0, 
-                            padding: '0.5rem 1.5rem', 
-                            background: '#111', 
-                            color: (reg.payment_status === 'verified' || reg.status === 'verified') ? '#34d399' : '#fbbf24', 
-                            borderBottomLeftRadius: '16px', 
-                            borderLeft: '1px solid #222', 
-                            borderBottom: '1px solid #222', 
-                            fontSize: '0.8rem', 
-                            fontWeight: 'bold', 
-                            letterSpacing: '1px' 
+                          <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            padding: '0.5rem 1.5rem',
+                            background: '#111',
+                            color: (reg.payment_status === 'verified' || reg.status === 'verified') ? '#34d399' : '#fbbf24',
+                            borderBottomLeftRadius: '16px',
+                            borderLeft: '1px solid #222',
+                            borderBottom: '1px solid #222',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold',
+                            letterSpacing: '1px'
                           }}>
                             {String(reg.payment_status || reg.status || 'VERIFIED').toUpperCase()}
                           </div>
-                          
+
                           <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#fff', fontWeight: 'bold' }}>
                             {reg.events?.name || reg.event_name || reg.event_id}
                           </h4>
@@ -1019,7 +1159,7 @@ export default function ProfilePage() {
                               {eventAttendance[reg.event_id] ? '✓ Present in Room' : '○ Room Attendance Pending'}
                             </span>
                           </div>
-                          
+
                           <div style={{ display: 'flex', gap: '1rem', marginTop: '1.25rem' }}>
                             <div style={{ flex: 1 }}>
                               <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.25rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Participant Code</p>
@@ -1042,122 +1182,115 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-        ) : step === 'onboarding' ? (
-          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-            {error && (
-              <div style={{ 
-                padding: '1.25rem', 
-                backgroundColor: 'rgba(255, 59, 48, 0.15)', 
-                color: '#ff453a', 
-                borderRadius: '16px', 
-                marginBottom: '2rem', 
-                fontSize: '0.95rem', 
-                lineHeight: '1.5',
-                border: '1px solid rgba(255,59,48,0.35)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.75rem'
-              }}>
-                <FiInfo style={{ flexShrink: 0, fontSize: '1.3rem', marginTop: '0.1rem' }} />
-                <div>
-                  <div style={{ fontWeight: '700', marginBottom: '0.25rem' }}>Registration Notice</div>
-                  <div>{error}</div>
-                </div>
-              </div>
-            )}
-            <Stepper
-              initialStep={1}
-              onStepChange={(s) => setOnboardingStep(s)}
-              onFinalStepCompleted={handleOnboardingComplete}
-              backButtonText="Back"
-              nextButtonText="Continue"
-              nextButtonProps={{ style: { opacity: isNextDisabled() ? 0.5 : 1, pointerEvents: isNextDisabled() ? 'none' : 'auto' } }}
-            >
-              <Step>
-                <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold', letterSpacing: '-0.02em' }}>Welcome</h2>
-                <p style={{ color: '#888', marginBottom: '3rem', fontSize: '1.1rem', lineHeight: '1.6' }}>We need a few details to generate your official Srishti 2.7 participant profile.</p>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <label style={{ color: '#aaa', fontSize: '0.9rem', fontWeight: '500' }}>Full Name</label>
-                  <input 
-                    type="text" 
-                    value={onboardingName} 
-                    onChange={(e) => setOnboardingName(e.target.value)} 
-                    placeholder="John Doe"
-                    style={{ width: '100%', padding: '1.25rem', background: '#000', border: '1px solid #333', borderRadius: '16px', color: '#fff', fontSize: '1.1rem', outline: 'none' }}
-                    onFocus={e => e.target.style.borderColor = '#666'}
-                    onBlur={e => e.target.style.borderColor = '#333'}
-                  />
-                </div>
-              </Step>
-              
-              <Step>
-                <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold', letterSpacing: '-0.02em' }}>Contact Info</h2>
-                <p style={{ color: '#888', marginBottom: '3rem', fontSize: '1.1rem', lineHeight: '1.6' }}>This information is required for verifying your identity at the venues.</p>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <label style={{ color: '#aaa', fontSize: '0.9rem', fontWeight: '500' }}>College Name</label>
-                    <input 
-                      type="text" 
-                      value={onboardingCollege} 
-                      onChange={(e) => setOnboardingCollege(e.target.value)} 
-                      placeholder="e.g. SRISHTI Institute"
-                      style={{ width: '100%', padding: '1.25rem', background: '#000', border: '1px solid #333', borderRadius: '16px', color: '#fff', fontSize: '1.1rem', outline: 'none' }}
-                      onFocus={e => e.target.style.borderColor = '#666'}
-                      onBlur={e => e.target.style.borderColor = '#333'}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <label style={{ color: '#aaa', fontSize: '0.9rem', fontWeight: '500' }}>Phone Number</label>
-                    <input 
-                      type="tel" 
-                      value={onboardingPhone} 
-                      onChange={(e) => setOnboardingPhone(e.target.value)} 
-                      placeholder="1234567890"
-                      style={{ width: '100%', padding: '1.25rem', background: '#000', border: '1px solid #333', borderRadius: '16px', color: '#fff', fontSize: '1.1rem', outline: 'none' }}
-                      onFocus={e => e.target.style.borderColor = '#666'}
-                      onBlur={e => e.target.style.borderColor = '#333'}
-                    />
-                  </div>
-                </div>
-              </Step>
-
-              <Step>
-                <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                  <FiInfo size={64} color="#fff" style={{ marginBottom: '2rem' }} />
-                  <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold', letterSpacing: '-0.02em' }}>All Set!</h2>
-                  <p style={{ color: '#888', marginBottom: '0', fontSize: '1.1rem', lineHeight: '1.6' }}>
-                    Your profile is ready. Click finish to access your dashboard.
-                  </p>
-                </div>
-              </Step>
-            </Stepper>
+        ) : step === 'not_registered' ? (
+          <div style={{ maxWidth: '500px', margin: '4rem auto 0', padding: '3rem', backgroundColor: '#0a0a0a', borderRadius: '32px', border: '1px solid #222', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(255, 149, 0, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#ff9500' }}>
+              <FiAlertCircle size={32} />
+            </div>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>Participant Registration Required</h2>
+            <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem', lineHeight: '1.6' }}>
+              No registered participant was found for <strong style={{ color: '#fff' }}>{email || session?.user?.email || 'this email'}</strong>.
+              Participant passes and profiles are reserved for students registered for SRISHTI 2.7 events.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => navigate('/events')}
+                style={{
+                  width: '100%', padding: '1.1rem', backgroundColor: '#fff',
+                  color: '#000', border: 'none', borderRadius: '16px',
+                  fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.backgroundColor = '#e5e5e5'}
+                onMouseOut={e => e.currentTarget.style.backgroundColor = '#fff'}
+              >
+                Browse Events & Register
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  supabase.auth.signOut().catch(() => {});
+                  localStorage.removeItem('srishti_session');
+                  setSession(null);
+                  setStep('email');
+                  setEmail('');
+                  setOtpCode('');
+                  setError(null);
+                  setMessage(null);
+                }}
+                style={{
+                  width: '100%', padding: '1rem', backgroundColor: 'transparent',
+                  color: '#888', border: '1px solid #333', borderRadius: '16px',
+                  fontSize: '0.95rem', cursor: 'pointer', transition: 'border-color 0.2s, color 0.2s'
+                }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = '#666'; e.currentTarget.style.color = '#fff'; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888'; }}
+              >
+                Use a Different Email
+              </button>
+            </div>
           </div>
         ) : (
           <div style={{ maxWidth: '460px', margin: '4rem auto 0', padding: '3rem', backgroundColor: '#0a0a0a', borderRadius: '32px', border: '1px solid #222', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
             <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', letterSpacing: '-0.02em' }}>
-              {step === 'email' ? 'Welcome Back' : 'Verify Identity'}
+              {step === 'email' ? 'Participant Access' : 'Verification Code'}
             </h2>
-            <p style={{ color: '#888', textAlign: 'center', marginBottom: '2.5rem', fontSize: '0.95rem' }}>
-              {step === 'email' ? 'Enter your email to access your tickets' : `We sent a code to ${email}`}
+            <p style={{ color: '#888', textAlign: 'center', marginBottom: '2rem', fontSize: '0.95rem', lineHeight: '1.5' }}>
+              {step === 'email' ? 'Enter your registered email to receive your one-time pass code.' : `Enter the 6-digit one-time code sent to ${email}`}
             </p>
 
-            {error && <div style={{ padding: '1rem', backgroundColor: 'rgba(255, 59, 48, 0.1)', color: '#ff3b30', borderRadius: '12px', marginBottom: '2rem', fontSize: '0.9rem', textAlign: 'center', border: '1px solid rgba(255,59,48,0.2)' }}>{error}</div>}
+            {message && (
+              <div style={{
+                padding: '0.875rem 1rem',
+                backgroundColor: 'rgba(52, 199, 89, 0.12)',
+                color: '#30d158',
+                borderRadius: '12px',
+                marginBottom: '1.5rem',
+                fontSize: '0.9rem',
+                textAlign: 'center',
+                border: '1px solid rgba(52,199,89,0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}>
+                <FiCheckCircle size={16} />
+                <span>{message}</span>
+              </div>
+            )}
+
+            {error && (
+              <div style={{
+                padding: '0.875rem 1rem',
+                backgroundColor: 'rgba(255, 59, 48, 0.12)',
+                color: '#ff3b30',
+                borderRadius: '12px',
+                marginBottom: '1.5rem',
+                fontSize: '0.9rem',
+                textAlign: 'center',
+                border: '1px solid rgba(255,59,48,0.25)'
+              }}>
+                {error}
+              </div>
+            )}
 
             {step === 'email' ? (
               <form onSubmit={handleSendOtp}>
-                <div style={{ marginBottom: '2rem' }}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', color: '#aaa', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+                    Email address
+                  </label>
                   <div style={{ position: 'relative' }}>
                     <FiMail style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#666', fontSize: '1.2rem' }} />
-                    <input 
+                    <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       placeholder="name@college.edu"
-                      style={{ 
-                        width: '100%', padding: '1.25rem 1.25rem 1.25rem 3.5rem', 
+                      style={{
+                        width: '100%', padding: '1.25rem 1.25rem 1.25rem 3.5rem',
                         backgroundColor: '#000', border: '1px solid #333',
                         borderRadius: '16px', color: '#fff', fontSize: '1rem',
                         outline: 'none', transition: 'border-color 0.2s'
@@ -1167,43 +1300,87 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
-                <button 
-                  type="submit" 
-                  disabled={loading || !email}
-                  style={{ 
-                    width: '100%', padding: '1.25rem', backgroundColor: '#fff', 
-                    color: '#000', border: 'none', borderRadius: '16px', 
-                    fontSize: '1rem', fontWeight: 'bold', cursor: (loading || !email) ? 'not-allowed' : 'pointer',
-                    opacity: (loading || !email) ? 0.7 : 1, transition: 'background-color 0.2s'
+                <button
+                  type="submit"
+                  disabled={loading || !email.trim()}
+                  style={{
+                    width: '100%', padding: '1.25rem', backgroundColor: '#fff',
+                    color: '#000', border: 'none', borderRadius: '16px',
+                    fontSize: '1rem', fontWeight: 'bold', cursor: (loading || !email.trim()) ? 'not-allowed' : 'pointer',
+                    opacity: (loading || !email.trim()) ? 0.7 : 1, transition: 'background-color 0.2s'
                   }}
-                  onMouseOver={e => { if(!loading && email) e.currentTarget.style.backgroundColor = '#e5e5e5'; }}
+                  onMouseOver={e => { if(!loading && email.trim()) e.currentTarget.style.backgroundColor = '#e5e5e5'; }}
                   onMouseOut={e => { e.currentTarget.style.backgroundColor = '#fff'; }}
                 >
-                  {loading ? 'Sending Code...' : 'Continue'}
+                  {loading ? 'Sending OTP...' : 'Send OTP'}
                 </button>
               </form>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ marginBottom: '2.5rem' }}>
-                  <CodeSlots 
-                    length={4} 
-                    onComplete={(code) => handleVerifyOtp(code)} 
-                    autoFocus
-                    accentColor="#fff"
-                    inkColor="#fff"
-                    slotColor="#111"
-                    digitColor="#fff"
-                    dangerColor="#ff3b30"
-                  />
+                <div style={{ width: '100%', marginBottom: '1.75rem' }}>
+                  <label style={{ display: 'block', color: '#aaa', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.75rem', textAlign: 'center' }}>
+                    Verification code
+                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <CodeSlots
+                      length={6}
+                      value={otpCode}
+                      onChange={(val) => setOtpCode(val)}
+                      onComplete={(code) => handleVerifyOtp(code)}
+                      autoFocus
+                      accentColor="#fff"
+                      inkColor="#fff"
+                      slotColor="#111"
+                      digitColor="#fff"
+                      dangerColor="#ff3b30"
+                    />
+                  </div>
                 </div>
-                {loading && <p style={{ color: '#888', fontSize: '0.9rem' }}>Verifying...</p>}
-                
-                <button 
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleVerifyOtp(otpCode)}
+                    disabled={loading || otpCode.trim().length < 6}
+                    style={{
+                      width: '100%', padding: '1.2rem', backgroundColor: '#fff',
+                      color: '#000', border: 'none', borderRadius: '16px',
+                      fontSize: '1rem', fontWeight: 'bold',
+                      cursor: (loading || otpCode.trim().length < 6) ? 'not-allowed' : 'pointer',
+                      opacity: (loading || otpCode.trim().length < 6) ? 0.6 : 1,
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={e => { if(!loading && otpCode.trim().length >= 6) e.currentTarget.style.backgroundColor = '#e5e5e5'; }}
+                    onMouseOut={e => { e.currentTarget.style.backgroundColor = '#fff'; }}
+                  >
+                    {loading ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={loading || resendCooldown > 0}
+                    style={{
+                      width: '100%', padding: '0.9rem', backgroundColor: '#111',
+                      color: resendCooldown > 0 ? '#666' : '#fff',
+                      border: '1px solid #222', borderRadius: '14px',
+                      fontSize: '0.9rem', fontWeight: '500',
+                      cursor: (loading || resendCooldown > 0) ? 'not-allowed' : 'pointer',
+                      transition: 'background-color 0.2s, color 0.2s'
+                    }}
+                    onMouseOver={e => { if(!loading && resendCooldown === 0) e.currentTarget.style.backgroundColor = '#1a1a1a'; }}
+                    onMouseOut={e => { e.currentTarget.style.backgroundColor = '#111'; }}
+                  >
+                    {resendCooldown > 0 ? `Resend OTP (${resendCooldown}s)` : 'Resend OTP'}
+                  </button>
+                </div>
+
+                <button
                   type="button"
-                  onClick={() => { setStep('email'); setError(null); setMessage(null); }}
-                  style={{ 
-                    padding: '0.75rem 1.5rem', backgroundColor: 'transparent', 
-                    color: '#666', border: 'none', borderRadius: '12px', 
+                  onClick={() => { setStep('email'); setOtpCode(''); setError(null); setMessage(null); }}
+                  style={{
+                    padding: '0.75rem 1.5rem', backgroundColor: 'transparent',
+                    color: '#666', border: 'none', borderRadius: '12px',
                     fontSize: '0.9rem', cursor: 'pointer', marginTop: '1rem',
                     transition: 'color 0.2s'
                   }}

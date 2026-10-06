@@ -426,34 +426,6 @@ export default function AdminDashboard() {
     setStationActionLoading(true);
 
     try {
-      // 1. Try atomic server RPC with cryptographic pass token
-      if (stationAttendee.pass_token) {
-        try {
-          const { data: rpcRes, error: rpcErr } = await supabase.rpc('verify_and_checkin_pass', {
-            p_code: stationAttendee.participant_code,
-            p_token: stationAttendee.pass_token,
-            p_station: 'gate',
-            p_notes: stationNotes.trim() || null
-          });
-          if (!rpcErr && rpcRes) {
-            if (!rpcRes.valid) {
-              throw new Error(rpcRes.error || 'Check-in rejected by server.');
-            }
-            if (rpcRes.already_checked_in) {
-              showToast(`Notice: Already checked in at ${new Date(rpcRes.checked_in_at).toLocaleTimeString()}`, 'warning');
-            } else {
-              showToast(`Gate Arrival Confirmed: ${stationAttendee.name} checked in!`, 'success');
-            }
-            setStationNotes('');
-            fetchAllData(adminRole, currentStaff?.id);
-            handleLookupParticipantForStation(stationAttendee.participant_code);
-            return;
-          }
-        } catch (rpcEx) {
-          console.warn('RPC checkin notice (using fallback):', rpcEx.message);
-        }
-      }
-
       const payload = {
         participant_id: stationAttendee.id,
         checked_in_by: currentStaff?.id || '8c78f36f-a47f-4837-8106-d06380aada14',
@@ -461,16 +433,21 @@ export default function AdminDashboard() {
         notes: stationNotes.trim() || null
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('arrival_checkins')
         .insert([payload])
         .select('*');
 
-      if (error && error.code !== '23505') { // 23505 is unique violation
-        throw error;
+      if (error) {
+        if (error.code === '23505') {
+          showToast(`Notice: ${stationAttendee.name} is already checked in at the gate!`, 'warning');
+        } else {
+          throw error;
+        }
+      } else {
+        showToast(`Gate Arrival Confirmed: ${stationAttendee.name} checked in!`, 'success');
       }
 
-      showToast(`Gate Arrival Confirmed: ${stationAttendee.name} checked in!`, 'success');
       setStationNotes('');
       
       // Refresh data
@@ -490,35 +467,6 @@ export default function AdminDashboard() {
   const handleMarkEventAttendance = async (participantId, targetEventId, sourceType = 'manual') => {
     setStationActionLoading(true);
     try {
-      // 1. Try atomic server RPC with cryptographic pass token & event scope check
-      if (stationAttendee?.pass_token) {
-        try {
-          const { data: rpcRes, error: rpcErr } = await supabase.rpc('verify_and_checkin_pass', {
-            p_code: stationAttendee.participant_code,
-            p_token: stationAttendee.pass_token,
-            p_station: 'event',
-            p_event_id: targetEventId,
-            p_notes: stationNotes.trim() || null
-          });
-          if (!rpcErr && rpcRes) {
-            if (!rpcRes.valid) {
-              throw new Error(rpcRes.error || 'Event check-in rejected by server.');
-            }
-            if (rpcRes.already_checked_in) {
-              showToast(`Notice: Attendance already marked at ${new Date(rpcRes.checked_in_at).toLocaleTimeString()}`, 'warning');
-            } else {
-              showToast(`Event Attendance Confirmed for ${rpcRes.event_name || 'event room'}!`, 'success');
-            }
-            setStationNotes('');
-            fetchAllData(adminRole, currentStaff?.id);
-            handleLookupParticipantForStation(stationAttendee.participant_code);
-            return;
-          }
-        } catch (rpcEx) {
-          console.warn('RPC event attendance notice (using fallback):', rpcEx.message);
-        }
-      }
-
       const payload = {
         participant_id: participantId,
         event_id: targetEventId,
@@ -531,11 +479,16 @@ export default function AdminDashboard() {
         .from('event_attendance')
         .insert([payload]);
 
-      if (error && error.code !== '23505') {
-        throw error;
+      if (error) {
+        if (error.code === '23505') {
+          showToast(`Notice: Attendance already recorded for this event room.`, 'warning');
+        } else {
+          throw error;
+        }
+      } else {
+        showToast(`Attendance marked successfully for event room!`, 'success');
       }
 
-      showToast(`Attendance marked successfully for event room!`, 'success');
       setStationNotes('');
       fetchAllData(adminRole, currentStaff?.id);
 
@@ -732,8 +685,8 @@ export default function AdminDashboard() {
     try {
       setIsGeneratingPass(true);
       setSelectedParticipantForPass(participant);
-      const passToken = `SRISHTI27-${participant.participant_code}-${participant.id ? participant.id.slice(0, 8) : 'FEST'}`;
-      const qrDataUrl = await QRCode.toDataURL(passToken, {
+      const plainCode = (participant.participant_code || '').trim().toUpperCase();
+      const qrDataUrl = await QRCode.toDataURL(plainCode, {
         margin: 1,
         width: 300,
         color: {
@@ -4054,6 +4007,104 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Participant Registrations & Event Attendance Breakdown */}
+            <div style={{
+              background: '#09090b',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '14px',
+              padding: '1.25rem',
+              marginBottom: '1.5rem',
+              maxHeight: '220px',
+              overflowY: 'auto'
+            }}>
+              <div style={{
+                fontSize: '0.8rem',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: '#a1a1aa',
+                marginBottom: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span>Registered Events &amp; Room Attendance</span>
+                <span style={{ fontSize: '0.75rem', color: '#71717a' }}>
+                  {registrations.filter(r => r.participant_id === selectedParticipantForPass.id).length} Events
+                </span>
+              </div>
+
+              {(() => {
+                const userRegs = registrations.filter(r => r.participant_id === selectedParticipantForPass.id);
+                if (userRegs.length === 0) {
+                  return (
+                    <div style={{ color: '#71717a', fontSize: '0.82rem', textAlign: 'center', padding: '1rem 0' }}>
+                      No registered events found for this participant.
+                    </div>
+                  );
+                }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    {userRegs.map(reg => {
+                      const ev = events.find(e => e.id === reg.event_id);
+                      const isAttended = eventAttendance.some(
+                        att => att.participant_id === selectedParticipantForPass.id && att.event_id === reg.event_id
+                      );
+                      const isPaid = reg.payment_status === 'verified';
+                      return (
+                        <div
+                          key={reg.id || reg.registration_code}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '10px',
+                            padding: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.5rem'
+                          }}
+                        >
+                          <div>
+                            <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '0.88rem' }}>
+                              {ev ? ev.title : (reg.event_id || 'Event')}
+                            </div>
+                            <div style={{ color: '#71717a', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                              Code: {reg.registration_code || 'N/A'}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            <span style={{
+                              fontSize: '0.7rem',
+                              fontWeight: '600',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '6px',
+                              background: isPaid ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                              color: isPaid ? '#4ade80' : '#facc15',
+                              border: isPaid ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)'
+                            }}>
+                              {isPaid ? 'Paid' : 'Payment Pending'}
+                            </span>
+                            <span style={{
+                              fontSize: '0.7rem',
+                              fontWeight: '600',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '6px',
+                              background: isAttended ? 'rgba(56, 189, 248, 0.15)' : 'rgba(148, 163, 184, 0.1)',
+                              color: isAttended ? '#38bdf8' : '#94a3b8',
+                              border: isAttended ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'
+                            }}>
+                              {isAttended ? '✓ Attended Room' : '○ Room Pending'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>

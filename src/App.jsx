@@ -799,30 +799,18 @@ export default function App() {
       `;
 
       try {
-        // Send to participant with inline high-res card image
-        await fetch('/api/send_email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        // Send to participant with inline high-res card image via server-side Edge Function
+        await supabase.functions.invoke('participant-profile', {
+          body: {
+            action: 'send-registration-pass',
             to: formEmail,
             subject: `Your Srishti 2.7 Digital Entry Pass — ${formName}`,
             html: ticketHtml,
             image: cardPng
-          })
-        });
-        
-        // Send to Admin
-        await fetch('/api/send_email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: 'tsrknight@gmail.com',
-            subject: `New Registration: ₹${amountPaid} for ${activeEventData.label}`,
-            html: adminHtml
-          })
+          }
         });
       } catch (emailErr) {
-        console.error('Failed to send emails:', emailErr);
+        console.error('Failed to send registration pass email:', emailErr);
       }
 
       setFormStatus('done');

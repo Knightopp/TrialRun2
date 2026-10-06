@@ -9,10 +9,29 @@ from http.server import BaseHTTPRequestHandler
 
 app_password = os.environ.get("SRISHTI_GMAIL_APP_PASSWORD")
 gmail_account = os.environ.get("SRISHTI_GMAIL_ACCOUNT", "srishti2.7stc@gmail.com")
+mailer_secret = os.environ.get("SRISHTI_MAILER_SECRET")
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
+            # Server-to-server authorization: Reject unauthenticated third-party callers
+            secret = os.environ.get("SRISHTI_MAILER_SECRET")
+            if secret:
+                auth_header = self.headers.get("Authorization", "")
+                custom_header = self.headers.get("X-Mailer-Secret", "")
+                provided_token = ""
+                if auth_header.startswith("Bearer "):
+                    provided_token = auth_header[7:].strip()
+                elif custom_header:
+                    provided_token = custom_header.strip()
+
+                if not provided_token or provided_token != secret:
+                    self.send_response(401)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Unauthorized: invalid mailer secret"}).encode())
+                    return
+
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             body = json.loads(post_data.decode('utf-8'))
@@ -76,5 +95,5 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200, "ok")
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header("Access-Control-Allow-Headers", "X-Requested-With, Content-type")
+        self.send_header("Access-Control-Allow-Headers", "X-Requested-With, Content-type, Authorization, X-Mailer-Secret")
         self.end_headers()
