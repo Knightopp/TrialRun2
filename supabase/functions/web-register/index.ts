@@ -26,6 +26,7 @@ interface WebRegisterPayload {
   team_members?: TeamMember[];
   payment_method?: string;
   payment_reference?: string;
+  otp?: string;
 }
 
 function getServiceKey(): string | null {
@@ -37,6 +38,19 @@ function getServiceKey(): string | null {
   } catch {
     return null;
   }
+}
+
+function getOtpSalt(): string {
+  return Deno.env.get("OTP_SALT") || "srishti27_secure_salt";
+}
+
+async function hashOtp(email: string, code: string): Promise<string> {
+  const salt = getOtpSalt();
+  const encoder = new TextEncoder();
+  const data = encoder.encode(`${email.toLowerCase()}:${code.trim()}:${salt}`);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 serve(async (req: Request) => {
@@ -113,7 +127,8 @@ serve(async (req: Request) => {
       event_code,
       team_members = [],
       payment_method = "upi",
-      payment_reference
+      payment_reference,
+      otp
     } = body;
 
     // 5. Strict Input Validation & Sanitization
@@ -133,11 +148,43 @@ serve(async (req: Request) => {
       );
     }
 
+    // 6. Verify Participant Identity (Session or OTP Verification)
+    let isEmailVerified = false;
+    if (verifiedCallerEmail && verifiedCallerEmail === cleanEmail) {
+      isEmailVerified = true;
+    } else if (otp && typeof otp === "string" && otp.trim().length === 6) {
+      const otpInput = otp.trim();
+      const { data: otpRecord } = await supabase
+        .from("participant_otps")
+        .select("*")
+        .eq("email", cleanEmail)
+        .maybeSingle();
+
+      if (otpRecord && otpRecord.attempts < 5 && new Date(otpRecord.expires_at).getTime() > Date.now()) {
+        const inputHash = await hashOtp(cleanEmail, otpInput);
+        if (inputHash === otpRecord.otp_hash) {
+          isEmailVerified = true;
+          // Invalidate single-use OTP
+          await supabase.from("participant_otps").delete().eq("email", cleanEmail);
+        }
+      }
+    }
+
+    if (!isEmailVerified) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Email verification required. Please verify your email with OTP before registering."
+        }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const cleanPhone = phone ? String(phone).trim().replace(/[^\d+ -]/g, "").slice(0, 20) : null;
     const cleanCollege = college ? String(college).trim().slice(0, 150) : "N/A";
     const cleanDept = department ? String(department).trim().slice(0, 100) : "N/A";
     const cleanYear = year ? String(year).trim().slice(0, 50) : "N/A";
-    const cleanPaymentRef = payment_reference ? String(payment_reference).trim().slice(0, 64) : null;
+    const cleanPaymentRef = payment_reference ? String(payment_reference).trim().slice(0, 64) : "";
 
     if (!event_id && !event_code) {
       return new Response(
@@ -279,6 +326,17 @@ serve(async (req: Request) => {
       participantId = newParticipant.id;
     }
 
+    // Ensure participant account exists in auth.users so they can receive official OTPs with shouldCreateUser: false
+    try {
+      await supabase.auth.admin.createUser({
+        email: cleanEmail,
+        email_confirm: true,
+        user_metadata: { name: name.trim() }
+      });
+    } catch (_) {
+      // User may already exist in auth.users
+    }
+
     // 8. Duplicate Registration Check
     const { data: existingReg, error: regCheckErr } = await supabase
       .from("registrations")
@@ -313,13 +371,31 @@ serve(async (req: Request) => {
       }
     }
 
-    // 9. Payment Status Determination (Enforced strictly server-side)
+    // 9. Payment Status Determination & UTR Validation (Enforced strictly server-side)
     // Security Rule:
-    // If event registration_fee is 0 -> 'verified' (Free event)
-    // If event registration_fee > 0 -> ALWAYS 'pending' for self-service web registrations.
-    // Client cannot override payment_status.
-    const expectedFee = Number(event.registration_fee || 0);
+    // The database event.registration_fee is the single source of truth.
+    // Client-provided fee, payment_status, verified, paid, or amount are strictly ignored.
+    const expectedFee = Math.max(0, Number(event.registration_fee || 0));
+
+    // For paid events (registration_fee > 0):
+    // 1. Payment reference (UTR) is MANDATORY and cannot be empty or whitespace.
+    // 2. payment_status MUST remain 'pending' until authorized coordinator/admin verification.
+    // For free events (registration_fee == 0):
+    // payment_status is 'verified'.
+    if (expectedFee > 0) {
+      if (!cleanPaymentRef || cleanPaymentRef.trim().length === 0) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Payment reference / UTR is required for paid event registrations."
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const finalPaymentStatus = expectedFee === 0 ? "verified" : "pending";
+    const finalPaymentMethod = expectedFee === 0 ? "waived" : (payment_method || "upi");
 
     // 10. Insert Registration
     const registrationPayload = {
@@ -329,9 +405,9 @@ serve(async (req: Request) => {
       registration_source: "web",
       registered_by: null, // Null for self-service web registration
       payment_status: finalPaymentStatus,
-      payment_method: payment_method || "upi",
+      payment_method: finalPaymentMethod,
       payment_amount: expectedFee, // Strictly enforced from server database
-      payment_reference: cleanPaymentRef,
+      payment_reference: expectedFee > 0 ? cleanPaymentRef.trim() : null,
       team_members: teamArray
     };
 
@@ -359,11 +435,15 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Registration completed successfully.",
+        message: finalPaymentStatus === "verified"
+          ? "Registration completed successfully."
+          : "Registration submitted successfully. Payment pending verification.",
         data: {
           registration_id: createdReg.id,
           status: createdReg.status,
           payment_status: createdReg.payment_status,
+          payment_amount: createdReg.payment_amount,
+          payment_reference: createdReg.payment_reference,
           participant: {
             id: participantId,
             participant_code: participantCode,
@@ -381,7 +461,8 @@ serve(async (req: Request) => {
             category: event.category,
             venue: event.venue,
             date: event.date,
-            start_time: event.start_time
+            start_time: event.start_time,
+            registration_fee: expectedFee
           }
         }
       }),

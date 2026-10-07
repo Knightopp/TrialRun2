@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import QRCode from 'qrcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { createPortal } from 'react-dom';
@@ -332,7 +332,7 @@ export default function App() {
   });
 
   const fetchUserRegistrations = async (emailToFetch) => {
-    const cleanEmail = (emailToFetch || formEmail || localStorage.getItem('srishti_session') || '').replace(/[\'"]+/g, '').trim().toLowerCase();
+    const cleanEmail = (emailToFetch || formEmail || localStorage.getItem('srishti_session') || '').replace(/['"]+/g, '').trim().toLowerCase();
     if (!cleanEmail) return [];
     try {
       const cached = JSON.parse(localStorage.getItem(`srishti_user_registrations_${cleanEmail}`) || '[]');
@@ -400,7 +400,12 @@ export default function App() {
 
   const handleEmailChange = async (val) => {
     setFormEmail(val);
-    const cleanEmail = val.replace(/[\'"]+/g, '').trim().toLowerCase();
+    setOtpVerified(false);
+    setOtpSent(false);
+    setOtpCode('');
+    setOtpError(null);
+    setOtpMessage(null);
+    const cleanEmail = val.replace(/['"]+/g, '').trim().toLowerCase();
     if (!cleanEmail) return;
 
     try {
@@ -466,19 +471,50 @@ export default function App() {
     }));
   };
 
-  const [paymentVerified, setPaymentVerified] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [paymentError, setPaymentError] = useState(null);
   const [paymentFraction, setPaymentFraction] = useState(0);
-  const paymentVerificationGeneration = useRef(0);
   const expectedPaymentAmount = Number((eventRegistrationFee + paymentFraction).toFixed(2));
 
+  // Manual payment reference / UTR state
+  const [utrNumber, setUtrNumber] = useState('');
+  const [isPaymentPending, setIsPaymentPending] = useState(false);
+
+  // Participant OTP verification state
+  const [otpCode, setOtpCode] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState(null);
+  const [otpMessage, setOtpMessage] = useState(null);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
   useEffect(() => {
-    paymentVerificationGeneration.current += 1;
-    setPaymentVerified(false);
-    setIsVerifying(false);
-    setPaymentError(null);
+    let timer;
+    if (otpCooldown > 0) {
+      timer = setTimeout(() => setOtpCooldown(prev => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [otpCooldown]);
+
+  // Check if caller already has a verified session matching formEmail
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const sessionEmail = session?.user?.email?.trim().toLowerCase();
+        const currentEmail = formEmail.trim().toLowerCase();
+        if (sessionEmail && currentEmail && sessionEmail === currentEmail) {
+          setOtpVerified(true);
+        }
+      } catch (_) {}
+    };
+    if (formEmail) checkActiveSession();
+  }, [formEmail]);
+
+  useEffect(() => {
     setPaymentFraction(0);
+    setUtrNumber('');
+    setIsPaymentPending(false);
     setTeamMembers({
       2: { name: '', email: '', phone: '', roll: '' },
       3: { name: '', email: '', phone: '', roll: '' },
@@ -499,59 +535,115 @@ export default function App() {
     }
   }, [activeEventData]);
 
+  // Generate a stable random fraction between 0.01 and 0.49 for manual payment reconciliation when arriving at payment step
   useEffect(() => {
-    // Generate a stable random fraction between 0.01 and 0.49 for verification when arriving at step
-    if (requiresPayment && activeStep === formTeamSize + 2 && paymentFraction === 0) {
+    const paymentStepIndex = formTeamSize + 3;
+    if (requiresPayment && activeStep === paymentStepIndex && paymentFraction === 0) {
        const randomCents = Math.floor(Math.random() * 49) + 1;
        setPaymentFraction(randomCents / 100);
     }
   }, [activeStep, formTeamSize, paymentFraction, requiresPayment]);
 
-  // Auto-polling for payment verification
-  useEffect(() => {
-    let intervalId;
-    if (requiresPayment && activeStep === formTeamSize + 2 && paymentFraction > 0 && !paymentVerified && !isVerifying) {
-      intervalId = setInterval(() => {
-        verifyPayment();
-      }, 8000); // Poll every 8 seconds
+  const handleSendOtp = useCallback(async () => {
+    const cleanEmail = formEmail.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      setOtpError('Please enter a valid email address first.');
+      return;
     }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [activeStep, formTeamSize, paymentFraction, paymentVerified, isVerifying, requiresPayment]);
+    if (otpCooldown > 0 || isSendingOtp) return;
 
-  const verifyPayment = async () => {
-    const generation = paymentVerificationGeneration.current;
-    setIsVerifying(true);
-    setPaymentError(null);
+    setIsSendingOtp(true);
+    setOtpError(null);
+    setOtpMessage(null);
+
     try {
-      const expectedAmount = expectedPaymentAmount;
-      const res = await fetch('/api/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: expectedAmount })
+      const { data, error } = await supabase.functions.invoke('participant-profile', {
+        body: {
+          action: 'send-otp',
+          email: cleanEmail,
+          purpose: 'registration',
+          name: formName.trim() || 'Participant'
+        }
       });
-      const data = await res.json();
-      if (generation === paymentVerificationGeneration.current && res.ok && data.verified) {
-        setPaymentVerified(true);
-      } else if (generation === paymentVerificationGeneration.current) {
-        setPaymentError(data.message || 'Payment not found. Try again in a minute.');
+
+      if (error || !data?.success) {
+        if (data?.cooldown_remaining) {
+          setOtpCooldown(data.cooldown_remaining);
+        }
+        setOtpError(data?.error || error?.message || 'Failed to send verification code. Please try again.');
+      } else {
+        setOtpSent(true);
+        setOtpMessage(`Verification code sent to ${cleanEmail}`);
+        setOtpCooldown(60);
       }
     } catch (err) {
-      if (generation === paymentVerificationGeneration.current) {
-        setPaymentError('Network error. Please try again.');
-      }
+      setOtpError(err.message || 'Network error while sending OTP.');
     } finally {
-      if (generation === paymentVerificationGeneration.current) setIsVerifying(false);
+      setIsSendingOtp(false);
+    }
+  }, [formEmail, formName, otpCooldown, isSendingOtp]);
+
+  const handleVerifyOtp = async (codeToVerify) => {
+    const code = (codeToVerify || otpCode || '').trim();
+    if (!code || code.length !== 6) {
+      setOtpError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+    const cleanEmail = formEmail.trim().toLowerCase();
+    setIsVerifyingOtp(true);
+    setOtpError(null);
+    setOtpMessage(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('participant-profile', {
+        body: {
+          action: 'verify-otp',
+          email: cleanEmail,
+          otp: code
+        }
+      });
+
+      if (error || !data?.success) {
+        setOtpError(data?.error || error?.message || 'Incorrect verification code. Please try again.');
+      } else {
+        if (data.token_hash) {
+          try {
+            await supabase.auth.verifyOtp({
+              token_hash: data.token_hash,
+              type: 'email'
+            });
+          } catch (_) {}
+        }
+        setOtpVerified(true);
+        setOtpMessage('Email verified successfully! You can now continue.');
+        localStorage.setItem('srishti_session', cleanEmail);
+      }
+    } catch (err) {
+      setOtpError(err.message || 'Error verifying code. Please try again.');
+    } finally {
+      setIsVerifyingOtp(false);
     }
   };
+
+  // Automatically trigger OTP dispatch when arriving at the OTP step
+  useEffect(() => {
+    const otpStepIndex = formTeamSize + 2;
+    if (activeStep === otpStepIndex && !otpSent && !otpVerified && formEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(formEmail.trim())) {
+        handleSendOtp();
+      }
+    }
+  }, [activeStep, formTeamSize, otpSent, otpVerified, formEmail, handleSendOtp]);
 
   const isStepValid = (step) => {
     if (activeEventData && isEventAlreadyRegistered(activeEventData)) return false;
     if (step === 1) return true;
     if (step === 2) {
       if (activeEventData && isEventAlreadyRegistered(activeEventData)) return false;
-      return formName.trim() !== '' && formCollege.trim() !== '' && formEmail.trim() !== '' && formPhone.trim() !== '';
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return formName.trim() !== '' && formCollege.trim() !== '' && emailRegex.test(formEmail.trim()) && formPhone.trim() !== '';
     }
     
     if (step > 2 && step <= formTeamSize + 1) {
@@ -561,7 +653,15 @@ export default function App() {
        return member.name.trim() !== '' && member.email.trim() !== '' && member.phone.trim() !== '';
     }
     
-    if (requiresPayment && step === formTeamSize + 2) return paymentVerified;
+    // OTP verification step
+    if (step === formTeamSize + 2) {
+      return otpVerified;
+    }
+
+    // Payment step (for paid events only)
+    if (requiresPayment && step === formTeamSize + 3) {
+      return utrNumber.trim().length >= 6;
+    }
     
     return true;
   };
@@ -647,6 +747,18 @@ export default function App() {
       return;
     }
 
+    if (requiresPayment && (!utrNumber.trim() || utrNumber.trim().length < 6)) {
+      alert('Please enter a valid UTR / Transaction Reference ID before submitting.');
+      setFormStatus('idle');
+      return;
+    }
+
+    if (!otpVerified) {
+      alert('Please verify your email with the 6-digit OTP before submitting registration.');
+      setFormStatus('idle');
+      return;
+    }
+
     try {
       const cleanEmail = formEmail.trim().toLowerCase();
       let participantPassCode = '';
@@ -666,7 +778,9 @@ export default function App() {
           ? activeEventData.id
           : `SRI27-${activeEventData.id.toUpperCase()}`,
         team_members: members,
-        payment_method: 'upi'
+        payment_method: requiresPayment ? 'upi' : 'waived',
+        payment_reference: requiresPayment ? utrNumber.trim() : null,
+        otp: otpCode.trim() || undefined
       };
 
       const { data: edgeData, error: edgeError } = await supabase.functions.invoke('web-register', {
@@ -689,7 +803,9 @@ export default function App() {
       };
       participantPassCode = pData.participant_code;
       const resolvedEventId = edgeData.data.event?.id || activeEventData?.dbId || null;
-      const registrationStatus = edgeData.data.payment_status === 'verified' ? 'VERIFIED' : 'PAYMENT PENDING';
+      const paymentStatus = edgeData.data.payment_status;
+      const isVerified = paymentStatus === 'verified';
+      const registrationStatus = isVerified ? 'VERIFIED' : 'PAYMENT PENDING';
 
       // Save user profile locally
       if (pData) {
@@ -703,121 +819,108 @@ export default function App() {
 
       // Keep this device's ticket cache in sync. Private registration rows are read by
       // authenticated users or admins, never by an anonymous email lookup.
-      let allEventsList = [activeEventData.label];
       let userAllRegs = [];
       try {
         const cached = JSON.parse(localStorage.getItem(`srishti_user_registrations_${cleanEmail}`) || '[]');
         if (Array.isArray(cached)) userAllRegs = cached;
       } catch (_) {}
-      if (userAllRegs.length > 0) {
-        const mapped = userAllRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
-        allEventsList = [...new Set([...mapped, ...allEventsList])];
-      }
-      {
-        const addedReg = {
-          event_id: resolvedEventId,
+
+      const addedReg = {
+        event_id: resolvedEventId,
+        event_code: activeEventData.id,
+        event_name: activeEventData.label,
+        status: 'registered',
+        payment_status: paymentStatus,
+        payment_reference: requiresPayment ? utrNumber.trim() : null,
+        events: {
+          name: activeEventData.label,
           event_code: activeEventData.id,
-          event_name: activeEventData.label,
-          status: 'registered',
-          payment_status: edgeData.data.payment_status,
-          events: {
-            name: activeEventData.label,
-            event_code: activeEventData.id,
-            venue: activeEventData.venue || 'Campus Venue',
-            date: activeEventData.date || 'Dec 10, 2026',
-            start_time: activeEventData.time || '10:00 AM'
-          }
-        };
-        userAllRegs = [...userAllRegs.filter(r => r.event_id !== resolvedEventId), addedReg];
-        setUserRegistrations(userAllRegs);
-      }
+          venue: activeEventData.venue || 'Campus Venue',
+          date: activeEventData.date || 'Dec 10, 2026',
+          start_time: activeEventData.time || '10:00 AM'
+        }
+      };
+      userAllRegs = [...userAllRegs.filter(r => r.event_id !== resolvedEventId), addedReg];
+      setUserRegistrations(userAllRegs);
 
       try {
         localStorage.setItem(`srishti_user_registrations_${cleanEmail}`, JSON.stringify(userAllRegs));
       } catch (_) {}
 
-
-      // Server-authoritative QR code with cryptographic pass token
-      let qrCodeString = participantPassCode;
-      try {
-        const { generatePassPayload } = await import('./utils/cryptoSecurity');
-        qrCodeString = generatePassPayload(participantPassCode, pData?.pass_token || '', formName.trim());
-      } catch (_) {}
-
-      const qrDataUrl = await QRCode.toDataURL(qrCodeString, {
-         width: 320,
-         margin: 2,
-         errorCorrectionLevel: 'H',
-         color: { dark: '#020617', light: '#ffffff' }
-      });
-      setQrCodeDataUrl(qrDataUrl);
       setParticipantCode(participantPassCode);
 
-      // Generate exact 1:1 high-resolution PNG image of the card
-      let cardPng = null;
-      try {
-        cardPng = await generateCardImagePng({
+      // ONLY FOR VERIFIED / FREE EVENTS:
+      // Generate confirmed entry pass, generate card PNG, send pass email
+      if (isVerified) {
+        let allEventsList = [activeEventData.label];
+        const mapped = userAllRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
+        allEventsList = [...new Set([...mapped, ...allEventsList])];
+
+        let qrCodeString = participantPassCode;
+        try {
+          const { generatePassPayload } = await import('./utils/cryptoSecurity');
+          qrCodeString = generatePassPayload(participantPassCode, pData?.pass_token || '', formName.trim());
+        } catch (_) {}
+
+        const qrDataUrl = await QRCode.toDataURL(qrCodeString, {
+           width: 320,
+           margin: 2,
+           errorCorrectionLevel: 'H',
+           color: { dark: '#020617', light: '#ffffff' }
+        });
+        setQrCodeDataUrl(qrDataUrl);
+
+        let cardPng = null;
+        try {
+          cardPng = await generateCardImagePng({
+            attendeeName: formName,
+            college: formCollege,
+            passCode: participantPassCode,
+            passToken: pData?.pass_token || '',
+            events: allEventsList,
+            isVerified: true,
+            statusText: 'VERIFIED'
+          });
+        } catch (pngErr) {
+          console.warn('PNG card generation notice:', pngErr);
+        }
+
+        const ticketHtml = generateEntryPassEmailHtml({
           attendeeName: formName,
           college: formCollege,
           passCode: participantPassCode,
-          passToken: pData?.pass_token || '',
-          events: allEventsList,
-          isVerified: registrationStatus === 'VERIFIED',
-          statusText: registrationStatus
+          eventName: activeEventData.label,
+          status: 'VERIFIED'
         });
-      } catch (pngErr) {
-        console.warn('PNG card generation notice:', pngErr);
-      }
 
-      // Send the exact cybernetic digital entry pass via email to the participant
-      const ticketHtml = generateEntryPassEmailHtml({
-        attendeeName: formName,
-        college: formCollege,
-        passCode: participantPassCode,
-        eventName: activeEventData.label,
-        status: registrationStatus
-      });
+        try {
+          await supabase.functions.invoke('participant-profile', {
+            body: {
+              action: 'send-registration-pass',
+              to: formEmail,
+              subject: `Your Srishti 2.7 Digital Entry Pass — ${formName}`,
+              html: ticketHtml,
+              image: cardPng
+            }
+          });
+        } catch (emailErr) {
+          console.error('Failed to send registration pass email:', emailErr);
+        }
 
-      // Admin notification email
-      const amountPaid = expectedPaymentAmount.toFixed(2);
-      const adminHtml = `
-        <div style="font-family: sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #10b981;">New Registration Received!</h2>
-          <p><strong>Event:</strong> ${activeEventData.label}</p>
-          <p><strong>Lead Name:</strong> ${formName}</p>
-          <p><strong>College:</strong> ${formCollege}</p>
-          <p><strong>Phone:</strong> ${formPhone}</p>
-          <p><strong>Email:</strong> ${formEmail}</p>
-          <p><strong>Team Size:</strong> ${formTeamSize}</p>
-          <p><strong>Registration status:</strong> ${registrationStatus}</p>
-          <div style="background: #f0fdf4; border: 1px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 8px;">
-            <h3 style="margin: 0; color: #047857;">Expected Payment</h3>
-            <p style="font-size: 24px; margin: 10px 0; font-weight: bold;">₹${amountPaid}</p>
-            <p style="margin: 0; font-size: 14px;">Look for this exact fractional amount in your bank history to verify the transaction.</p>
-          </div>
-        </div>
-      `;
-
-      try {
-        // Send to participant with inline high-res card image via server-side Edge Function
-        await supabase.functions.invoke('participant-profile', {
-          body: {
-            action: 'send-registration-pass',
-            to: formEmail,
-            subject: `Your Srishti 2.7 Digital Entry Pass — ${formName}`,
-            html: ticketHtml,
-            image: cardPng
-          }
-        });
-      } catch (emailErr) {
-        console.error('Failed to send registration pass email:', emailErr);
+        setIsPaymentPending(false);
+      } else {
+        // FOR PAID / PENDING EVENT:
+        // Do NOT generate entry pass QR or card PNG.
+        // Do NOT send verified entry pass email.
+        setQrCodeDataUrl('');
+        setIsPaymentPending(true);
       }
 
       setFormStatus('done');
       setIsRegistered(true);
     } catch (error) {
       console.error('Error saving registration:', error);
-      alert('There was an error saving your registration to the database. Please contact support.');
+      alert(error.message || 'There was an error saving your registration to the database. Please contact support.');
       setFormStatus('idle'); // Let them try again
     }
   };
@@ -1691,72 +1794,249 @@ export default function App() {
                                 </Step>
                               );
                             })}
+                            {/* Step: OTP Verification (Always required for both free and paid events) */}
+                            <Step>
+                              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                                <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.4rem', marginBottom: '0.75rem' }}>
+                                  Email Verification
+                                </h4>
+                                <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+                                  To secure your registration, enter the 6-digit verification code sent to:
+                                </p>
+                                <div style={{
+                                  display: 'inline-block',
+                                  padding: '0.4rem 1rem',
+                                  background: 'rgba(56, 189, 248, 0.1)',
+                                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                                  borderRadius: '8px',
+                                  color: '#38bdf8',
+                                  fontFamily: 'var(--font-mono)',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.95rem',
+                                  marginBottom: '1.25rem'
+                                }}>
+                                  {formEmail || 'your email'}
+                                </div>
+
+                                {otpVerified ? (
+                                  <div style={{
+                                    color: '#10b981',
+                                    padding: '1.25rem',
+                                    border: '1px solid #10b981',
+                                    borderRadius: '10px',
+                                    background: 'rgba(16, 185, 129, 0.1)',
+                                    maxWidth: '420px',
+                                    margin: '0 auto'
+                                  }}>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.35rem' }}>
+                                      ✓ Email Verified Successfully!
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>
+                                      {requiresPayment ? 'Click Continue to proceed to the payment step.' : 'Click Complete to confirm your registration.'}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div style={{ maxWidth: '420px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {!otpSent ? (
+                                      <button
+                                        type="button"
+                                        onClick={handleSendOtp}
+                                        disabled={isSendingOtp}
+                                        style={{
+                                          background: '#38bdf8',
+                                          color: '#0f172a',
+                                          border: 'none',
+                                          padding: '0.75rem 1.5rem',
+                                          borderRadius: '8px',
+                                          fontWeight: 'bold',
+                                          cursor: isSendingOtp ? 'not-allowed' : 'pointer',
+                                          fontFamily: 'var(--font-mono)'
+                                        }}
+                                      >
+                                        {isSendingOtp ? 'SENDING CODE...' : 'SEND VERIFICATION CODE'}
+                                      </button>
+                                    ) : (
+                                      <>
+                                        <div className="form-group-item">
+                                          <label className="field-caption" style={{ color: '#cbd5e1' }}>Enter 6-Digit OTP</label>
+                                          <input
+                                            type="text"
+                                            maxLength={6}
+                                            className="app-input"
+                                            placeholder="123456"
+                                            value={otpCode}
+                                            onChange={(e) => {
+                                              const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                              setOtpCode(val);
+                                              if (val.length === 6) {
+                                                handleVerifyOtp(val);
+                                              }
+                                            }}
+                                            style={{
+                                              textAlign: 'center',
+                                              fontFamily: 'var(--font-mono)',
+                                              fontSize: '1.5rem',
+                                              letterSpacing: '0.4em',
+                                              fontWeight: 'bold'
+                                            }}
+                                          />
+                                        </div>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => handleVerifyOtp()}
+                                          disabled={isVerifyingOtp || otpCode.length !== 6}
+                                          style={{
+                                            background: otpCode.length === 6 ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
+                                            color: otpCode.length === 6 ? '#ffffff' : '#64748b',
+                                            border: 'none',
+                                            padding: '0.75rem 1.5rem',
+                                            borderRadius: '8px',
+                                            fontWeight: 'bold',
+                                            cursor: (isVerifyingOtp || otpCode.length !== 6) ? 'not-allowed' : 'pointer',
+                                            fontFamily: 'var(--font-mono)'
+                                          }}
+                                        >
+                                          {isVerifyingOtp ? 'VERIFYING...' : 'VERIFY CODE'}
+                                        </button>
+
+                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                          <span style={{ color: '#64748b' }}>Didn't receive the code?</span>
+                                          <button
+                                            type="button"
+                                            onClick={handleSendOtp}
+                                            disabled={otpCooldown > 0 || isSendingOtp}
+                                            style={{
+                                              background: 'transparent',
+                                              border: 'none',
+                                              color: otpCooldown > 0 ? '#64748b' : '#38bdf8',
+                                              cursor: otpCooldown > 0 ? 'not-allowed' : 'pointer',
+                                              fontWeight: 'bold',
+                                              fontFamily: 'var(--font-mono)',
+                                              padding: 0
+                                            }}
+                                          >
+                                            {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : 'Resend Code'}
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+
+                                    {otpMessage && (
+                                      <p style={{ color: '#10b981', fontSize: '0.85rem', margin: '0.5rem 0 0 0' }}>{otpMessage}</p>
+                                    )}
+                                    {otpError && (
+                                      <p style={{ color: '#ef4444', fontSize: '0.85rem', margin: '0.5rem 0 0 0' }}>{otpError}</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </Step>
+
+                            {/* Step: Payment Required (Paid events only) */}
                             {requiresPayment && (
                             <Step>
                               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                                <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Payment Verification</h4>
-                                <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>Scan the QR code to pay the exact verification amount below:</p>
+                                <h4 style={{ fontFamily: 'var(--font-akira)', color: '#fff', fontSize: '1.4rem', marginBottom: '0.5rem' }}>
+                                  Payment Required
+                                </h4>
+                                <p style={{ color: '#94a3b8', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
+                                  Pay ₹{expectedPaymentAmount.toFixed(2)} to the FEST payment account using the QR code or UPI link below:
+                                </p>
                                 
-                                <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'var(--font-mono)', marginBottom: '0.5rem', background: 'rgba(16, 185, 129, 0.1)', padding: '0.5rem 1.5rem', borderRadius: '12px', display: 'inline-block' }}>
-                                  ₹{expectedPaymentAmount.toFixed(2)}
-                                </div>
-                                <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>The random fraction ensures instant automatic verification.</p>
-                                
-                                {paymentVerified ? (
-                                  <div style={{ color: '#10b981', padding: '1rem', border: '1px solid #10b981', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)' }}>
-                                    Payment Verified successfully! You can now complete registration.
+                                <div style={{
+                                  display: 'inline-flex',
+                                  flexDirection: 'column',
+                                  gap: '0.35rem',
+                                  background: 'rgba(16, 185, 129, 0.08)',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                                  borderRadius: '12px',
+                                  padding: '0.75rem 1.75rem',
+                                  marginBottom: '1.25rem'
+                                }}>
+                                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
+                                    REGISTRATION FEE: ₹{eventRegistrationFee} • EXACT PAYABLE AMOUNT:
                                   </div>
-                                ) : (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
-                                    
-                                    <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block' }}>
-                                      {(() => {
-                                        const amount = expectedPaymentAmount.toFixed(2);
-                                        const upiId = import.meta.env.VITE_UPI_ID || '9188811692@fam';
-                                        
-                                        // Clean the strings so they are safe for the URI
-                                        const safeEventName = activeEventData?.label?.substring(0, 20) || 'Event';
-                                        const safeLeadName = formName?.substring(0, 15) || 'Team';
-                                        const transactionNote = encodeURIComponent(`Knightopp: ${safeEventName} - ${safeLeadName}`);
-                                        
-                                        const upiString = `upi://pay?pa=${upiId}&pn=Event Registration&tn=${transactionNote}&am=${amount}&cu=INR`;
-                                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
-                                        return (
-                                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                                            <img src={qrUrl} alt="Payment QR" style={{ width: '200px', height: '200px', display: 'block' }} />
-                                            
-                                            {/* Mobile deep link button */}
-                                            <a 
-                                              href={upiString}
-                                              style={{ 
-                                                display: 'inline-block',
-                                                background: '#10b981', 
-                                                color: '#fff', 
-                                                textDecoration: 'none',
-                                                padding: '0.75rem 1.5rem', 
-                                                borderRadius: '8px', 
-                                                fontWeight: 'bold', 
-                                                fontFamily: 'var(--font-mono)',
-                                                width: '100%',
-                                                textAlign: 'center'
-                                              }}
-                                            >
-                                              PAY ON THIS DEVICE
-                                            </a>
-                                          </div>
-                                        );
-                                      })()}
+                                  <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#10b981', fontFamily: 'var(--font-mono)' }}>
+                                    ₹{expectedPaymentAmount.toFixed(2)}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                    (Exact fractional amount ensures quick reconciliation by coordinators)
+                                  </div>
+                                </div>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'center' }}>
+                                  <div style={{ background: '#fff', padding: '1rem', borderRadius: '12px', display: 'inline-block' }}>
+                                    {(() => {
+                                      const amount = expectedPaymentAmount.toFixed(2);
+                                      const upiId = import.meta.env.VITE_UPI_ID || '9188811692@fam';
+                                      
+                                      const safeEventName = activeEventData?.label?.substring(0, 20) || 'Event';
+                                      const safeLeadName = formName?.substring(0, 15) || 'Team';
+                                      const transactionNote = encodeURIComponent(`Knightopp: ${safeEventName} - ${safeLeadName}`);
+                                      
+                                      const upiString = `upi://pay?pa=${upiId}&pn=SRISHTI FEST&tn=${transactionNote}&am=${amount}&cu=INR`;
+                                      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
+                                      return (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                                          <img src={qrUrl} alt="Payment QR" style={{ width: '200px', height: '200px', display: 'block' }} />
+                                          
+                                          {/* Mobile deep link button */}
+                                          <a 
+                                            href={upiString}
+                                            style={{ 
+                                              display: 'inline-block',
+                                              background: '#10b981', 
+                                              color: '#fff', 
+                                              textDecoration: 'none',
+                                              padding: '0.75rem 1.5rem', 
+                                              borderRadius: '8px', 
+                                              fontWeight: 'bold', 
+                                              fontFamily: 'var(--font-mono)',
+                                              width: '100%',
+                                              textAlign: 'center'
+                                            }}
+                                          >
+                                            PAY ON THIS DEVICE
+                                          </a>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+
+                                  <div style={{ width: '100%', maxWidth: '440px', textAlign: 'left' }}>
+                                    <div className="form-group-item">
+                                      <label className="field-caption" style={{ color: '#cbd5e1' }}>
+                                        UTR / Transaction Reference ID <span style={{ color: '#ef4444' }}>*</span>
+                                      </label>
+                                      <input
+                                        type="text"
+                                        required
+                                        className="app-input"
+                                        placeholder="e.g. 12-digit UTR (e.g. 428719284729)"
+                                        value={utrNumber}
+                                        onChange={(e) => setUtrNumber(e.target.value)}
+                                        style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem' }}
+                                      />
+                                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.4rem' }}>
+                                        Enter the 12-digit UTR or Transaction ID from your payment app (Google Pay, PhonePe, Paytm, etc.).
+                                      </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#cbd5e1', fontFamily: 'var(--font-mono)' }}>
-                                      <div className="spinner" style={{ width: '16px', height: '16px', border: '2px solid #38bdf8', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                      {isVerifying ? 'Checking payment...' : 'Waiting for payment...'}
+                                    <div style={{
+                                      marginTop: '1rem',
+                                      padding: '0.85rem',
+                                      borderRadius: '8px',
+                                      background: 'rgba(245, 158, 11, 0.08)',
+                                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                                      color: '#fbbf24',
+                                      fontSize: '0.8rem',
+                                      lineHeight: 1.45
+                                    }}>
+                                      <strong>Note:</strong> Your registration will remain pending until the payment is verified by the FEST coordinator. Once approved, your entry pass will be issued.
                                     </div>
-                                    <style>{`
-                                      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                                    `}</style>
                                   </div>
-                                )}
+                                </div>
                               </div>
                             </Step>
                             )}
@@ -1764,7 +2044,133 @@ export default function App() {
                           )
                         ) : (
                           <div style={{ textAlign: 'center', padding: '1rem 0', display: 'flex', justifyContent: 'center' }}>
-                            {isRegistered && qrCodeDataUrl ? (
+                            {isRegistered && isPaymentPending ? (
+                              <div style={{
+                                width: '100%',
+                                maxWidth: '560px',
+                                background: '#0c0d14',
+                                border: '1px solid rgba(245, 158, 11, 0.35)',
+                                borderRadius: '16px',
+                                padding: '2.5rem 1.75rem',
+                                textAlign: 'center',
+                                boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+                                margin: '0 auto'
+                              }}>
+                                <div style={{
+                                  width: '56px',
+                                  height: '56px',
+                                  borderRadius: '50%',
+                                  background: 'rgba(245, 158, 11, 0.15)',
+                                  border: '2px solid #f59e0b',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  margin: '0 auto 1.25rem'
+                                }}>
+                                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                  </svg>
+                                </div>
+                                
+                                <div style={{
+                                  display: 'inline-block',
+                                  padding: '0.35rem 0.85rem',
+                                  borderRadius: '20px',
+                                  background: 'rgba(245, 158, 11, 0.15)',
+                                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                                  color: '#fbbf24',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 'bold',
+                                  fontFamily: 'var(--font-mono)',
+                                  letterSpacing: '0.08em',
+                                  marginBottom: '0.75rem'
+                                }}>
+                                  PAYMENT PENDING VERIFICATION
+                                </div>
+
+                                <h3 style={{
+                                  fontFamily: 'var(--font-akira)',
+                                  fontSize: '1.4rem',
+                                  color: '#ffffff',
+                                  margin: '0 0 0.5rem 0'
+                                }}>
+                                  Registration Submitted
+                                </h3>
+
+                                <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                                  Your payment details have been submitted successfully.<br />
+                                  Your registration is pending payment verification by the FEST coordinator.
+                                </p>
+
+                                <div style={{
+                                  background: 'rgba(255, 255, 255, 0.03)',
+                                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                                  borderRadius: '12px',
+                                  padding: '1rem',
+                                  textAlign: 'left',
+                                  marginBottom: '1.5rem',
+                                  fontFamily: 'var(--font-mono)',
+                                  fontSize: '0.82rem'
+                                }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                    <span style={{ color: '#64748b' }}>Event:</span>
+                                    <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{activeEventData?.label}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                    <span style={{ color: '#64748b' }}>Amount:</span>
+                                    <span style={{ color: '#10b981', fontWeight: 'bold' }}>₹{expectedPaymentAmount.toFixed(2)}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                    <span style={{ color: '#64748b' }}>UTR / Reference:</span>
+                                    <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{utrNumber}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: '#64748b' }}>Status:</span>
+                                    <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>Awaiting Coordinator Approval</span>
+                                  </div>
+                                </div>
+
+                                <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                                  Once your payment is verified, your official entry pass will be issued and viewable in your Participant Profile.
+                                </p>
+
+                                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate('/profile')}
+                                    style={{
+                                      background: '#38bdf8',
+                                      color: '#0f172a',
+                                      border: 'none',
+                                      padding: '0.75rem 1.5rem',
+                                      borderRadius: '8px',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer',
+                                      fontFamily: 'var(--font-mono)'
+                                    }}
+                                  >
+                                    View Profile
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate('/register')}
+                                    style={{
+                                      background: 'rgba(255, 255, 255, 0.08)',
+                                      color: '#ffffff',
+                                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                                      padding: '0.75rem 1.5rem',
+                                      borderRadius: '8px',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer',
+                                      fontFamily: 'var(--font-mono)'
+                                    }}
+                                  >
+                                    Browse Events
+                                  </button>
+                                </div>
+                              </div>
+                            ) : isRegistered && qrCodeDataUrl ? (
                               <TearTicket
                                 orientation="horizontal"
                                 scrim={false}

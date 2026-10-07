@@ -356,9 +356,11 @@ export default function ProfilePage() {
     const passCode = participantData?.participant_code || registrations[0]?.participant_code || 'SRI27-PASS';
     const passToken = participantData?.pass_token || registrations[0]?.pass_token || '';
     const events = registrations.map(r => r.events?.name || r.event_name).filter(Boolean);
-    const isVerified = registrations.some(r => r.payment_status === 'verified' || r.status === 'verified') || !!participantData?.id;
-    const statusText = isVerified ? 'VERIFIED' : (registrations.length === 0 ? 'UNLOCKED' : 'PENDING');
-    return { attendeeName, college, passCode, passToken, events, isVerified, statusText };
+    const hasVerifiedRegistration = registrations.length > 0 && registrations.some(r => r.payment_status === 'verified' || r.status === 'verified');
+    const hasPendingPayment = registrations.some(r => r.payment_status === 'pending');
+    const isVerified = hasVerifiedRegistration;
+    const statusText = isVerified ? 'VERIFIED' : (hasPendingPayment ? 'PAYMENT PENDING' : (registrations.length === 0 ? 'LOCKED' : 'PENDING'));
+    return { attendeeName, college, passCode, passToken, events, isVerified, statusText, hasPendingPayment };
   };
 
   const handleEmailPassToUser = async () => {
@@ -374,6 +376,10 @@ export default function ProfilePage() {
       return;
     }
     const data = getPassData();
+    if (!data.isVerified) {
+      alert('Your registration is pending payment verification by the FEST coordinator. Your entry pass will be issued once payment is approved.');
+      return;
+    }
     setEmailingPass(true);
     setEmailPassMsg(null);
 
@@ -427,6 +433,10 @@ export default function ProfilePage() {
     }
 
     const data = getPassData();
+    if (!data.isVerified) {
+      alert('Your registration is pending payment verification by the FEST coordinator. Your entry pass will be issued once payment is approved.');
+      return;
+    }
     setDownloadingPass(true);
     try {
       const cardPng = await generateCardImagePng({
@@ -839,7 +849,7 @@ export default function ProfilePage() {
                           </TearTicket>
                           </div>
 
-                          {!hasRegistered && (
+                          {!hasRegistered ? (
                             <div style={{
                               position: 'absolute',
                               inset: 0,
@@ -924,7 +934,75 @@ export default function ProfilePage() {
                                 Browse Events &amp; Register Now →
                               </button>
                             </div>
-                          )}
+                          ) : !isVerified ? (
+                            <div style={{
+                              position: 'absolute',
+                              inset: 0,
+                              width: '100%',
+                              height: '100%',
+                              minHeight: '280px',
+                              background: 'rgba(5, 8, 16, 0.88)',
+                              backdropFilter: 'blur(10px)',
+                              WebkitBackdropFilter: 'blur(10px)',
+                              borderRadius: '16px',
+                              border: '1px dashed rgba(245, 158, 11, 0.45)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '1.5rem',
+                              textAlign: 'center',
+                              zIndex: 10,
+                              boxSizing: 'border-box',
+                              boxShadow: '0 0 35px rgba(245, 158, 11, 0.2)'
+                            }}>
+                              <div style={{
+                                width: '52px',
+                                height: '52px',
+                                borderRadius: '50%',
+                                background: 'rgba(245, 158, 11, 0.15)',
+                                border: '1px solid rgba(245, 158, 11, 0.5)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginBottom: '0.85rem',
+                                boxShadow: '0 0 20px rgba(245, 158, 11, 0.3)'
+                              }}>
+                                <FiLock size={26} color="#f59e0b" />
+                              </div>
+
+                              <div style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: '0.78rem',
+                                color: '#f59e0b',
+                                letterSpacing: '0.18em',
+                                fontWeight: 'bold',
+                                marginBottom: '0.35rem'
+                              }}>
+                                PAYMENT VERIFICATION PENDING // PASS LOCKED
+                              </div>
+
+                              <h4 style={{
+                                fontFamily: 'var(--font-akira)',
+                                fontSize: '1.15rem',
+                                color: '#ffffff',
+                                margin: '0 0 0.45rem 0',
+                                letterSpacing: '0.04em'
+                              }}>
+                                PAYMENT PENDING APPROVAL
+                              </h4>
+
+                              <p style={{
+                                color: '#94a3b8',
+                                fontSize: '0.86rem',
+                                maxWidth: '440px',
+                                lineHeight: 1.45,
+                                margin: '0 0 1.15rem 0'
+                              }}>
+                                Your registration details have been submitted and are awaiting coordinator verification. Once your payment reference is verified, your official entry pass and download will unlock automatically.
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
 
                         {/* Send Pass & Download Actions */}
