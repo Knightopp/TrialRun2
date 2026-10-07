@@ -212,6 +212,19 @@ function hexToRgb(hex) {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
+export function isWebGLSupported() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
 class MorphEngine {
   constructor(container, { items, startIndex, reducedMotion, getOptions, onIndexChange, dprCap }) {
     this.container = container;
@@ -227,13 +240,20 @@ class MorphEngine {
     this.shownIndex = startIndex;
     this.tween = null;
 
-    this.renderer = new Renderer({
-      alpha: false,
-      antialias: true,
-      dpr: Math.min(window.devicePixelRatio || 1, dprCap)
-    });
-    this.gl = this.renderer.gl;
-    this.gl.clearColor(0, 0, 0, 1);
+    try {
+      this.renderer = new Renderer({
+        alpha: false,
+        antialias: true,
+        dpr: Math.min(window.devicePixelRatio || 1, dprCap)
+      });
+      this.gl = this.renderer.gl;
+      if (!this.gl) throw new Error('WebGL context is null');
+      this.gl.clearColor(0, 0, 0, 1);
+    } catch (e) {
+      this.gl = null;
+      this.renderer = null;
+      throw e;
+    }
 
     this.canvas = this.gl.canvas;
     this.canvas.className = 'morph-slider-canvas';
@@ -460,15 +480,25 @@ class MorphEngine {
   destroy() {
     cancelAnimationFrame(this.raf);
     if (this.tween) this.tween.kill();
-    this.resizeObserver.disconnect();
-    this.canvas.removeEventListener('webglcontextlost', this.boundContextLost);
-    this.textures.forEach(tex => {
-      if (tex && tex.texture) this.gl.deleteTexture(tex.texture);
-    });
-    if (this.program && this.program.program) this.gl.deleteProgram(this.program.program);
-    const ext = this.gl.getExtension('WEBGL_lose_context');
-    if (ext) ext.loseContext();
-    if (this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
+    if (this.resizeObserver) this.resizeObserver.disconnect();
+    if (this.canvas) {
+      this.canvas.removeEventListener('webglcontextlost', this.boundContextLost);
+      if (this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
+    }
+    if (this.gl) {
+      this.textures?.forEach(tex => {
+        if (tex && tex.texture) {
+          try { this.gl.deleteTexture(tex.texture); } catch (_) {}
+        }
+      });
+      if (this.program && this.program.program) {
+        try { this.gl.deleteProgram(this.program.program); } catch (_) {}
+      }
+      try {
+        const ext = this.gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+      } catch (_) {}
+    }
   }
 }
 
@@ -497,39 +527,73 @@ export default function MorphSlider({
   const engineRef = useRef(null);
   const [index, setIndex] = useState(startIndex);
   const [hovering, setHovering] = useState(false);
+  const [hasWebGL, setHasWebGL] = useState(() => isWebGLSupported());
 
   const optsRef = useRef();
   optsRef.current = { transition, duration, ease, intensity, scale, aberration, drift, overlayColor, loop };
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
+
+    if (!isWebGLSupported()) {
+      setHasWebGL(false);
+      return undefined;
+    }
+
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const engine = new MorphEngine(containerRef.current, {
-      items,
-      startIndex,
-      reducedMotion,
-      dprCap: 2,
-      getOptions: () => optsRef.current,
-      onIndexChange: setIndex
-    });
-    engineRef.current = engine;
-    setIndex(startIndex);
+    try {
+      const engine = new MorphEngine(containerRef.current, {
+        items,
+        startIndex,
+        reducedMotion,
+        dprCap: 2,
+        getOptions: () => optsRef.current,
+        onIndexChange: setIndex
+      });
+      engineRef.current = engine;
+      setIndex(startIndex);
+      setHasWebGL(true);
 
-    return () => {
-      engine.destroy();
+      return () => {
+        engine.destroy();
+        engineRef.current = null;
+      };
+    } catch (err) {
+      console.warn('MorphSlider: WebGL initialization failed, falling back to CSS carousel.', err);
+      setHasWebGL(false);
       engineRef.current = null;
-    };
+      return undefined;
+    }
   }, [items, startIndex]);
 
-  const handleNext = useCallback(() => engineRef.current?.next(), []);
-  const handlePrev = useCallback(() => engineRef.current?.prev(), []);
+  const handleNext = useCallback(() => {
+    if (engineRef.current) {
+      engineRef.current.next();
+    } else {
+      setIndex(prev => (prev + 1) % (items.length || 1));
+    }
+  }, [items.length]);
+
+  const handlePrev = useCallback(() => {
+    if (engineRef.current) {
+      engineRef.current.prev();
+    } else {
+      setIndex(prev => (prev - 1 + (items.length || 1)) % (items.length || 1));
+    }
+  }, [items.length]);
 
   useEffect(() => {
     if (!autoplay || hovering) return undefined;
-    const id = setTimeout(() => engineRef.current?.next(), Math.max(autoplayDelay, 1) * 1000);
+    const id = setTimeout(() => {
+      if (engineRef.current) {
+        engineRef.current.next();
+      } else {
+        setIndex(prev => (prev + 1) % (items.length || 1));
+      }
+    }, Math.max(autoplayDelay, 1) * 1000);
     return () => clearTimeout(id);
-  }, [autoplay, autoplayDelay, hovering, index]);
+  }, [autoplay, autoplayDelay, hovering, index, items.length]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -611,7 +675,38 @@ export default function MorphSlider({
         aria-label="Image morph slider"
         tabIndex={0}
         onKeyDown={onKeyDown}
-      />
+      >
+        {!hasWebGL && (
+          <div
+            className="morph-slider-fallback-container"
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              overflow: 'hidden',
+              borderRadius: 'inherit'
+            }}
+          >
+            {items.map((item, i) => (
+              <img
+                key={i}
+                src={item.image}
+                alt={item.caption || `Slide ${i + 1}`}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  opacity: i === index ? 1 : 0,
+                  transition: 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  pointerEvents: 'none'
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {showCaptions && hasCaptions && (
         <div className="morph-slider-caption" aria-live="polite">
@@ -670,8 +765,12 @@ export default function MorphSlider({
               className={`morph-slider-dot ${i === index ? 'is-active' : ''}`}
               onClick={() => {
                 const engine = engineRef.current;
-                if (!engine || i === index) return;
-                engine.goTo(i > index ? 1 : -1);
+                if (engine) {
+                  if (i === index) return;
+                  engine.goTo(i > index ? 1 : -1);
+                } else {
+                  setIndex(i);
+                }
               }}
             />
           ))}

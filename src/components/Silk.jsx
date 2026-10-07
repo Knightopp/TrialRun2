@@ -2,8 +2,65 @@
 
 /* eslint-disable react/no-unknown-property */
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { forwardRef, useRef, useMemo, useLayoutEffect, useEffect } from 'react';
+import { forwardRef, useRef, useMemo, useLayoutEffect, useEffect, useState, Component } from 'react';
 import { Color } from 'three';
+
+export function isWebGLSupported() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
+export const SilkFallback = ({ color = '#0a192f', style = {} }) => (
+  <div
+    className="silk-fallback-bg"
+    style={{
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      background: `radial-gradient(circle at 60% 40%, ${color} 0%, #030712 85%)`,
+      pointerEvents: 'none',
+      overflow: 'hidden',
+      ...style
+    }}
+  >
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(ellipse at 25% 75%, rgba(56, 189, 248, 0.08), transparent 60%)',
+        opacity: 0.85
+      }}
+    />
+  </div>
+);
+
+class SilkCanvasErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err) {
+    console.warn('Silk Canvas context creation failed, using CSS fallback:', err);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 const hexToNormalizedRGB = hex => {
   hex = hex.replace('#', '');
@@ -106,7 +163,7 @@ const SilkPlane = forwardRef(function SilkPlane({ uniforms }, ref) {
 });
 SilkPlane.displayName = 'SilkPlane';
 
-const Silk = ({ speed = 5, scale = 1, color = '#7B7481', noiseIntensity = 1.5, rotation = 0, lightMode = false, dpr = [1, 2] }) => {
+const SilkContent = ({ speed, scale, color, noiseIntensity, rotation, lightMode }) => {
   const meshRef = useRef();
 
   const uniforms = useMemo(
@@ -132,10 +189,29 @@ const Silk = ({ speed = 5, scale = 1, color = '#7B7481', noiseIntensity = 1.5, r
     uniforms.uLightMode.value = lightMode ? 1 : 0;
   }, [speed, scale, noiseIntensity, color, rotation, lightMode, uniforms]);
 
+  return <SilkPlane ref={meshRef} uniforms={uniforms} />;
+};
+
+const Silk = ({ speed = 5, scale = 1, color = '#7B7481', noiseIntensity = 1.5, rotation = 0, lightMode = false, dpr = [1, 2], style }) => {
+  const [hasWebGL] = useState(() => isWebGLSupported());
+
+  if (!hasWebGL) {
+    return <SilkFallback color={color} style={style} />;
+  }
+
   return (
-    <Canvas dpr={dpr} frameloop="always">
-      <SilkPlane ref={meshRef} uniforms={uniforms} />
-    </Canvas>
+    <SilkCanvasErrorBoundary fallback={<SilkFallback color={color} style={style} />}>
+      <Canvas dpr={dpr} frameloop="always" style={style}>
+        <SilkContent
+          speed={speed}
+          scale={scale}
+          color={color}
+          noiseIntensity={noiseIntensity}
+          rotation={rotation}
+          lightMode={lightMode}
+        />
+      </Canvas>
+    </SilkCanvasErrorBoundary>
   );
 };
 

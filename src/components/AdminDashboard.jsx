@@ -11,6 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { generateCardImagePng } from '../utils/cardImageGenerator';
 import SideRays from './SideRays';
+import SafeVisual from './SafeVisual';
 import AdminAnalytics from './AdminAnalytics';
 import { getAuditLogs, clearAuditLogs, exportLogsAsCsv, exportLogsAsJson, logActivity, parseLocationTelemetryPayload } from '../utils/auditLogger';
 import './AdminDashboard.css';
@@ -1195,19 +1196,21 @@ export default function AdminDashboard() {
       <div className="admin-auth-wrapper">
         {/* Ambient WebGL SideRays Background */}
         <div className="admin-ambient-rays">
-          <SideRays
-            speed={2.5}
-            rayColor1="#EAB308"
-            rayColor2="#96c8ff"
-            intensity={2}
-            spread={2}
-            origin="top-right"
-            tilt={0}
-            saturation={1.5}
-            blend={0.75}
-            falloff={1.6}
-            opacity={1.0}
-          />
+          <SafeVisual>
+            <SideRays
+              speed={2.5}
+              rayColor1="#EAB308"
+              rayColor2="#96c8ff"
+              intensity={2}
+              spread={2}
+              origin="top-right"
+              tilt={0}
+              saturation={1.5}
+              blend={0.75}
+              falloff={1.6}
+              opacity={1.0}
+            />
+          </SafeVisual>
         </div>
 
         <div className="admin-auth-card" style={{ maxWidth: '500px' }}>
@@ -1317,19 +1320,21 @@ export default function AdminDashboard() {
     <div className="admin-portal-root">
       {/* React Bits Volumetric SideRays Background Layer */}
       <div className="admin-ambient-rays">
-        <SideRays
-          speed={2.5}
-          rayColor1="#EAB308"
-          rayColor2="#96c8ff"
-          intensity={2}
-          spread={2}
-          origin="top-right"
-          tilt={0}
-          saturation={1.5}
-          blend={0.75}
-          falloff={1.6}
-          opacity={1.0}
-        />
+        <SafeVisual>
+          <SideRays
+            speed={2.5}
+            rayColor1="#EAB308"
+            rayColor2="#96c8ff"
+            intensity={2}
+            spread={2}
+            origin="top-right"
+            tilt={0}
+            saturation={1.5}
+            blend={0.75}
+            falloff={1.6}
+            opacity={1.0}
+          />
+        </SafeVisual>
       </div>
 
       <div className="admin-content-layer">

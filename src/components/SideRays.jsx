@@ -4,6 +4,19 @@ import { useRef, useEffect, useState } from 'react';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 import './SideRays.css';
 
+export function isWebGLSupported() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
 const hexToRgb = hex => {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [1, 1, 1];
@@ -40,6 +53,7 @@ const SideRays = ({
   const cleanupFunctionRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const observerRef = useRef(null);
+  const [hasWebGL, setHasWebGL] = useState(() => isWebGLSupported());
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -65,32 +79,47 @@ const SideRays = ({
   useEffect(() => {
     if (!isVisible || !containerRef.current) return;
 
+    if (!isWebGLSupported()) {
+      setHasWebGL(false);
+      return;
+    }
+
     if (cleanupFunctionRef.current) {
       cleanupFunctionRef.current();
       cleanupFunctionRef.current = null;
     }
 
     const initializeWebGL = async () => {
-      if (!containerRef.current) return;
+      try {
+        if (!containerRef.current) return;
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 10));
 
-      if (!containerRef.current) return;
+        if (!containerRef.current) return;
 
-      const renderer = new Renderer({
-        dpr: Math.min(window.devicePixelRatio || 1, 2),
-        alpha: true
-      });
-      rendererRef.current = renderer;
+        let renderer;
+        try {
+          renderer = new Renderer({
+            dpr: Math.min(window.devicePixelRatio || 1, 2),
+            alpha: true
+          });
+          if (!renderer?.gl) throw new Error('WebGL context is null');
+        } catch (err) {
+          console.warn('SideRays: WebGL context creation failed, using CSS fallback.', err);
+          setHasWebGL(false);
+          return;
+        }
 
-      const gl = renderer.gl;
-      gl.canvas.style.width = '100%';
-      gl.canvas.style.height = '100%';
+        rendererRef.current = renderer;
 
-      while (containerRef.current.firstChild) {
-        containerRef.current.removeChild(containerRef.current.firstChild);
-      }
-      containerRef.current.appendChild(gl.canvas);
+        const gl = renderer.gl;
+        gl.canvas.style.width = '100%';
+        gl.canvas.style.height = '100%';
+
+        while (containerRef.current.firstChild) {
+          containerRef.current.removeChild(containerRef.current.firstChild);
+        }
+        containerRef.current.appendChild(gl.canvas);
 
       const vert = `
 attribute vec2 position;
@@ -214,9 +243,9 @@ void main() {
         window.removeEventListener('resize', updateSize);
         if (renderer) {
           try {
-            const loseCtx = renderer.gl.getExtension('WEBGL_lose_context');
+            const loseCtx = renderer.gl?.getExtension?.('WEBGL_lose_context');
             if (loseCtx) loseCtx.loseContext();
-            const canvas = renderer.gl.canvas;
+            const canvas = renderer.gl?.canvas;
             if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
           } catch (e) {}
         }
@@ -224,6 +253,10 @@ void main() {
         uniformsRef.current = null;
         meshRef.current = null;
       };
+      } catch (err) {
+        console.warn('SideRays: WebGL initialization failed, using CSS fallback.', err);
+        setHasWebGL(false);
+      }
     };
 
     initializeWebGL();
@@ -254,7 +287,18 @@ void main() {
     u.iOpacity.value = opacity;
   }, [speed, rayColor1, rayColor2, intensity, spread, origin, tilt, saturation, blend, falloff, opacity]);
 
-  return <div ref={containerRef} className={`side-rays-container ${className}`.trim()} />;
+  return (
+    <div
+      ref={containerRef}
+      className={`side-rays-container ${className}`.trim()}
+      style={{
+        ...(!hasWebGL ? {
+          background: 'radial-gradient(ellipse at 15% 25%, rgba(56, 189, 248, 0.12) 0%, transparent 60%), radial-gradient(ellipse at 85% 75%, rgba(14, 165, 233, 0.08) 0%, transparent 60%)',
+          pointerEvents: 'none'
+        } : {})
+      }}
+    />
+  );
 };
 
 export default SideRays;

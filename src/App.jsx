@@ -8,7 +8,6 @@ import FlowingMenu from './components/FlowingMenu';
 import TearTicket from './components/TearTicket';
 import LatticeLoader from './components/LatticeLoader';
 import PixelSwap from './components/PixelSwap';
-import RippleDistortion from './components/RippleDistortion';
 import CursorGrid from './components/CursorGrid';
 import Dock from './components/Dock';
 import StaggeredMenu from './components/StaggeredMenu';
@@ -22,8 +21,9 @@ import GradientText from './components/GradientText';
 import SplitText from './components/SplitText';
 import Silk from './components/Silk';
 import PatternWaves from './components/PatternWaves';
-import { FiHome, FiCalendar, FiActivity, FiUserPlus, FiBookmark, FiCheckCircle } from 'react-icons/fi';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import SafeVisual from './components/SafeVisual';
+import { FiHome, FiCalendar, FiActivity, FiUserPlus, FiBookmark, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import ColorBends from './components/ColorBends';
 import GlareHover from './components/GlareHover';
 import ProfilePage from './components/ProfilePage';
@@ -1128,17 +1128,19 @@ export default function App() {
             opacity: 0.75
           }}
         >
-          <PatternWaves
-            preset="silk"
-            color="#38bdf8"
-            backgroundColor="#0a0a0a"
-            fade="edges"
-            fadeSize={0.4}
-            interactive={!isMobile}
-            cursorSize={50}
-            cursorStrength={0.5}
-            opacity={0.85}
-          />
+          <SafeVisual>
+            <PatternWaves
+              preset="silk"
+              color="#38bdf8"
+              backgroundColor="#0a0a0a"
+              fade="edges"
+              fadeSize={0.4}
+              interactive={!isMobile}
+              cursorSize={50}
+              cursorStrength={0.5}
+              opacity={0.85}
+            />
+          </SafeVisual>
         </div>
 
         <h2 
@@ -1450,21 +1452,23 @@ export default function App() {
               {/* ColorBends Background for Registration Page (Disabled on mobile to prevent lag) */}
               <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1, background: '#020617' }}>
                 {!isMobile && (
-                  <ColorBends
-                    colors={["#0036ff", "#38bdf8", "#0ea5e9"]}
-                    rotation={90}
-                    speed={0.2}
-                    scale={1}
-                    frequency={1}
-                    warpStrength={1}
-                    mouseInfluence={1}
-                    noise={0.15}
-                    parallax={0.5}
-                    iterations={1}
-                    intensity={1.5}
-                    bandWidth={6}
-                    transparent={true}
-                  />
+                  <SafeVisual>
+                    <ColorBends
+                      colors={["#0036ff", "#38bdf8", "#0ea5e9"]}
+                      rotation={90}
+                      speed={0.2}
+                      scale={1}
+                      frequency={1}
+                      warpStrength={1}
+                      mouseInfluence={1}
+                      noise={0.15}
+                      parallax={0.5}
+                      iterations={1}
+                      intensity={1.5}
+                      bandWidth={6}
+                      transparent={true}
+                    />
+                  </SafeVisual>
                 )}
               </div>
               {separateRegisterPageContent}
@@ -1875,14 +1879,16 @@ export default function App() {
                     
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? '280px' : 'auto' }}>
                       <div style={{ width: '100%', maxWidth: '750px', height: isMobile ? '100%' : '85vh', maxHeight: '850px', position: 'relative' }}>
-                        <MorphSlider
-                          items={sliderItems}
-                          transition="melt"
-                          intensity={0.55}
-                          aberration={0.35}
-                          drift={0.4}
-                          autoplay={false}
-                        />
+                        <SafeVisual>
+                          <MorphSlider
+                            items={sliderItems}
+                            transition="melt"
+                            intensity={0.55}
+                            aberration={0.35}
+                            drift={0.4}
+                            autoplay={false}
+                          />
+                        </SafeVisual>
                       </div>
                     </div>
                   </div>
@@ -1891,13 +1897,15 @@ export default function App() {
               return (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#0a0a0a', overflowY: isMobile ? 'auto' : 'hidden' }}>
                   <div style={{ position: 'absolute', inset: 0, zIndex: -1, pointerEvents: 'none' }}>
-                    <Silk 
-                      dpr={isMobile ? [1, 1] : [1, 2]} 
-                      speed={isMobile ? 3 : 5} 
-                      scale={1.2}
-                      noiseIntensity={1.0}
-                      color="#0a192f"
-                    />
+                    <SafeVisual>
+                      <Silk 
+                        dpr={isMobile ? [1, 1] : [1, 2]} 
+                        speed={isMobile ? 3 : 5} 
+                        scale={1.2}
+                        noiseIntensity={1.0}
+                        color="#0a192f"
+                      />
+                    </SafeVisual>
                   </div>
                   <button 
                     onClick={() => navigate('/register')}
@@ -1907,8 +1915,98 @@ export default function App() {
                   {eventContent}
                 </div>
               );
-            })() : null
+            })() : (
+              <div style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 100000,
+                background: '#0a0a0a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1.5rem',
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  maxWidth: '460px',
+                  width: '100%',
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '24px',
+                  padding: '2.5rem 1.75rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+                }}>
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#f87171'
+                  }}>
+                    <FiAlertCircle size={28} />
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', letterSpacing: '0.15em', color: '#f87171', textTransform: 'uppercase' }}>
+                    404 // EVENT NOT FOUND
+                  </div>
+                  <h3 style={{ fontFamily: 'var(--font-akira)', fontSize: '1.2rem', color: '#ffffff', margin: 0, lineHeight: 1.25 }}>
+                    EVENT NOT FOUND
+                  </h3>
+                  <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
+                    The event you are looking for does not exist or may have been updated.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', marginTop: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/register')}
+                      style={{
+                        padding: '0.85rem 1.5rem',
+                        background: '#38bdf8',
+                        color: '#000000',
+                        fontWeight: '700',
+                        fontSize: '0.88rem',
+                        borderRadius: '12px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      ← Browse All Events
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/')}
+                      style={{
+                        padding: '0.85rem 1.5rem',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: '#e4e4e7',
+                        fontWeight: '600',
+                        fontSize: '0.88rem',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Return to Homepage
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
           } />
+          <Route path="/events" element={<Navigate to="/register" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
 
