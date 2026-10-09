@@ -934,6 +934,7 @@ export default function App() {
         // Automatic 24/7 WhatsApp Pass Dispatch to Participant
         if (formPhone.trim()) {
           try {
+            const customMsg = localStorage.getItem('srishti_wa_custom_template') || null;
             fetch('https://trialrun2.onrender.com/send-pass', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -944,7 +945,8 @@ export default function App() {
                 eventName: activeEventData.label,
                 college: formCollege.trim(),
                 passUrl: 'https://srishti2-7.vercel.app/profile',
-                imageBase64: cardPng
+                imageBase64: cardPng,
+                customMessage: customMsg
               })
             }).catch(waErr => console.warn('WhatsApp auto-dispatch notice:', waErr));
           } catch (_) {}

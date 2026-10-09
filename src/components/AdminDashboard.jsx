@@ -138,6 +138,70 @@ export default function AdminDashboard() {
     }
   });
 
+  // Default and Custom WhatsApp Message Template
+  const DEFAULT_WA_TEMPLATE = 
+`🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
+━━━━━━━━━━━━━━━━━━━━━━
+Hello *{name}*,
+
+Your festival registration has been confirmed! Here are your official entry credentials:
+
+👤 *Participant:* {name}
+🆔 *Delegate ID:* *{participantCode}*
+🏆 *Event(s):* {eventName}
+🏛️ *College:* {college}
+
+📱 *Access Your Live Digital Pass & QR:*
+{passUrl}
+
+━━━━━━━━━━━━━━━━━━━━━━
+⚡ *VENUE INSTRUCTIONS:*
+• Present your QR code on arrival at the Gate Turnstile.
+• Carry your college ID card for physical verification.
+• Save this message or screenshot your QR code for offline access.
+
+See you at *SRISHTI 2.7*! 🚀
+_Govt Model Engineering College_`;
+
+  const [whatsAppTemplate, setWhatsAppTemplate] = useState(() => {
+    try {
+      return localStorage.getItem('srishti_wa_custom_template') || DEFAULT_WA_TEMPLATE;
+    } catch (_) {
+      return DEFAULT_WA_TEMPLATE;
+    }
+  });
+  const [isCustomizingWhatsApp, setIsCustomizingWhatsApp] = useState(false);
+
+  const handleSaveWhatsAppTemplate = () => {
+    try {
+      localStorage.setItem('srishti_wa_custom_template', whatsAppTemplate);
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('srishti_wa_template_update'));
+      logActivity(
+        'UPDATE_SETTINGS',
+        'WHATSAPP_TEMPLATE',
+        'Admin updated custom WhatsApp pass message template',
+        currentStaff?.username || currentStaff?.email || 'admin',
+        'SUCCESS'
+      );
+      showToast('Custom WhatsApp template saved successfully!', 'success');
+    } catch (err) {
+      showToast('Failed to save template: ' + err.message, 'error');
+    }
+  };
+
+  const handleResetWhatsAppTemplate = () => {
+    setWhatsAppTemplate(DEFAULT_WA_TEMPLATE);
+    localStorage.removeItem('srishti_wa_custom_template');
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('srishti_wa_template_update'));
+    showToast('Reset to default Srishti template.', 'info');
+  };
+
+  const handleInsertWhatsAppTag = (tag) => {
+    setWhatsAppTemplate(prev => prev + ' ' + tag);
+  };
+
   const handleTogglePortalStatus = (newStatus) => {
     try {
       localStorage.setItem('srishti_reg_portal_status', newStatus);
@@ -820,9 +884,37 @@ export default function AdminDashboard() {
         : 'All Registered Competitions';
     }
 
-    // 1. Try automated cloud bot dispatch first
+    // 1. Generate full-resolution Delegate Card PNG image attachment
+    let cardPng = null;
     try {
-      showToast(`Sending pass automatically to ${participant.name} via WhatsApp bot...`, 'info');
+      const pEvents = registrations
+        .filter(r => (r.participant_id === participant.id || r.participants?.id === participant.id))
+        .map(r => r.events?.name || r.events?.label || 'Festival Event');
+
+      cardPng = await generateCardImagePng({
+        attendeeName: participant.name,
+        college: participant.college || 'St. Thomas College Thrissur',
+        passCode: participant.participant_code,
+        passToken: `SRISHTI27-${participant.participant_code}`,
+        events: pEvents.length > 0 ? pEvents : [eventTitle],
+        isVerified: true,
+        statusText: 'VERIFIED'
+      });
+    } catch (pngErr) {
+      console.warn('Card PNG generation note:', pngErr);
+    }
+
+    // Format custom message template
+    const formattedCaption = whatsAppTemplate
+      .replace(/{name}/g, participant.name)
+      .replace(/{participantCode}/g, participant.participant_code)
+      .replace(/{eventName}/g, eventTitle)
+      .replace(/{college}/g, participant.college || '')
+      .replace(/{passUrl}/g, profileLink);
+
+    // 2. Try automated cloud bot dispatch with image card attachment
+    try {
+      showToast(`Generating pass card image & dispatching to ${participant.name}...`, 'info');
       const res = await fetch('https://trialrun2.onrender.com/send-pass', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -832,7 +924,9 @@ export default function AdminDashboard() {
           participantCode: participant.participant_code,
           eventName: eventTitle,
           college: participant.college || '',
-          passUrl: profileLink
+          passUrl: profileLink,
+          imageBase64: cardPng,
+          customMessage: whatsAppTemplate
         })
       });
       const data = await res.json();
@@ -840,42 +934,19 @@ export default function AdminDashboard() {
         logActivity(
           'DISPATCH_PASS',
           'WHATSAPP_BOT',
-          `Automated WhatsApp pass successfully sent to ${participant.name} (${cleanPhone})`,
+          `Automated WhatsApp pass card image sent to ${participant.name} (${cleanPhone})`,
           currentStaff?.username || currentStaff?.email || 'admin',
           'SUCCESS'
         );
-        showToast(`Pass delivered to ${participant.name}'s WhatsApp!`, 'success');
+        showToast(`Pass card image delivered to ${participant.name}'s WhatsApp!`, 'success');
         return;
       }
     } catch (botErr) {
       console.warn('Bot automated dispatch fallback to wa.me:', botErr);
     }
 
-    // 2. Fallback: Open WhatsApp Web directly if bot is unreachable
-    const message = 
-`🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
-━━━━━━━━━━━━━━━━━━━━━━
-Hello *${participant.name}*,
-
-Your festival registration has been confirmed! Here are your official entry credentials:
-
-👤 *Participant:* ${participant.name}
-🆔 *Delegate ID:* *${participant.participant_code}*
-🏆 *Event(s):* ${eventTitle}
-${participant.college ? `🏛️ *College:* ${participant.college}\n` : ''}
-📱 *Access Your Live Digital Pass & QR:*
-${profileLink}
-
-━━━━━━━━━━━━━━━━━━━━━━
-⚡ *VENUE INSTRUCTIONS:*
-• Present your QR code on arrival at the Gate Turnstile.
-• Carry your college ID card for physical verification.
-• Save this message or screenshot your QR code for offline access.
-
-See you at *SRISHTI 2.7*! 🚀
-_Govt Model Engineering College_`;
-
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    // 3. Fallback: Open WhatsApp Web directly if bot is unreachable
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(formattedCaption)}`;
     window.open(waUrl, '_blank');
     logActivity(
       'DISPATCH_PASS',
@@ -885,7 +956,7 @@ _Govt Model Engineering College_`;
       'SUCCESS'
     );
     showToast(`Opening WhatsApp for ${participant.name}...`, 'success');
-  }, [registrations, currentStaff, showToast]);
+  }, [registrations, currentStaff, showToast, whatsAppTemplate]);
 
   const handleOpenQuickRegister = (participant) => {
     setActiveItem(participant);
@@ -1785,6 +1856,190 @@ _Govt Model Engineering College_`;
                         </>
                       )}
                     </button>
+                  </div>
+                )}
+              </div>
+
+              {/* WHATSAPP PASS DISPATCH & CUSTOM MESSAGE TEMPLATE SETTINGS */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(10, 25, 18, 0.95), rgba(10, 14, 12, 0.98))',
+                border: '1px solid rgba(34, 197, 94, 0.35)',
+                borderRadius: '16px',
+                padding: '1.25rem 1.5rem',
+                marginBottom: '1.75rem',
+                boxShadow: '0 8px 30px rgba(34, 197, 94, 0.08)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                  marginBottom: isCustomizingWhatsApp ? '1.25rem' : '0'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '12px',
+                      background: 'rgba(37, 211, 102, 0.18)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#25D366',
+                      fontSize: '1.4rem'
+                    }}>
+                      <FiPhone />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <h4 style={{ margin: 0, color: '#ffffff', fontSize: '1.05rem', fontWeight: '800' }}>
+                          WhatsApp Pass Automation &amp; Message Template
+                        </h4>
+                        <span style={{
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '20px',
+                          fontSize: '0.7rem',
+                          fontWeight: '800',
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          background: 'rgba(34, 197, 94, 0.2)',
+                          color: '#4ade80',
+                          border: '1px solid rgba(34, 197, 94, 0.4)'
+                        }}>
+                          CLOUD BOT ACTIVE (trialrun2.onrender.com)
+                        </span>
+                      </div>
+                      <p style={{ margin: '0.35rem 0 0 0', color: '#a1a1aa', fontSize: '0.84rem', lineHeight: '1.4' }}>
+                        Dispatches official <strong>Pass Card Image attachment</strong> + customized notice automatically on registration and admin click.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomizingWhatsApp(!isCustomizingWhatsApp)}
+                      className="admin-btn admin-btn-secondary"
+                      style={{
+                        border: '1px solid rgba(34, 197, 94, 0.4)',
+                        color: '#4ade80',
+                        fontSize: '0.82rem'
+                      }}
+                    >
+                      <FiEdit2 /> {isCustomizingWhatsApp ? 'Close Template Editor' : 'Customize Message Template'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* EXPANDABLE MESSAGE TEMPLATE EDITOR */}
+                {isCustomizingWhatsApp && (
+                  <div style={{
+                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    paddingTop: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <label style={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: '700' }}>
+                          WhatsApp Pass Caption Template:
+                        </label>
+                        <span style={{ color: '#71717a', fontSize: '0.75rem' }}>
+                          Click tags below to insert dynamic participant details:
+                        </span>
+                      </div>
+
+                      {/* Dynamic Tags Insertion Pills */}
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                        {[
+                          { tag: '{name}', label: 'Participant Name' },
+                          { tag: '{participantCode}', label: 'Delegate Code' },
+                          { tag: '{eventName}', label: 'Event Name' },
+                          { tag: '{college}', label: 'College' },
+                          { tag: '{passUrl}', label: 'Pass Link' }
+                        ].map(item => (
+                          <button
+                            key={item.tag}
+                            type="button"
+                            onClick={() => handleInsertWhatsAppTag(item.tag)}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.06)',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              color: '#38bdf8',
+                              borderRadius: '6px',
+                              padding: '0.2rem 0.55rem',
+                              fontSize: '0.75rem',
+                              fontFamily: 'var(--font-mono)',
+                              cursor: 'pointer'
+                            }}
+                            title={`Insert ${item.label}`}
+                          >
+                            + {item.tag}
+                          </button>
+                        ))}
+                      </div>
+
+                      <textarea
+                        value={whatsAppTemplate}
+                        onChange={(e) => setWhatsAppTemplate(e.target.value)}
+                        rows={12}
+                        style={{
+                          width: '100%',
+                          background: '#09090b',
+                          color: '#e4e4e7',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '12px',
+                          padding: '1rem',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.82rem',
+                          lineHeight: '1.5',
+                          boxSizing: 'border-box',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <button
+                        type="button"
+                        onClick={handleResetWhatsAppTemplate}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#71717a',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        Reset to Default Srishti Template
+                      </button>
+
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <button
+                          type="button"
+                          onClick={handleSaveWhatsAppTemplate}
+                          style={{
+                            padding: '0.65rem 1.4rem',
+                            borderRadius: '10px',
+                            fontWeight: '700',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            background: '#22c55e',
+                            color: '#ffffff',
+                            border: 'none',
+                            boxShadow: '0 4px 14px rgba(34, 197, 94, 0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.45rem'
+                          }}
+                        >
+                          <FiCheckCircle size={15} /> Save Template
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
