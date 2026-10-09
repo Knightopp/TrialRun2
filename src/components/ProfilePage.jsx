@@ -184,20 +184,24 @@ export default function ProfilePage() {
     setLoading(true);
 
     try {
-      // 1. Request secure 6-digit numeric OTP via server-side Edge Function
+      // 1. Request secure 4-digit numeric OTP via server-side Edge Function
       const { data: sendData, error: sendError } = await supabase.functions.invoke('participant-profile', {
         body: { action: 'send-otp', email: cleanEmail }
       });
 
       if (sendError || !sendData?.success) {
-        if (sendData?.not_registered) {
-          setError('No registered participant found with this email. Please register for an event first.');
-        } else if (sendData?.cooldown_remaining) {
-          setResendCooldown(sendData.cooldown_remaining);
-          setError(sendData?.error || 'Please wait before requesting another code.');
-        } else {
-          setError(sendData?.error || sendError?.message || 'Failed to send OTP. Please try again.');
+        let errMessage = 'Failed to send OTP. Please try again.';
+        if (sendError?.context && typeof sendError.context.json === 'function') {
+          try {
+            const errBody = await sendError.context.json();
+            if (errBody?.error) errMessage = errBody.error;
+            if (errBody?.cooldown_remaining) setResendCooldown(errBody.cooldown_remaining);
+          } catch (_) {}
+        } else if (sendData?.error) {
+          errMessage = sendData.error;
+          if (sendData?.cooldown_remaining) setResendCooldown(sendData.cooldown_remaining);
         }
+        setError(errMessage);
         setLoading(false);
         return;
       }
@@ -229,8 +233,18 @@ export default function ProfilePage() {
       });
 
       if (resendError || !resendData?.success) {
-        setError(resendData?.error || resendError?.message || 'Failed to resend code.');
-        if (resendData?.cooldown_remaining) setResendCooldown(resendData.cooldown_remaining);
+        let errMessage = 'Failed to resend code.';
+        if (resendError?.context && typeof resendError.context.json === 'function') {
+          try {
+            const errBody = await resendError.context.json();
+            if (errBody?.error) errMessage = errBody.error;
+            if (errBody?.cooldown_remaining) setResendCooldown(errBody.cooldown_remaining);
+          } catch (_) {}
+        } else if (resendData?.error) {
+          errMessage = resendData.error;
+          if (resendData?.cooldown_remaining) setResendCooldown(resendData.cooldown_remaining);
+        }
+        setError(errMessage);
         setLoading(false);
         return;
       }
@@ -267,7 +281,16 @@ export default function ProfilePage() {
       });
 
       if (verifyError || !verifyData?.success) {
-        setError(verifyData?.error || verifyError?.message || 'Incorrect verification code. Please try again.');
+        let errMessage = 'Incorrect verification code. Please check your email and try again.';
+        if (verifyError?.context && typeof verifyError.context.json === 'function') {
+          try {
+            const errBody = await verifyError.context.json();
+            if (errBody?.error) errMessage = errBody.error;
+          } catch (_) {}
+        } else if (verifyData?.error) {
+          errMessage = verifyData.error;
+        }
+        setError(errMessage);
         setLoading(false);
         return;
       }

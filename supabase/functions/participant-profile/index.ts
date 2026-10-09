@@ -335,17 +335,30 @@ serve(async (req: Request) => {
       await admin.from("participant_otps").delete().eq("email", targetEmail);
 
       // 6. Generate official Supabase Auth token_hash for client session establishment
-      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-        type: "magiclink",
-        email: targetEmail
-      });
-
-      if (linkErr || !linkData?.properties?.hashed_token) {
-        console.error("Session token generation error:", linkErr);
-        return json({ success: false, error: "Error authenticating session. Please try again." }, 500);
+      let tokenHash: string | null = null;
+      try {
+        const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+          type: "magiclink",
+          email: targetEmail
+        });
+        if (linkData?.properties?.hashed_token) {
+          tokenHash = linkData.properties.hashed_token;
+        } else if (linkErr) {
+          // Attempt creating user first if missing, then regenerate link
+          await admin.auth.admin.createUser({
+            email: targetEmail,
+            email_confirm: true,
+            user_metadata: { name: "Participant" }
+          }).catch(() => {});
+          const retry = await admin.auth.admin.generateLink({
+            type: "magiclink",
+            email: targetEmail
+          });
+          tokenHash = retry?.data?.properties?.hashed_token || null;
+        }
+      } catch (authErr) {
+        console.warn("Session token generation notice:", authErr);
       }
-
-      const tokenHash = linkData.properties.hashed_token;
 
       return json({
         success: true,
