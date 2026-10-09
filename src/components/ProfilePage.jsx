@@ -2031,6 +2031,9 @@ See you at *SRISHTI 2.7*! 🚀`;
                       dangerColor="#ef4444"
                     />
                   </div>
+                  <p style={{ textAlign: 'center', fontSize: '0.78rem', color: '#64748b', marginTop: '0.75rem', marginBottom: 0 }}>
+                    Please check your <strong>Inbox</strong> or <strong>Spam / Promotions</strong> folder.
+                  </p>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>

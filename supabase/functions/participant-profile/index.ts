@@ -141,14 +141,6 @@ serve(async (req: Request) => {
       const isRegistration = body?.purpose === "registration" || body?.context === "registration";
       const participantName = pMatch?.name || (typeof body?.name === "string" && body.name.trim()) || "Participant";
 
-      // For profile login, safely return generic response if participant does not exist
-      if (!pMatch && !isRegistration) {
-        return json({
-          success: true,
-          message: "If this email is registered, a 6-digit verification code has been sent."
-        });
-      }
-
       // 3. Ensure auth account exists so Supabase Auth can establish sessions
       try {
         await admin.auth.admin.createUser({
@@ -284,7 +276,7 @@ serve(async (req: Request) => {
 
       return json({
         success: true,
-        message: "If this email is registered, a 6-digit verification code has been sent."
+        message: "A 4-digit verification code has been sent to your email."
       });
     }
 
