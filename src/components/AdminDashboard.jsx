@@ -791,7 +791,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSendWhatsAppPass = useCallback((participant, specificEventName = null) => {
+  const handleSendWhatsAppPass = useCallback(async (participant, specificEventName = null) => {
     if (!participant) return;
     const phone = participant.phone;
     if (!phone) {
@@ -820,6 +820,38 @@ export default function AdminDashboard() {
         : 'All Registered Competitions';
     }
 
+    // 1. Try automated cloud bot dispatch first
+    try {
+      showToast(`Sending pass automatically to ${participant.name} via WhatsApp bot...`, 'info');
+      const res = await fetch('https://trialrun2.onrender.com/send-pass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          name: participant.name,
+          participantCode: participant.participant_code,
+          eventName: eventTitle,
+          college: participant.college || '',
+          passUrl: profileLink
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        logActivity(
+          'DISPATCH_PASS',
+          'WHATSAPP_BOT',
+          `Automated WhatsApp pass successfully sent to ${participant.name} (${cleanPhone})`,
+          currentStaff?.username || currentStaff?.email || 'admin',
+          'SUCCESS'
+        );
+        showToast(`Pass delivered to ${participant.name}'s WhatsApp!`, 'success');
+        return;
+      }
+    } catch (botErr) {
+      console.warn('Bot automated dispatch fallback to wa.me:', botErr);
+    }
+
+    // 2. Fallback: Open WhatsApp Web directly if bot is unreachable
     const message = 
 `🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
 ━━━━━━━━━━━━━━━━━━━━━━

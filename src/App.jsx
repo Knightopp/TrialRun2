@@ -931,6 +931,25 @@ export default function App() {
           console.error('Failed to send registration pass email:', emailErr);
         }
 
+        // Automatic 24/7 WhatsApp Pass Dispatch to Participant
+        if (formPhone.trim()) {
+          try {
+            fetch('https://trialrun2.onrender.com/send-pass', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                phone: formPhone.trim(),
+                name: formName.trim(),
+                participantCode: participantPassCode,
+                eventName: activeEventData.label,
+                college: formCollege.trim(),
+                passUrl: 'https://srishti2-7.vercel.app/profile',
+                imageBase64: cardPng
+              })
+            }).catch(waErr => console.warn('WhatsApp auto-dispatch notice:', waErr));
+          } catch (_) {}
+        }
+
         setIsPaymentPending(false);
       } else {
         // FOR PAID / PENDING EVENT:

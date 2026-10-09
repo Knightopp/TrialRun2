@@ -431,6 +431,25 @@ serve(async (req: Request) => {
       );
     }
 
+    // Background automatic WhatsApp Pass Dispatch
+    const participantPhone = existingParticipant?.phone || cleanPhone;
+    if (participantPhone) {
+      try {
+        fetch("https://trialrun2.onrender.com/send-pass", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: participantPhone,
+            name: existingParticipant?.name || name.trim(),
+            participantCode: participantCode,
+            eventName: event.name || event.event_code,
+            college: existingParticipant?.college || cleanCollege || "",
+            passUrl: "https://srishti2-7.vercel.app/profile"
+          })
+        }).catch(err => console.warn("WhatsApp background dispatch notice:", err));
+      } catch (_) {}
+    }
+
     // 11. Return Clean Success Response
     return new Response(
       JSON.stringify({
