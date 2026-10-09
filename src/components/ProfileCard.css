@@ -1,0 +1,316 @@
+:root {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --pointer-from-center: 0;
+  --pointer-from-top: 0.5;
+  --pointer-from-left: 0.5;
+  --card-opacity: 0;
+  --rotate-x: 0deg;
+  --rotate-y: 0deg;
+  --background-x: 50%;
+  --background-y: 50%;
+  --grain: none;
+  --icon: none;
+  --behind-gradient: none;
+  --behind-glow-color: rgba(56, 189, 248, 0.5);
+  --behind-glow-size: 35%;
+  --inner-gradient: none;
+  --sunpillar-1: hsl(2, 100%, 73%);
+  --sunpillar-2: hsl(53, 100%, 69%);
+  --sunpillar-3: hsl(93, 100%, 69%);
+  --sunpillar-4: hsl(176, 100%, 76%);
+  --sunpillar-5: hsl(228, 100%, 74%);
+  --sunpillar-6: hsl(283, 100%, 73%);
+  --sunpillar-clr-1: var(--sunpillar-1);
+  --sunpillar-clr-2: var(--sunpillar-2);
+  --sunpillar-clr-3: var(--sunpillar-3);
+  --sunpillar-clr-4: var(--sunpillar-4);
+  --sunpillar-clr-5: var(--sunpillar-5);
+  --sunpillar-clr-6: var(--sunpillar-6);
+  --card-radius: 28px;
+}
+
+.pc-card-wrapper {
+  perspective: 600px;
+  transform: translate3d(0, 0, 0.1px);
+  position: relative;
+  touch-action: none;
+  width: 100%;
+}
+
+.pc-behind {
+  position: absolute;
+  inset: -20px;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at var(--pointer-x) var(--pointer-y),
+    var(--behind-glow-color) 0%,
+    transparent var(--behind-glow-size)
+  );
+  filter: blur(40px) saturate(1.2);
+  opacity: calc(0.85 * var(--card-opacity));
+  transition: opacity 250ms ease;
+}
+
+.pc-card-wrapper:hover,
+.pc-card-wrapper.active {
+  --card-opacity: 1;
+}
+
+.pc-card-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.pc-card {
+  width: 100%;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--card-radius);
+  position: relative;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateZ(0) rotateX(0deg) rotateY(0deg);
+  background: #0f1015;
+  backface-visibility: hidden;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pc-card:hover,
+.pc-card.active {
+  transition: none;
+  transform: translateZ(0) rotateX(var(--rotate-y)) rotateY(var(--rotate-x));
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.pc-card-shell.entering .pc-card {
+  transition: transform 180ms ease-out;
+}
+
+.pc-inside {
+  inset: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.75rem;
+  background-image: var(--inner-gradient);
+  background-color: #0d0f14;
+  height: 100%;
+  min-height: 480px;
+  box-sizing: border-box;
+}
+
+.pc-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: inherit;
+  transition: opacity 0.4s ease;
+  opacity: calc(0.35 * var(--card-opacity));
+  background: radial-gradient(
+    circle at var(--pointer-x) var(--pointer-y),
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 60%
+  );
+  mix-blend-mode: overlay;
+}
+
+.pc-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    rgba(56, 189, 248, 0.12) 10%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  z-index: 3;
+}
+
+/* Event Specific Minimalist Card Sections */
+.pc-top-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 1.25rem;
+  z-index: 4;
+}
+
+.pc-avatar-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(56, 189, 248, 0.4));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+}
+
+.pc-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #181a20;
+}
+
+.pc-action-btn-pill {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.pc-action-btn-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.pc-card-headings {
+  margin-bottom: 1.25rem;
+  z-index: 4;
+}
+
+.pc-card-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.35rem 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.pc-card-subtitle {
+  font-size: 0.92rem;
+  color: #94a3b8;
+  margin: 0;
+  font-weight: 400;
+}
+
+.pc-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  z-index: 4;
+}
+
+.pc-badge-pill {
+  background: rgba(255, 255, 255, 0.07);
+  color: #e2e8f0;
+  padding: 0.35rem 0.85rem;
+  border-radius: 50px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pc-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 1.5rem;
+  z-index: 4;
+}
+
+.pc-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.pc-stat-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pc-stat-lbl {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.pc-bottom-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  z-index: 4;
+}
+
+.pc-primary-action-btn {
+  flex: 1;
+  background: #1e2026;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  padding: 0.9rem 1.25rem;
+  border-radius: 50px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.pc-primary-action-btn:hover {
+  background: #2a2c35;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.pc-bookmark-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50px;
+  background: #1e2026;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  pointer-events: auto;
+}
+
+.pc-bookmark-btn:hover {
+  background: #2a2c35;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}

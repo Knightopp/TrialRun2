@@ -10,6 +10,7 @@ import { generateCardImagePng, downloadPngFromDataUrl } from '../utils/cardImage
 import { supabase } from '../supabaseClient';
 import SideRays from './SideRays';
 import SafeVisual from './SafeVisual';
+import ProfileCard from './ProfileCard';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -1304,224 +1305,71 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
                       {registrations.map(reg => {
                         const isVerified = reg.payment_status === 'verified' || reg.status === 'verified';
                         const isGateChecked = Boolean(arrivalCheckin);
                         const isRoomChecked = Boolean(eventAttendance[reg.event_id]);
                         const codeVal = participantData?.participant_code || reg.participant_code || reg.registration_code || reg.id?.substring(0, 8) || 'PASS';
+                        const eventName = reg.events?.name || reg.event_name || reg.event_id;
+                        const eventCategory = reg.events?.category || 'COMPETITION';
+                        const venueName = reg.events?.venue || 'Campus Venue';
+                        const eventDate = reg.events?.date || 'Dec 2026';
+                        const eventTime = reg.events?.start_time ? reg.events.start_time.substring(0, 5) : '10:00';
+
+                        // Curated category badge pills matching the Ethan Harrison design
+                        const badges = [
+                          eventCategory.toUpperCase(),
+                          reg.team_size > 1 ? `TEAM (${reg.team_size} PAX)` : 'SOLO',
+                          isVerified ? 'VERIFIED' : 'PENDING'
+                        ];
+
+                        // 3-Column Telemetry stats (Rating / Earned / Rate equivalent)
+                        const stats = [
+                          {
+                            value: isVerified ? '✓ PASS' : '⏳ PENDING',
+                            label: 'Status'
+                          },
+                          {
+                            value: isGateChecked ? 'IN' : 'WAIT',
+                            label: 'Gate'
+                          },
+                          {
+                            value: isRoomChecked ? 'HERE' : 'CALL',
+                            label: 'Venue'
+                          }
+                        ];
+
+                        const avatarImg = reg.events?.image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=600&auto=format&fit=crop';
 
                         return (
-                          <div 
-                            key={reg.id} 
-                            style={{
-                              padding: '1.75rem',
-                              backgroundColor: 'rgba(12, 14, 18, 0.85)',
-                              backdropFilter: 'blur(16px)',
-                              WebkitBackdropFilter: 'blur(16px)',
-                              borderRadius: '20px',
-                              border: '1px solid rgba(255, 255, 255, 0.08)',
-                              position: 'relative',
-                              overflow: 'hidden',
-                              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
-                              transition: 'transform 0.25s ease, border-color 0.25s ease',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'space-between'
+                          <ProfileCard
+                            key={reg.id}
+                            name={eventName}
+                            title={`${venueName} · ${eventDate} @ ${eventTime}`}
+                            avatarUrl={avatarImg}
+                            badges={badges}
+                            stats={stats}
+                            actionText={`Pass: ${codeVal}`}
+                            onActionClick={() => {
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
-                          >
-                            {/* Subtle ambient accent glow line */}
-                            <div style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: '2px',
-                              background: isVerified 
-                                ? 'linear-gradient(90deg, transparent, #38bdf8, transparent)' 
-                                : 'linear-gradient(90deg, transparent, #eab308, transparent)',
-                              opacity: 0.6
-                            }} />
-
-                            <div>
-                              {/* Top Bar: Event Category / Status Indicator */}
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-                                <span style={{
-                                  fontFamily: 'var(--font-mono, monospace)',
-                                  fontSize: '0.7rem',
-                                  letterSpacing: '0.14em',
-                                  textTransform: 'uppercase',
-                                  color: '#64748b'
-                                }}>
-                                  {reg.events?.category || 'COMPETITION'}
-                                </span>
-                                
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
-                                  <span style={{
-                                    width: '6px',
-                                    height: '6px',
-                                    borderRadius: '50%',
-                                    backgroundColor: isVerified ? '#10b981' : '#f59e0b',
-                                    boxShadow: isVerified ? '0 0 8px #10b981' : '0 0 8px #f59e0b'
-                                  }} />
-                                  <span style={{
-                                    fontFamily: 'var(--font-mono, monospace)',
-                                    fontSize: '0.72rem',
-                                    fontWeight: '700',
-                                    letterSpacing: '0.1em',
-                                    textTransform: 'uppercase',
-                                    color: isVerified ? '#34d399' : '#fbbf24'
-                                  }}>
-                                    {isVerified ? 'VERIFIED' : 'PENDING'}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Competition Title */}
-                              <h4 style={{
-                                fontSize: '1.35rem',
-                                margin: '0 0 0.85rem 0',
-                                color: '#ffffff',
-                                fontWeight: '700',
-                                letterSpacing: '-0.01em',
-                                lineHeight: '1.25'
-                              }}>
-                                {reg.events?.name || reg.event_name || reg.event_id}
-                              </h4>
-
-                              {/* Venue & Time metadata */}
-                              {reg.events && (
-                                <div style={{
-                                  display: 'flex',
-                                  flexWrap: 'wrap',
-                                  alignItems: 'center',
-                                  gap: '1rem',
-                                  marginBottom: '1.25rem',
-                                  color: '#94a3b8',
-                                  fontSize: '0.82rem'
-                                }}>
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                                    <FiMapPin size={13} style={{ color: '#38bdf8' }} />
-                                    <span>{reg.events.venue || 'Campus Venue'}</span>
-                                  </span>
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                                    <FiClock size={13} style={{ color: '#38bdf8' }} />
-                                    <span>{reg.events.date}{reg.events.start_time ? ` · ${reg.events.start_time.substring(0, 5)}` : ''}</span>
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Minimalist Live Attendance Trackers */}
-                              <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
-                                gap: '0.65rem',
-                                padding: '0.85rem 1rem',
-                                backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                                borderRadius: '12px',
-                                border: '1px solid rgba(255, 255, 255, 0.04)',
-                                marginBottom: '1.25rem'
-                              }}>
-                                <div>
-                                  <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>
-                                    Gate Check-In
-                                  </div>
-                                  <div style={{
-                                    fontSize: '0.78rem',
-                                    fontWeight: '600',
-                                    color: isGateChecked ? '#34d399' : '#64748b',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.35rem'
-                                  }}>
-                                    <span style={{
-                                      width: '5px',
-                                      height: '5px',
-                                      borderRadius: '50%',
-                                      backgroundColor: isGateChecked ? '#10b981' : '#475569'
-                                    }} />
-                                    {isGateChecked ? 'Confirmed' : 'Pending Entry'}
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>
-                                    Hall Attendance
-                                  </div>
-                                  <div style={{
-                                    fontSize: '0.78rem',
-                                    fontWeight: '600',
-                                    color: isRoomChecked ? '#38bdf8' : '#64748b',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.35rem'
-                                  }}>
-                                    <span style={{
-                                      width: '5px',
-                                      height: '5px',
-                                      borderRadius: '50%',
-                                      backgroundColor: isRoomChecked ? '#38bdf8' : '#475569'
-                                    }} />
-                                    {isRoomChecked ? 'Present' : 'Pending Call'}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Card Footer: Master Participant Code & Team Meta */}
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'flex-end',
-                              justifyContent: 'space-between',
-                              paddingTop: '0.85rem',
-                              borderTop: '1px solid rgba(255, 255, 255, 0.05)'
-                            }}>
-                              <div>
-                                <span style={{
-                                  display: 'block',
-                                  fontSize: '0.65rem',
-                                  color: '#64748b',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.12em',
-                                  marginBottom: '0.15rem'
-                                }}>
-                                  Participant Code
-                                </span>
-                                <span style={{
-                                  fontFamily: 'var(--font-mono, monospace)',
-                                  fontSize: '1.05rem',
-                                  fontWeight: '700',
-                                  color: '#e2e8f0',
-                                  letterSpacing: '0.06em'
-                                }}>
-                                  {codeVal}
-                                </span>
-                              </div>
-
-                              {reg.team_size > 1 && (
-                                <div style={{ textAlign: 'right' }}>
-                                  <span style={{
-                                    display: 'block',
-                                    fontSize: '0.65rem',
-                                    color: '#64748b',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.12em',
-                                    marginBottom: '0.15rem'
-                                  }}>
-                                    Squad
-                                  </span>
-                                  <span style={{
-                                    fontFamily: 'var(--font-mono, monospace)',
-                                    fontSize: '0.88rem',
-                                    fontWeight: '600',
-                                    color: '#cbd5e1'
-                                  }}>
-                                    {reg.team_size} Pax
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                            onShareClick={() => {
+                              if (navigator.share) {
+                                navigator.share({
+                                  title: `Srishti 2.7 - ${eventName}`,
+                                  text: `I'm registered for ${eventName} at Srishti 2.7! Code: ${codeVal}`,
+                                  url: window.location.href
+                                }).catch(() => {});
+                              } else {
+                                navigator.clipboard?.writeText?.(codeVal);
+                                alert(`Copied Participant Code: ${codeVal}`);
+                              }
+                            }}
+                            behindGlowColor={isVerified ? 'rgba(56, 189, 248, 0.4)' : 'rgba(234, 179, 8, 0.4)'}
+                            behindGlowSize="40%"
+                            innerGradient="linear-gradient(155deg, rgba(24, 25, 32, 0.95) 0%, rgba(13, 14, 18, 0.98) 100%)"
+                          />
                         );
                       })}
                     </div>
