@@ -266,8 +266,10 @@ app.post('/send-pass', async (req, res) => {
       participantCode, 
       eventName = 'All Registered Events', 
       college = '', 
-      passUrl = 'https://srishti27.com/profile',
-      imageBase64 = null
+      passUrl = 'https://srishti2-7.vercel.app/profile',
+      imageBase64 = null,
+      imageUrl = null,
+      customMessage = null
     } = req.body;
 
     if (!phone) {
@@ -282,8 +284,17 @@ app.post('/send-pass', async (req, res) => {
     const displayName = name || 'Delegate';
     const displayCode = participantCode || 'SRI27-PASS';
 
-    // Construct high-impact festival pass message
-    const caption = 
+    // Construct high-impact festival pass message (custom or default)
+    let caption = '';
+    if (customMessage && typeof customMessage === 'string' && customMessage.trim().length > 0) {
+      caption = customMessage
+        .replace(/{name}/g, displayName)
+        .replace(/{participantCode}/g, displayCode)
+        .replace(/{eventName}/g, eventName)
+        .replace(/{college}/g, college || '')
+        .replace(/{passUrl}/g, passUrl);
+    } else {
+      caption = 
 `🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
 ━━━━━━━━━━━━━━━━━━━━━━
 Hello *${displayName}*,
@@ -305,10 +316,11 @@ ${passUrl}
 
 See you at *SRISHTI 2.7*! 🚀
 _Govt Model Engineering College_`;
+    }
 
     let sendResult;
 
-    // Send as Image Message if base64 provided
+    // Send as Image Message if base64 or URL provided
     if (imageBase64 && typeof imageBase64 === 'string') {
       try {
         const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
@@ -320,7 +332,18 @@ _Govt Model Engineering College_`;
           mimetype: 'image/png'
         });
       } catch (imgErr) {
-        console.warn('[WHATSAPP] Failed sending image attachment, falling back to text:', imgErr);
+        console.warn('[WHATSAPP] Failed sending base64 image, falling back to text:', imgErr);
+        sendResult = await sock.sendMessage(jid, { text: caption });
+      }
+    } else if (imageUrl && typeof imageUrl === 'string') {
+      try {
+        sendResult = await sock.sendMessage(jid, {
+          image: { url: imageUrl },
+          caption: caption,
+          mimetype: 'image/png'
+        });
+      } catch (urlErr) {
+        console.warn('[WHATSAPP] Failed sending image URL, falling back to text:', urlErr);
         sendResult = await sock.sendMessage(jid, { text: caption });
       }
     } else {
