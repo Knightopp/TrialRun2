@@ -463,10 +463,12 @@ serve(async (req: Request) => {
 
     if (!participant) {
       return json({
-        success: false,
+        success: true,
         not_registered: true,
-        error: "No registered participant profile found for this email. Please register for an event first."
-      }, 404);
+        participant: null,
+        registrations: [],
+        message: "No registered participant profile found for this email. Please register for an event first."
+      }, 200);
     }
 
     if (action === "save") {

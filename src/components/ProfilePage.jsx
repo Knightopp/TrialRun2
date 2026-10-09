@@ -115,9 +115,37 @@ export default function ProfilePage() {
     const { data, error: profileError } = await supabase.functions.invoke('participant-profile', {
       body: { action: 'get' }
     });
-    if (profileError || !data?.success) {
-      throw new Error(data?.error || profileError?.message || 'Could not load your profile.');
+
+    // Check if participant is simply not registered yet
+    let isNotRegistered = false;
+    if (data?.not_registered || (!data?.participant && data?.success)) {
+      isNotRegistered = true;
+    } else if (profileError?.context && typeof profileError.context.json === 'function') {
+      try {
+        const errBody = await profileError.context.json();
+        if (errBody?.not_registered) isNotRegistered = true;
+      } catch (_) {}
     }
+
+    if (isNotRegistered) {
+      setParticipantData(null);
+      setRegistrations([]);
+      return false;
+    }
+
+    if (profileError || !data?.success) {
+      let errMsg = 'Could not load your profile.';
+      if (profileError?.context && typeof profileError.context.json === 'function') {
+        try {
+          const errBody = await profileError.context.json();
+          errMsg = errBody?.error || errMsg;
+        } catch (_) {}
+      } else if (data?.error) {
+        errMsg = data.error;
+      }
+      throw new Error(errMsg);
+    }
+
     const currentParticipant = data.participant || null;
     const regs = Array.isArray(data.registrations) ? data.registrations : [];
 
