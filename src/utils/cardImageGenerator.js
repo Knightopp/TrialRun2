@@ -8,7 +8,7 @@ function loadCanvasImage(src) {
   return new Promise((resolve) => {
     if (typeof window === 'undefined') return resolve(null);
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // No crossOrigin for local/same-origin assets to avoid Chromium cached-asset CORS rejection
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;
@@ -267,13 +267,7 @@ export async function generateCardImagePng({
     ctx.restore();
   }
 
-  // Radial center glow for 100% QR contrast
-  const stubGlow = ctx.createRadialGradient(bodyW + stubW / 2, H / 2, 50, bodyW + stubW / 2, H / 2, 220);
-  stubGlow.addColorStop(0, 'rgba(255, 255, 255, 0.96)');
-  stubGlow.addColorStop(0.75, 'rgba(255, 255, 255, 0.6)');
-  stubGlow.addColorStop(1, 'transparent');
-  ctx.fillStyle = stubGlow;
-  ctx.fillRect(bodyW, 0, stubW, H);
+  // Clean stub background matching official artwork
 
   // SCAN ME Header
   ctx.font = '900 28px "Arial Black", Impact, sans-serif';
@@ -423,11 +417,7 @@ export async function generateCardImagePng({
   ctx.setLineDash([]); // Reset
   ctx.restore();
 
-  // Outer border with subtle cyan glow
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
-  ctx.lineWidth = 3;
-  drawRoundedRect(1, 1, W - 2, H - 2, R);
-  ctx.stroke();
+  // Borderless pass matching TearTicket aesthetic
 
   return canvas.toDataURL('image/png');
 }

@@ -2391,16 +2391,14 @@ See you at *SRISHTI 2.7*! 🚀`;
                                 tearAngle={25}
                                 stretch={30}
                                 resistance={0.5}
-                                rotate={-1.5}
-                                tilt={true}
-                                tiltMax={12}
-                                tiltReach={300}
-                                paral                                background="#070a13"
+                                rotate={0}
+                                tilt={false}
+                                background="#070a13"
                                 stubBackground="#ffffff"
                                 color="#ffffff"
-                                border={true}
-                                borderColor="rgba(56,189,248,0.4)"
-                                borderWidth={1.5}
+                                border={false}
+                                borderColor="transparent"
+                                borderWidth={0}
                                 recenter={true}
                                 stub={
                                   <div style={{
@@ -2418,14 +2416,6 @@ See you at *SRISHTI 2.7*! 🚀`;
                                     backgroundColor: '#ffffff',
                                     overflow: 'hidden'
                                   }}>
-                                    <div style={{
-                                      position: 'absolute',
-                                      inset: 0,
-                                      zIndex: 0,
-                                      background: 'radial-gradient(circle at center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 75%, transparent 100%)',
-                                      pointerEvents: 'none'
-                                    }} />
-                                    
                                     <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                                       <h4 style={{ fontFamily: 'var(--font-akira)', color: '#050714', fontSize: '1.1rem', marginBottom: '1.25rem', letterSpacing: '0.05em' }}>SCAN ME</h4>
                                       

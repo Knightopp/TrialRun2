@@ -1185,9 +1185,9 @@ See you at *SRISHTI 2.7*! 🚀`;
                             background="#070a13"
                             stubBackground="#ffffff"
                             color="#ffffff"
-                            border={true}
-                            borderColor="rgba(56,189,248,0.4)"
-                            borderWidth={1.5}
+                            border={false}
+                            borderColor="transparent"
+                            borderWidth={0}
                             recenter={true}
                             stub={
                               <div style={{
@@ -1206,14 +1206,6 @@ See you at *SRISHTI 2.7*! 🚀`;
                                 overflow: 'hidden',
                                 boxSizing: 'border-box'
                               }}>
-                                {/* Soft ambient radial gradient behind the QR code for perfect contrast */}
-                                <div style={{
-                                  position: 'absolute',
-                                  inset: 0,
-                                  zIndex: 0,
-                                  background: 'radial-gradient(circle at center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 75%, transparent 100%)',
-                                  pointerEvents: 'none'
-                                }} />
 
                                 <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                                   <h4 style={{ fontFamily: 'var(--font-akira)', color: '#050714', fontSize: '1.05rem', margin: '0 0 0.85rem 0', letterSpacing: '0.05em' }}>SCAN ME</h4>
