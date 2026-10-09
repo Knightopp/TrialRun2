@@ -27,3 +27,7 @@ dist-ssr
 .env*
 __pycache__/
 *.py[cod]
+
+# WhatsApp Bot Session Data
+auth_info_baileys/
+whatsapp-service/auth_info_baileys/

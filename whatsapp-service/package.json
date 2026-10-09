@@ -1,0 +1,18 @@
+{
+  "name": "srishti-whatsapp-service",
+  "version": "1.0.0",
+  "description": "Self-hosted zero-cost WhatsApp ticket & pass dispatch bot for SRISHTI 2.7",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.24",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
