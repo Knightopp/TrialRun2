@@ -236,6 +236,25 @@ See you at *SRISHTI 2.7*! 🚀`;
     }
   };
 
+  // WhatsApp Cloud Bot Real-time Connection Status
+  const [botStatus, setBotStatus] = useState({ connected: false, phone: null, loading: true });
+
+  const checkBotStatus = useCallback(async () => {
+    try {
+      const res = await fetch('https://trialrun2.onrender.com/status');
+      const data = await res.json();
+      setBotStatus({ connected: !!data.connected, phone: data.phone || null, loading: false });
+    } catch (_) {
+      setBotStatus({ connected: false, phone: null, loading: false });
+    }
+  }, []);
+
+  useEffect(() => {
+    checkBotStatus();
+    const interval = setInterval(checkBotStatus, 10000);
+    return () => clearInterval(interval);
+  }, [checkBotStatus]);
+
   const handleTogglePortalStatus = (newStatus) => {
     try {
       localStorage.setItem('srishti_reg_portal_status', newStatus);
@@ -946,9 +965,9 @@ See you at *SRISHTI 2.7*! 🚀`;
       .replace(/{college}/g, participant.college || '')
       .replace(/{passUrl}/g, profileLink);
 
-    // 2. Try automated cloud bot dispatch with image card attachment
+    // 2. Automated cloud bot dispatch with image card attachment
     try {
-      showToast(`Generating pass card image & dispatching to ${participant.name}...`, 'info');
+      showToast(`Generating pass card image & dispatching automatically to ${participant.name}...`, 'info');
       const res = await fetch('https://trialrun2.onrender.com/send-pass', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -974,22 +993,30 @@ See you at *SRISHTI 2.7*! 🚀`;
         );
         showToast(`Pass card image delivered to ${participant.name}'s WhatsApp!`, 'success');
         return;
+      } else {
+        console.error('WhatsApp Bot Dispatch Error:', data.error);
+        if (data.error && data.error.includes('not connected')) {
+          showToast('WhatsApp Bot is not linked to your phone! Please scan QR code first.', 'error');
+          const wantLink = window.confirm(
+            '⚠️ WhatsApp Bot on Render is NOT linked to your phone!\n\n' +
+            'Because the bot is disconnected, it cannot send the pass automatically.\n\n' +
+            'Would you like to open the QR scan page (https://trialrun2.onrender.com/qr) right now to link your phone?\n\n' +
+            '(Once scanned, all passes are sent 100% automatically in the background).'
+          );
+          if (wantLink) {
+            window.open('https://trialrun2.onrender.com/qr', '_blank');
+          }
+          return;
+        } else {
+          showToast(`WhatsApp Bot error: ${data.error || 'Failed to dispatch pass'}`, 'error');
+          return;
+        }
       }
     } catch (botErr) {
-      console.warn('Bot automated dispatch fallback to wa.me:', botErr);
+      console.error('Bot dispatch network error:', botErr);
+      showToast('Could not reach WhatsApp bot server (trialrun2.onrender.com).', 'error');
+      return;
     }
-
-    // 3. Fallback: Open WhatsApp Web directly if bot is unreachable
-    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(formattedCaption)}`;
-    window.open(waUrl, '_blank');
-    logActivity(
-      'DISPATCH_PASS',
-      'WHATSAPP',
-      `Admin opened WhatsApp pass dispatch for ${participant.name} (${cleanPhone})`,
-      currentStaff?.username || currentStaff?.email || 'admin',
-      'SUCCESS'
-    );
-    showToast(`Opening WhatsApp for ${participant.name}...`, 'success');
   }, [registrations, currentStaff, showToast, whatsAppTemplate]);
 
   const handleOpenQuickRegister = (participant) => {
@@ -1930,19 +1957,70 @@ See you at *SRISHTI 2.7*! 🚀`;
                         <h4 style={{ margin: 0, color: '#ffffff', fontSize: '1.05rem', fontWeight: '800' }}>
                           WhatsApp Pass Automation &amp; Message Template
                         </h4>
-                        <span style={{
-                          padding: '0.2rem 0.6rem',
-                          borderRadius: '20px',
-                          fontSize: '0.7rem',
-                          fontWeight: '800',
-                          letterSpacing: '0.06em',
-                          textTransform: 'uppercase',
-                          background: 'rgba(34, 197, 94, 0.2)',
-                          color: '#4ade80',
-                          border: '1px solid rgba(34, 197, 94, 0.4)'
-                        }}>
-                          CLOUD BOT ACTIVE (trialrun2.onrender.com)
-                        </span>
+                        {botStatus.loading ? (
+                          <span style={{
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '20px',
+                            fontSize: '0.7rem',
+                            fontWeight: '800',
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: '#e4e4e7'
+                          }}>
+                            Checking Bot...
+                          </span>
+                        ) : botStatus.connected ? (
+                          <span style={{
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '20px',
+                            fontSize: '0.7rem',
+                            fontWeight: '800',
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                            background: 'rgba(34, 197, 94, 0.2)',
+                            color: '#4ade80',
+                            border: '1px solid rgba(34, 197, 94, 0.4)'
+                          }}>
+                            🟢 BOT CONNECTED (+{botStatus.phone || 'ONLINE'})
+                          </span>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span style={{
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '20px',
+                              fontSize: '0.7rem',
+                              fontWeight: '800',
+                              letterSpacing: '0.06em',
+                              textTransform: 'uppercase',
+                              background: 'rgba(239, 68, 68, 0.2)',
+                              color: '#f87171',
+                              border: '1px solid rgba(239, 68, 68, 0.4)'
+                            }}>
+                              🔴 BOT DISCONNECTED
+                            </span>
+                            <a
+                              href="https://trialrun2.onrender.com/qr"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '8px',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                background: 'rgba(56, 189, 248, 0.2)',
+                                color: '#38bdf8',
+                                border: '1px solid rgba(56, 189, 248, 0.4)',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem'
+                              }}
+                            >
+                              Scan QR to Link ➔
+                            </a>
+                          </div>
+                        )}
                       </div>
                       <p style={{ margin: '0.35rem 0 0 0', color: '#a1a1aa', fontSize: '0.84rem', lineHeight: '1.4' }}>
                         Dispatches official <strong>Pass Card Image attachment</strong> + customized notice automatically on registration and admin click.
