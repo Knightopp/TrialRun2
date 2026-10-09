@@ -487,6 +487,33 @@ export default function ProfilePage() {
     }
   };
 
+  const handleWhatsAppSharePass = () => {
+    const hasRegistered = registrations.length > 0;
+    if (!hasRegistered) {
+      alert('Your delegate pass is locked. Please register for at least one event first.');
+      return;
+    }
+    const data = getPassData();
+    const liveProductionUrl = 'https://srishti2-7.vercel.app';
+    const profileLink = `${liveProductionUrl}/profile`;
+    const eventNames = data.events.length > 0 ? data.events.join(', ') : 'All Registered Competitions';
+
+    const text = 
+`🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *Participant:* ${data.attendeeName}
+🆔 *Delegate ID:* *${data.passCode}*
+🏆 *Event(s):* ${eventNames}
+${data.college ? `🏛️ *College:* ${data.college}\n` : ''}
+📱 *View & Scan My Live Pass:*
+${profileLink}
+
+⚡ *National Level Technical & Cultural Festival*
+Govt Model Engineering College`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   const isNextDisabled = () => {
     if (onboardingStep === 1 && !onboardingName.trim()) return true;
     if (onboardingStep === 2 && (!onboardingCollege.trim() || !onboardingPhone.trim())) return true;
@@ -1347,6 +1374,30 @@ export default function ProfilePage() {
                               }}
                             >
                               <FiMail /> {emailingPass ? 'Generating & Sending...' : 'Send Entry Pass to My Email'}
+                            </button>
+
+                            <button
+                              onClick={handleWhatsAppSharePass}
+                              disabled={!hasRegistered}
+                              title={!hasRegistered ? 'Pass is locked. Register for an event first.' : 'Save / Share Pass on WhatsApp'}
+                              style={{
+                                padding: '0.7rem 1.4rem',
+                                backgroundColor: !hasRegistered ? 'rgba(37, 211, 102, 0.04)' : 'rgba(37, 211, 102, 0.12)',
+                                color: !hasRegistered ? '#64748b' : '#4ade80',
+                                border: !hasRegistered ? '1px solid #334155' : '1px solid rgba(37, 211, 102, 0.35)',
+                                borderRadius: '12px',
+                                fontWeight: '600',
+                                fontSize: '0.88rem',
+                                opacity: !hasRegistered ? 0.45 : 1,
+                                cursor: !hasRegistered ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                transition: 'all 0.2s',
+                                backdropFilter: 'blur(8px)'
+                              }}
+                            >
+                              <FiPhone /> Save to WhatsApp
                             </button>
 
                             <button

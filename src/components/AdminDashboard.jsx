@@ -791,6 +791,70 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSendWhatsAppPass = useCallback((participant, specificEventName = null) => {
+    if (!participant) return;
+    const phone = participant.phone;
+    if (!phone) {
+      showToast('No phone number registered for this participant.', 'error');
+      return;
+    }
+
+    // Always link to the live production website!
+    const liveProductionUrl = 'https://srishti2-7.vercel.app';
+    const profileLink = `${liveProductionUrl}/profile`;
+
+    // Clean Indian phone number: strip non-digits, ensure 91 prefix
+    let cleanPhone = String(phone).replace(/\D/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = `91${cleanPhone}`;
+    } else if (cleanPhone.length === 11 && cleanPhone.startsWith('0')) {
+      cleanPhone = `91${cleanPhone.slice(1)}`;
+    }
+
+    // Determine event names
+    let eventTitle = specificEventName;
+    if (!eventTitle) {
+      const pRegs = registrations.filter(r => r.participant_id === participant.id || r.participants?.id === participant.id);
+      eventTitle = pRegs.length > 0
+        ? pRegs.map(r => r.events?.name || r.events?.label || r.event_name || 'Event').join(', ')
+        : 'All Registered Competitions';
+    }
+
+    const message = 
+`🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
+━━━━━━━━━━━━━━━━━━━━━━
+Hello *${participant.name}*,
+
+Your festival registration has been confirmed! Here are your official entry credentials:
+
+👤 *Participant:* ${participant.name}
+🆔 *Delegate ID:* *${participant.participant_code}*
+🏆 *Event(s):* ${eventTitle}
+${participant.college ? `🏛️ *College:* ${participant.college}\n` : ''}
+📱 *Access Your Live Digital Pass & QR:*
+${profileLink}
+
+━━━━━━━━━━━━━━━━━━━━━━
+⚡ *VENUE INSTRUCTIONS:*
+• Present your QR code on arrival at the Gate Turnstile.
+• Carry your college ID card for physical verification.
+• Save this message or screenshot your QR code for offline access.
+
+See you at *SRISHTI 2.7*! 🚀
+_Govt Model Engineering College_`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
+    logActivity(
+      'DISPATCH_PASS',
+      'WHATSAPP',
+      `Admin opened WhatsApp pass dispatch for ${participant.name} (${cleanPhone})`,
+      currentStaff?.username || currentStaff?.email || 'admin',
+      'SUCCESS'
+    );
+    showToast(`Opening WhatsApp for ${participant.name}...`, 'success');
+  }, [registrations, currentStaff, showToast]);
+
   const handleOpenQuickRegister = (participant) => {
     setActiveItem(participant);
     const registeredEventIds = new Set(
@@ -2769,6 +2833,19 @@ export default function AdminDashboard() {
                               <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
                                 <button
                                   type="button"
+                                  onClick={() => handleSendWhatsAppPass(p)}
+                                  className="admin-btn admin-btn-sm"
+                                  style={{
+                                    background: 'rgba(37, 211, 102, 0.15)',
+                                    border: '1px solid rgba(37, 211, 102, 0.4)',
+                                    color: '#4ade80'
+                                  }}
+                                  title="Send Live Delegate Pass on WhatsApp"
+                                >
+                                  <FiPhone />
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleViewParticipantPass(p)}
                                   className="admin-btn admin-btn-sm admin-btn-secondary"
                                   title="View Digital Festival Pass & QR Badge"
@@ -2907,16 +2984,39 @@ export default function AdminDashboard() {
                           {r.registered_at ? new Date(r.registered_at).toLocaleDateString() : '—'}
                         </td>
                         <td style={{ textAlign: 'right' }}>
-                          {(adminRole === 'admin' || adminRole === 'registration') && (
+                          <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
                             <button
                               type="button"
-                              onClick={() => handleDeleteRegistration(r.id, r.participants?.name || r.name, r.events?.name || r.event_name)}
-                              className="admin-btn admin-btn-sm admin-btn-danger"
-                              title="Cancel & Delete Registration"
+                              onClick={() => {
+                                const participantObj = participants.find(p => p.id === r.participant_id) || r.participants || {
+                                  name: r.name,
+                                  phone: r.phone,
+                                  participant_code: r.participant_code,
+                                  id: r.participant_id
+                                };
+                                handleSendWhatsAppPass(participantObj, r.events?.name || r.event_name);
+                              }}
+                              className="admin-btn admin-btn-sm"
+                              style={{
+                                background: 'rgba(37, 211, 102, 0.15)',
+                                border: '1px solid rgba(37, 211, 102, 0.4)',
+                                color: '#4ade80'
+                              }}
+                              title="Send Pass on WhatsApp"
                             >
-                              <FiTrash2 />
+                              <FiPhone />
                             </button>
-                          )}
+                            {(adminRole === 'admin' || adminRole === 'registration') && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRegistration(r.id, r.participants?.name || r.name, r.events?.name || r.event_name)}
+                                className="admin-btn admin-btn-sm admin-btn-danger"
+                                title="Cancel & Delete Registration"
+                              >
+                                <FiTrash2 />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -4295,7 +4395,25 @@ export default function AdminDashboard() {
                 </span>
               </button>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => handleSendWhatsAppPass(selectedParticipantForPass)}
+                  className="admin-btn"
+                  style={{
+                    background: '#25D366',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: '700',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    cursor: 'pointer'
+                  }}
+                  title="Send Official Pass & Live Link to Participant on WhatsApp"
+                >
+                  <FiPhone /> Send on WhatsApp
+                </button>
                 <button
                   type="button"
                   onClick={handleDownloadPassPng}
