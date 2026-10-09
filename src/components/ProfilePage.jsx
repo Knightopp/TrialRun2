@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle, FiAlertCircle, FiShield, FiMapPin, FiClock } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle, FiAlertCircle, FiShield, FiMapPin, FiClock, FiKey, FiArrowRight } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
@@ -1428,24 +1428,85 @@ export default function ProfilePage() {
             </div>
           </div>
         ) : (
-          <div style={{ maxWidth: '460px', margin: '4rem auto 0', padding: '3rem', backgroundColor: '#0a0a0a', borderRadius: '32px', border: '1px solid #222', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', letterSpacing: '-0.02em' }}>
-              {step === 'email' ? 'Participant Access' : 'Verification Code'}
+          <div style={{
+            maxWidth: '480px',
+            margin: '3rem auto 0',
+            padding: '2.5rem',
+            backgroundColor: 'rgba(12, 14, 20, 0.9)',
+            backdropFilter: 'blur(28px)',
+            WebkitBackdropFilter: 'blur(28px)',
+            borderRadius: '28px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(56, 189, 248, 0.08)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Top Cyan Accent Beam */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: '10%',
+              right: '10%',
+              height: '2px',
+              background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
+              boxShadow: '0 0 12px #38bdf8'
+            }} />
+
+            {/* Header Badge */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.35rem 0.85rem',
+                borderRadius: '50px',
+                background: 'rgba(56, 189, 248, 0.08)',
+                border: '1px solid rgba(56, 189, 248, 0.25)',
+                color: '#38bdf8',
+                fontSize: '0.72rem',
+                fontFamily: 'var(--font-mono, monospace)',
+                fontWeight: '700',
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase'
+              }}>
+                <FiKey size={13} /> SRISHTI 2.7 • DELEGATE PORTAL
+              </span>
+            </div>
+
+            <h2 style={{
+              fontSize: '1.9rem',
+              fontWeight: '800',
+              marginBottom: '0.65rem',
+              textAlign: 'center',
+              letterSpacing: '-0.02em',
+              color: '#ffffff'
+            }}>
+              {step === 'email' ? 'Claim Your Delegate Pass' : 'Enter Secure Access Code'}
             </h2>
-            <p style={{ color: '#888', textAlign: 'center', marginBottom: '2rem', fontSize: '0.95rem', lineHeight: '1.5' }}>
-              {step === 'email' ? 'Enter your registered email to receive your one-time pass code.' : `Enter the 6-digit one-time code sent to ${email}`}
+
+            <p style={{
+              color: '#94a3b8',
+              textAlign: 'center',
+              marginBottom: '2rem',
+              fontSize: '0.92rem',
+              lineHeight: '1.55',
+              padding: '0 0.5rem'
+            }}>
+              {step === 'email'
+                ? 'Enter your registered email address to retrieve your digital entry pass and access your festival schedule.'
+                : `We dispatched a 6-digit verification code to ${email}`}
             </p>
 
             {message && (
               <div style={{
-                padding: '0.875rem 1rem',
-                backgroundColor: 'rgba(52, 199, 89, 0.12)',
-                color: '#30d158',
-                borderRadius: '12px',
+                padding: '0.85rem 1rem',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                color: '#34d399',
+                borderRadius: '14px',
                 marginBottom: '1.5rem',
-                fontSize: '0.9rem',
+                fontSize: '0.88rem',
                 textAlign: 'center',
-                border: '1px solid rgba(52,199,89,0.25)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1458,14 +1519,14 @@ export default function ProfilePage() {
 
             {error && (
               <div style={{
-                padding: '0.875rem 1rem',
-                backgroundColor: 'rgba(255, 59, 48, 0.12)',
-                color: '#ff3b30',
-                borderRadius: '12px',
+                padding: '0.85rem 1rem',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                color: '#f87171',
+                borderRadius: '14px',
                 marginBottom: '1.5rem',
-                fontSize: '0.9rem',
+                fontSize: '0.88rem',
                 textAlign: 'center',
-                border: '1px solid rgba(255,59,48,0.25)'
+                border: '1px solid rgba(239, 68, 68, 0.25)'
               }}>
                 {error}
               </div>
@@ -1474,28 +1535,56 @@ export default function ProfilePage() {
             {step === 'email' ? (
               <form onSubmit={handleSendOtp}>
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', color: '#aaa', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                    Email address
+                  <label style={{
+                    display: 'block',
+                    color: '#64748b',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Registered Email Address
                   </label>
                   <div style={{ position: 'relative' }}>
-                    <FiMail style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: '#666', fontSize: '1.2rem' }} />
+                    <FiMail style={{
+                      position: 'absolute',
+                      left: '1.25rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#475569',
+                      fontSize: '1.15rem'
+                    }} />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      placeholder="name@college.edu"
+                      placeholder="e.g. name@college.edu"
                       style={{
-                        width: '100%', padding: '1.25rem 1.25rem 1.25rem 3.5rem',
-                        backgroundColor: '#000', border: '1px solid #333',
-                        borderRadius: '16px', color: '#fff', fontSize: '1rem',
-                        outline: 'none', transition: 'border-color 0.2s'
+                        width: '100%',
+                        padding: '1.15rem 1.15rem 1.15rem 3.4rem',
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        borderRadius: '16px',
+                        color: '#ffffff',
+                        fontSize: '0.98rem',
+                        outline: 'none',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                        boxSizing: 'border-box'
                       }}
-                      onFocus={(e) => e.target.style.borderColor = '#666'}
-                      onBlur={(e) => e.target.style.borderColor = '#333'}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#38bdf8';
+                        e.target.style.boxShadow = '0 0 15px rgba(56, 189, 248, 0.2)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
                 </div>
+
                 <button
                   type="submit"
                   disabled={loading || !email.trim()}
@@ -1505,44 +1594,55 @@ export default function ProfilePage() {
                     backgroundColor: '#ffffff',
                     color: '#000000',
                     border: 'none',
-                    borderRadius: '14px',
+                    borderRadius: '16px',
                     fontSize: '0.95rem',
                     fontWeight: '700',
-                    letterSpacing: '0.04em',
+                    letterSpacing: '0.03em',
                     cursor: (loading || !email.trim()) ? 'not-allowed' : 'pointer',
                     opacity: (loading || !email.trim()) ? 0.65 : 1,
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 20px rgba(255, 255, 255, 0.15)',
+                    transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                    boxShadow: '0 8px 24px rgba(255, 255, 255, 0.12)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.6rem'
                   }}
-                  onMouseOver={e => { if(!loading && email.trim()) e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-                  onMouseOut={e => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                  onMouseOver={e => {
+                    if (!loading && email.trim()) {
+                      e.currentTarget.style.backgroundColor = '#38bdf8';
+                      e.currentTarget.style.boxShadow = '0 8px 28px rgba(56, 189, 248, 0.35)';
+                    }
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 255, 255, 0.12)';
+                  }}
                 >
                   {loading ? (
                     <>
                       <span style={{
                         width: '16px',
                         height: '16px',
-                        border: '2px solid rgba(0,0,0,0.2)',
-                        borderTopColor: '#000',
+                        border: '2px solid rgba(0, 0, 0, 0.25)',
+                        borderTopColor: '#000000',
                         borderRadius: '50%',
                         animation: 'srishtiSpin 0.7s linear infinite'
                       }} />
-                      <span>Transmitting Access Pass...</span>
+                      <span>Sending One-Time Code...</span>
                     </>
                   ) : (
-                    <span>Request Access Pass</span>
+                    <>
+                      <span>Continue with Email</span>
+                      <FiArrowRight size={16} />
+                    </>
                   )}
                 </button>
               </form>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ width: '100%', marginBottom: '1.75rem' }}>
-                  <label style={{ display: 'block', color: '#aaa', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.75rem', textAlign: 'center' }}>
-                    Verification code
+                  <label style={{ display: 'block', color: '#64748b', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.85rem', textAlign: 'center' }}>
+                    Enter 6-Digit Passcode
                   </label>
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <CodeSlots
@@ -1551,11 +1651,11 @@ export default function ProfilePage() {
                       onChange={(val) => setOtpCode(val)}
                       onComplete={(code) => handleVerifyOtp(code)}
                       autoFocus
-                      accentColor="#fff"
-                      inkColor="#fff"
-                      slotColor="#111"
-                      digitColor="#fff"
-                      dangerColor="#ff3b30"
+                      accentColor="#38bdf8"
+                      inkColor="#ffffff"
+                      slotColor="rgba(0,0,0,0.6)"
+                      digitColor="#ffffff"
+                      dangerColor="#ef4444"
                     />
                   </div>
                 </div>
@@ -1566,17 +1666,28 @@ export default function ProfilePage() {
                     onClick={() => handleVerifyOtp(otpCode)}
                     disabled={loading || otpCode.trim().length < 6}
                     style={{
-                      width: '100%', padding: '1.2rem', backgroundColor: '#fff',
-                      color: '#000', border: 'none', borderRadius: '16px',
-                      fontSize: '1rem', fontWeight: 'bold',
+                      width: '100%',
+                      padding: '1.15rem',
+                      backgroundColor: '#38bdf8',
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: '16px',
+                      fontSize: '0.98rem',
+                      fontWeight: '700',
+                      letterSpacing: '0.03em',
                       cursor: (loading || otpCode.trim().length < 6) ? 'not-allowed' : 'pointer',
-                      opacity: (loading || otpCode.trim().length < 6) ? 0.6 : 1,
-                      transition: 'background-color 0.2s'
+                      opacity: (loading || otpCode.trim().length < 6) ? 0.5 : 1,
+                      transition: 'all 0.2s',
+                      boxShadow: '0 8px 24px rgba(56, 189, 248, 0.25)'
                     }}
-                    onMouseOver={e => { if(!loading && otpCode.trim().length >= 6) e.currentTarget.style.backgroundColor = '#e5e5e5'; }}
-                    onMouseOut={e => { e.currentTarget.style.backgroundColor = '#fff'; }}
+                    onMouseOver={e => {
+                      if (!loading && otpCode.trim().length >= 6) {
+                        e.currentTarget.style.backgroundColor = '#7dd3fc';
+                      }
+                    }}
+                    onMouseOut={e => { e.currentTarget.style.backgroundColor = '#38bdf8'; }}
                   >
-                    {loading ? 'Verifying...' : 'Verify OTP'}
+                    {loading ? 'Verifying Credentials...' : 'Unlock Delegate Portal'}
                   </button>
 
                   <button
@@ -1584,17 +1695,21 @@ export default function ProfilePage() {
                     onClick={handleResendOtp}
                     disabled={loading || resendCooldown > 0}
                     style={{
-                      width: '100%', padding: '0.9rem', backgroundColor: '#111',
-                      color: resendCooldown > 0 ? '#666' : '#fff',
-                      border: '1px solid #222', borderRadius: '14px',
-                      fontSize: '0.9rem', fontWeight: '500',
+                      width: '100%',
+                      padding: '0.9rem',
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      color: resendCooldown > 0 ? '#64748b' : '#cbd5e1',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '14px',
+                      fontSize: '0.88rem',
+                      fontWeight: '600',
                       cursor: (loading || resendCooldown > 0) ? 'not-allowed' : 'pointer',
-                      transition: 'background-color 0.2s, color 0.2s'
+                      transition: 'all 0.2s'
                     }}
-                    onMouseOver={e => { if(!loading && resendCooldown === 0) e.currentTarget.style.backgroundColor = '#1a1a1a'; }}
-                    onMouseOut={e => { e.currentTarget.style.backgroundColor = '#111'; }}
+                    onMouseOver={e => { if(!loading && resendCooldown === 0) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
+                    onMouseOut={e => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'; }}
                   >
-                    {resendCooldown > 0 ? `Resend OTP (${resendCooldown}s)` : 'Resend OTP'}
+                    {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : 'Resend Code'}
                   </button>
                 </div>
 
@@ -1602,15 +1717,20 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => { setStep('email'); setOtpCode(''); setError(null); setMessage(null); }}
                   style={{
-                    padding: '0.75rem 1.5rem', backgroundColor: 'transparent',
-                    color: '#666', border: 'none', borderRadius: '12px',
-                    fontSize: '0.9rem', cursor: 'pointer', marginTop: '1rem',
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: 'transparent',
+                    color: '#64748b',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    marginTop: '1rem',
                     transition: 'color 0.2s'
                   }}
                   onMouseOver={e => e.currentTarget.style.color = '#fff'}
-                  onMouseOut={e => e.currentTarget.style.color = '#666'}
+                  onMouseOut={e => e.currentTarget.style.color = '#64748b'}
                 >
-                  Use a different email
+                  Use a different email address
                 </button>
               </div>
             )}
