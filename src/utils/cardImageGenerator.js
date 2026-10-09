@@ -4,6 +4,38 @@ import QRCode from 'qrcode';
  * Renders the exact cybernetic Srishti 2.7 Entry Pass card onto an HTML5 Canvas
  * and exports it as a high-resolution lossless PNG data URL.
  */
+function loadCanvasImage(src) {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') return resolve(null);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function drawImageCover(ctx, img, x, y, w, h, alignX = 0.5, alignY = 0.5) {
+  if (!img || !img.width || !img.height) return;
+  const imgRatio = img.width / img.height;
+  const targetRatio = w / h;
+  let sWidth, sHeight, sx, sy;
+
+  if (imgRatio > targetRatio) {
+    sHeight = img.height;
+    sWidth = img.height * targetRatio;
+    sx = (img.width - sWidth) * alignX;
+    sy = 0;
+  } else {
+    sWidth = img.width;
+    sHeight = img.width / targetRatio;
+    sx = 0;
+    sy = (img.height - sHeight) * alignY;
+  }
+
+  ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
+}
+
 export async function generateCardImagePng({
   attendeeName = 'Participant',
   college = 'St Thomas College Thrissur',
@@ -13,6 +45,12 @@ export async function generateCardImagePng({
   isVerified = true,
   statusText = 'VERIFIED'
 }) {
+  // Preload custom card artwork assets
+  const [bgImg, stubImg] = await Promise.all([
+    loadCanvasImage('/assets/ticket-bg-dark.png'),
+    loadCanvasImage('/assets/ticket-stub-light.jpg')
+  ]);
+
   // High-res canvas: 1320 x 640 (2x scale of 660 x 320 for Retina display crispness)
   const W = 1320;
   const H = 640;
@@ -49,49 +87,26 @@ export async function generateCardImagePng({
   // ----------------------------------------------------
   // LEFT BODY SECTION (0 to bodyW)
   // ----------------------------------------------------
-  // Deep dark navy background
   ctx.fillStyle = '#070a13';
   ctx.fillRect(0, 0, bodyW, H);
 
-  // Soft cyan radial glow aura
-  const radialGlow = ctx.createRadialGradient(250, 320, 20, 350, 320, 450);
-  radialGlow.addColorStop(0, 'rgba(14, 165, 233, 0.28)');
-  radialGlow.addColorStop(0.5, 'rgba(14, 165, 233, 0.08)');
-  radialGlow.addColorStop(1, 'transparent');
-  ctx.fillStyle = radialGlow;
-  ctx.fillRect(0, 0, bodyW, H);
-
-  // Cybernetic electric blue light beams (slanted bars)
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, 0, bodyW, H);
-  ctx.clip();
-
-  // Transform for angled bars
-  const barWidths = [50, 75, 60, 85, 45, 95];
-  const barX = [320, 420, 540, 650, 780, 860];
-  const barOpacities = [0.18, 0.38, 0.25, 0.45, 0.15, 0.32];
-
-  barX.forEach((bx, i) => {
+  if (bgImg) {
     ctx.save();
-    ctx.transform(1, 0, -0.28, 1, 0, 0); // ~-15 degree slant
-    const barGrad = ctx.createLinearGradient(bx, 0, bx, H);
-    barGrad.addColorStop(0, `rgba(14, 165, 233, ${barOpacities[i] * 0.4})`);
-    barGrad.addColorStop(0.5, `rgba(14, 165, 233, ${barOpacities[i]})`);
-    barGrad.addColorStop(1, `rgba(2, 132, 199, ${barOpacities[i] * 0.8})`);
-    ctx.fillStyle = barGrad;
-    ctx.fillRect(bx, -50, barWidths[i], H + 100);
+    ctx.beginPath();
+    ctx.rect(0, 0, bodyW, H);
+    ctx.clip();
+    // Draw cyber artwork aligned to the right so the glowing 3D emblem shines beside perforation
+    drawImageCover(ctx, bgImg, 0, 0, bodyW, H, 1.0, 0.5);
     ctx.restore();
-  });
-  ctx.restore();
-
-  // Decorative dot grid near perforation
-  ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
-  for (let c = 0; c < 2; c++) {
-    for (let r = 0; r < 3; r++) {
-      ctx.fillRect(bodyW - 70 + c * 14, 280 + r * 14, 6, 6);
-    }
   }
+
+  // Dark cyber vignette overlay: provides crisp text contrast on the left, let emblem pop on the right
+  const bodyOverlay = ctx.createLinearGradient(0, 0, bodyW, 0);
+  bodyOverlay.addColorStop(0, 'rgba(3, 5, 12, 0.94)');
+  bodyOverlay.addColorStop(0.55, 'rgba(3, 5, 12, 0.72)');
+  bodyOverlay.addColorStop(1, 'rgba(3, 5, 12, 0.25)');
+  ctx.fillStyle = bodyOverlay;
+  ctx.fillRect(0, 0, bodyW, H);
 
   // Content Padding: left = 60, top = 55
   // Header Tag
@@ -243,46 +258,26 @@ export async function generateCardImagePng({
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(bodyW, 0, stubW, H);
 
-  // Top-right light cyan triangular flare
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(W, 0);
-  ctx.lineTo(W - 200, 0);
-  ctx.lineTo(W, 200);
-  ctx.closePath();
-  const topGrad = ctx.createLinearGradient(W - 200, 0, W, 200);
-  topGrad.addColorStop(0, 'rgba(165, 243, 252, 0.7)');
-  topGrad.addColorStop(1, 'rgba(56, 189, 248, 0.85)');
-  ctx.fillStyle = topGrad;
-  ctx.fill();
-  ctx.restore();
-
-  // Bottom-right diagonal cybernetic stripes
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(W, H - 240);
-  ctx.lineTo(W - 240, H);
-  ctx.lineTo(W, H);
-  ctx.closePath();
-  const botGrad = ctx.createLinearGradient(W - 240, H, W, H - 240);
-  botGrad.addColorStop(0, '#1d4ed8');
-  botGrad.addColorStop(0.5, '#0284c7');
-  botGrad.addColorStop(1, '#38bdf8');
-  ctx.fillStyle = botGrad;
-  ctx.fill();
-  ctx.restore();
-
-  // Bottom-left 3x3 dot matrix on stub
-  ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
-  for (let c = 0; c < 3; c++) {
-    for (let r = 0; r < 3; r++) {
-      ctx.fillRect(bodyW + 36 + c * 10, H - 65 + r * 10, 5, 5);
-    }
+  if (stubImg) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bodyW, 0, stubW, H);
+    ctx.clip();
+    drawImageCover(ctx, stubImg, bodyW, 0, stubW, H, 0.5, 0.5);
+    ctx.restore();
   }
+
+  // Radial center glow for 100% QR contrast
+  const stubGlow = ctx.createRadialGradient(bodyW + stubW / 2, H / 2, 50, bodyW + stubW / 2, H / 2, 220);
+  stubGlow.addColorStop(0, 'rgba(255, 255, 255, 0.96)');
+  stubGlow.addColorStop(0.75, 'rgba(255, 255, 255, 0.6)');
+  stubGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = stubGlow;
+  ctx.fillRect(bodyW, 0, stubW, H);
 
   // SCAN ME Header
   ctx.font = '900 28px "Arial Black", Impact, sans-serif';
-  ctx.fillStyle = '#000000';
+  ctx.fillStyle = '#050714';
   ctx.textAlign = 'center';
   ctx.letterSpacing = '1.5px';
   const stubCenterX = bodyW + stubW / 2;
