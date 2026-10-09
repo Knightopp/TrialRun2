@@ -1,17 +1,21 @@
 import QRCode from 'qrcode';
+import { toPng } from 'html-to-image';
 
 /**
- * Renders the exact cybernetic Srishti 2.7 Entry Pass card onto an HTML5 Canvas
- * and exports it as a high-resolution lossless PNG data URL.
+ * Renders the exact cybernetic Srishti 2.7 Entry Pass card.
+ * Priority 1: Snapshots the exact live DOM pass element from the profile page.
+ * Priority 2: Canvas-based pixel-perfect fallback.
  */
 function loadCanvasImage(src) {
   return new Promise((resolve) => {
     if (typeof window === 'undefined') return resolve(null);
     const img = new Image();
-    // No crossOrigin for local/same-origin assets to avoid Chromium cached-asset CORS rejection
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;
+    if (img.complete && img.naturalWidth > 0) {
+      resolve(img);
+    }
   });
 }
 
@@ -45,7 +49,26 @@ export async function generateCardImagePng({
   isVerified = true,
   statusText = 'VERIFIED'
 }) {
-  // Preload custom card artwork assets
+  // 1. Primary: Snapshot exact live DOM pass card from the user's screen
+  if (typeof document !== 'undefined') {
+    const livePass = document.getElementById('participant-ticket-card') || document.querySelector('.tear-ticket');
+    if (livePass) {
+      try {
+        const domDataUrl = await toPng(livePass, {
+          pixelRatio: 2,
+          cacheBust: true,
+          quality: 1
+        });
+        if (domDataUrl && domDataUrl.length > 1000) {
+          return domDataUrl;
+        }
+      } catch (domErr) {
+        console.warn('DOM pass snapshot notice, falling back to canvas:', domErr);
+      }
+    }
+  }
+
+  // 2. High-fidelity Canvas rendering matching the TearTicket pass
   const [bgImg, stubImg] = await Promise.all([
     loadCanvasImage('/assets/ticket-bg-dark.png'),
     loadCanvasImage('/assets/ticket-stub-light.jpg')
@@ -125,8 +148,8 @@ export async function generateCardImagePng({
   ctx.fillStyle = lineGrad;
   ctx.fillRect(270, 107, 120, 4);
 
-  // Main Attendee Name (Akira style)
-  ctx.font = '900 52px "Arial Black", "Montserrat", Impact, sans-serif';
+  // Main Attendee Name (Akira style matching profile)
+  ctx.font = '900 48px "Akira", "Akira Expanded", "Outfit", "Arial Black", sans-serif';
   const nameGrad = ctx.createLinearGradient(60, 160, 60, 230);
   nameGrad.addColorStop(0, '#ffffff');
   nameGrad.addColorStop(0.4, '#ffffff');
@@ -138,9 +161,9 @@ export async function generateCardImagePng({
   const displayName = (attendeeName || 'PARTICIPANT').toUpperCase();
   // If name is long, scale font size
   if (displayName.length > 20) {
-    ctx.font = '900 38px "Arial Black", "Montserrat", Impact, sans-serif';
+    ctx.font = '900 34px "Akira", "Akira Expanded", "Outfit", "Arial Black", sans-serif';
   } else if (displayName.length > 14) {
-    ctx.font = '900 44px "Arial Black", "Montserrat", Impact, sans-serif';
+    ctx.font = '900 40px "Akira", "Akira Expanded", "Outfit", "Arial Black", sans-serif';
   }
   ctx.fillText(displayName, 60, 195);
   ctx.shadowBlur = 0; // Reset shadow
@@ -247,7 +270,7 @@ export async function generateCardImagePng({
   ctx.fillStyle = '#94a3b8';
   ctx.fillText('EVENTS ENROLLED', bodyW - 80, statusBoxY + 32);
 
-  ctx.font = '900 32px "Arial Black", -apple-system, sans-serif';
+  ctx.font = '900 32px "Akira", "Akira Expanded", "Arial Black", -apple-system, sans-serif';
   ctx.fillStyle = '#ffffff';
   ctx.fillText(`${eventsCount} Event(s)`, bodyW - 80, statusBoxY + 70);
   ctx.textAlign = 'left'; // Reset
@@ -270,7 +293,7 @@ export async function generateCardImagePng({
   // Clean stub background matching official artwork
 
   // SCAN ME Header
-  ctx.font = '900 28px "Arial Black", Impact, sans-serif';
+  ctx.font = '900 28px "Akira", "Akira Expanded", "Arial Black", Impact, sans-serif';
   ctx.fillStyle = '#050714';
   ctx.textAlign = 'center';
   ctx.letterSpacing = '1.5px';
@@ -392,11 +415,12 @@ export async function generateCardImagePng({
   ctx.restore(); // Restore outer clip
 
   // ----------------------------------------------------
-  // PERFORATION LINE & NOTCHES (Drawn on top)
+  // PERFORATION LINE & 12 HOLE CUTOUTS (Matching TearTicket)
   // ----------------------------------------------------
-  // Top semi-circular notch cutout
   ctx.save();
-  ctx.fillStyle = '#000000'; // Match background
+  ctx.fillStyle = '#000000'; // Cutout punch through
+
+  // Top semi-circular notch cutout
   ctx.beginPath();
   ctx.arc(bodyW, 0, 18, 0, Math.PI);
   ctx.fill();
@@ -406,15 +430,13 @@ export async function generateCardImagePng({
   ctx.arc(bodyW, H, 18, Math.PI, 0);
   ctx.fill();
 
-  // Vertical dashed perforation line
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([8, 12]);
-  ctx.beginPath();
-  ctx.moveTo(bodyW, 25);
-  ctx.lineTo(bodyW, H - 25);
-  ctx.stroke();
-  ctx.setLineDash([]); // Reset
+  // 12 circular perforation holes
+  for (let i = 0; i < 12; i++) {
+    const holeY = (H / 13) * (i + 1);
+    ctx.beginPath();
+    ctx.arc(bodyW, holeY, 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 
   // Borderless pass matching TearTicket aesthetic

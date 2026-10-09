@@ -1152,7 +1152,9 @@ See you at *SRISHTI 2.7*! 🚀`;
                     return (
                       <div style={{ width: '100%', maxWidth: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'visible' }}>
                         <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: '100%', overflow: 'visible', padding: '0.5rem 0' }}>
-                          <div style={{
+                          <div
+                            id="participant-ticket-card"
+                            style={{
                             width: '100%',
                             maxWidth: '660px',
                             display: 'flex',
