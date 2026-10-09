@@ -122,6 +122,7 @@ async function startWhatsAppBot() {
 app.get('/', (req, res) => {
   res.json({
     service: 'SRISHTI 2.7 WhatsApp Dispatch Microservice',
+    version: '2.2.0',
     status: isConnected ? 'online' : 'connecting',
     phone: botUser?.id ? botUser.id.split(':')[0] : null,
     qrReady: !isConnected && !!latestQR,
@@ -293,6 +294,7 @@ app.post('/send-pass', async (req, res) => {
         .replace(/{eventName}/g, eventName)
         .replace(/{college}/g, college || '')
         .replace(/{passUrl}/g, passUrl);
+    } else {
       caption = 
 `🎟️ *SRISHTI 2.7 | OFFICIAL DELEGATE PASS*
 
