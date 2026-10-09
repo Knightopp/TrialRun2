@@ -2395,22 +2395,39 @@ See you at *SRISHTI 2.7*! 🚀`;
                                 tilt={true}
                                 tiltMax={12}
                                 tiltReach={300}
-                                parallax={8}
-                                perspective={1000}
-                                background="#070a13"
+                                paral                                background="#070a13"
                                 stubBackground="#ffffff"
                                 color="#ffffff"
                                 border={true}
-                                borderColor="rgba(56,189,248,0.2)"
-                                borderWidth={1}
+                                borderColor="rgba(56,189,248,0.4)"
+                                borderWidth={1.5}
                                 recenter={true}
                                 stub={
-                                  <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1.25rem', background: '#fff', overflow: 'hidden' }}>
-                                    <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', background: 'linear-gradient(135deg, rgba(165,243,252,0.6), rgba(56,189,248,0.8))', transform: 'rotate(45deg)', opacity: 0.6, zIndex: 0 }}></div>
-                                    <div style={{ position: 'absolute', bottom: '-40px', left: '-30px', width: '150px', height: '120px', background: 'linear-gradient(135deg, rgba(56,189,248,0.8), rgba(29,78,216,0.8))', transform: 'rotate(35deg)', opacity: 0.8, zIndex: 0 }}></div>
+                                  <div style={{
+                                    position: 'relative',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    padding: '1.25rem',
+                                    backgroundImage: "url('/assets/ticket-stub-light.jpg')",
+                                    backgroundPosition: 'center',
+                                    backgroundSize: 'cover',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundColor: '#ffffff',
+                                    overflow: 'hidden'
+                                  }}>
+                                    <div style={{
+                                      position: 'absolute',
+                                      inset: 0,
+                                      zIndex: 0,
+                                      background: 'radial-gradient(circle at center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 75%, transparent 100%)',
+                                      pointerEvents: 'none'
+                                    }} />
                                     
                                     <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                      <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '1.1rem', marginBottom: '1.25rem', letterSpacing: '0.05em' }}>SCAN ME</h4>
+                                      <h4 style={{ fontFamily: 'var(--font-akira)', color: '#050714', fontSize: '1.1rem', marginBottom: '1.25rem', letterSpacing: '0.05em' }}>SCAN ME</h4>
                                       
                                       <div style={{ position: 'relative', padding: '12px' }}>
                                         <div style={{ position: 'absolute', top: 0, left: 0, width: '18px', height: '18px', borderTop: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '4px 0 0 0' }}></div>
@@ -2433,14 +2450,33 @@ See you at *SRISHTI 2.7*! 🚀`;
                                         />
                                       </div>
                                       
-                                      <span style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '1.25rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{participantCode}</span>
+                                      <span style={{ fontSize: '0.85rem', color: '#0f172a', marginTop: '1.25rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold', background: 'rgba(255,255,255,0.7)', padding: '2px 8px', borderRadius: '6px' }}>{participantCode}</span>
                                     </div>
                                   </div>
                                 }
                               >
-                                <div style={{ position: 'relative', width: '100%', height: '100%', padding: '2.5rem', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, background: 'radial-gradient(circle at 30% 50%, rgba(14,165,233,0.2) 0%, transparent 60%)' }}></div>
-                                  <div style={{ position: 'absolute', top: '-10%', left: '20%', width: '150%', height: '120%', zIndex: 0, background: 'repeating-linear-gradient(90deg, rgba(14,165,233,0) 0px, rgba(14,165,233,0) 40px, rgba(14,165,233,0.3) 40px, rgba(14,165,233,0.6) 60px, rgba(14,165,233,0) 60px, rgba(14,165,233,0) 80px)', transform: 'skewX(-15deg)', opacity: 0.6 }}></div>
+                                <div style={{
+                                  position: 'relative',
+                                  width: '100%',
+                                  height: '100%',
+                                  padding: '2.5rem',
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                  backgroundImage: "url('/assets/ticket-bg-dark.png')",
+                                  backgroundPosition: 'right center',
+                                  backgroundSize: 'cover',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundColor: '#070a13'
+                                }}>
+                                  <div style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    zIndex: 0,
+                                    background: 'linear-gradient(90deg, rgba(3, 5, 12, 0.94) 0%, rgba(3, 5, 12, 0.72) 55%, rgba(3, 5, 12, 0.25) 100%)',
+                                    pointerEvents: 'none'
+                                  }} />
                               
                                   <div style={{ position: 'relative', zIndex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>

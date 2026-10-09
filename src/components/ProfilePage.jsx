@@ -1186,23 +1186,37 @@ See you at *SRISHTI 2.7*! 🚀`;
                             stubBackground="#ffffff"
                             color="#ffffff"
                             border={true}
-                            borderColor="rgba(56,189,248,0.25)"
-                            borderWidth={1}
+                            borderColor="rgba(56,189,248,0.4)"
+                            borderWidth={1.5}
                             recenter={true}
                             stub={
-                              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '1rem', background: '#fff', overflow: 'hidden', boxSizing: 'border-box' }}>
-                                <div style={{ position: 'absolute', top: '-25px', right: '-25px', width: '110px', height: '110px', background: 'linear-gradient(225deg, rgba(56,189,248,0.7) 0%, rgba(165,243,252,0.8) 35%, transparent 36%)', zIndex: 0 }}></div>
-                                <div style={{ position: 'absolute', bottom: '-20px', right: '-20px', width: '120px', height: '120px', background: 'linear-gradient(135deg, transparent 40%, #38bdf8 40%, #38bdf8 60%, #1d4ed8 60%, #1d4ed8 100%)', zIndex: 0 }}></div>
-
-                                {/* Bottom-left dot matrix */}
-                                <div style={{ position: 'absolute', bottom: '16px', left: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, 4px)', gap: '4px', opacity: 0.35, zIndex: 1 }}>
-                                  {[...Array(9)].map((_, i) => (
-                                    <div key={i} style={{ width: '4px', height: '4px', borderRadius: '1px', background: '#38bdf8' }} />
-                                  ))}
-                                </div>
+                              <div style={{
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: '100%',
+                                padding: '1rem',
+                                backgroundImage: "url('/assets/ticket-stub-light.jpg')",
+                                backgroundPosition: 'center',
+                                backgroundSize: 'cover',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundColor: '#ffffff',
+                                overflow: 'hidden',
+                                boxSizing: 'border-box'
+                              }}>
+                                {/* Soft ambient radial gradient behind the QR code for perfect contrast */}
+                                <div style={{
+                                  position: 'absolute',
+                                  inset: 0,
+                                  zIndex: 0,
+                                  background: 'radial-gradient(circle at center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.55) 75%, transparent 100%)',
+                                  pointerEvents: 'none'
+                                }} />
 
                                 <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                  <h4 style={{ fontFamily: 'var(--font-akira)', color: '#000', fontSize: '1.05rem', margin: '0 0 0.85rem 0', letterSpacing: '0.05em' }}>SCAN ME</h4>
+                                  <h4 style={{ fontFamily: 'var(--font-akira)', color: '#050714', fontSize: '1.05rem', margin: '0 0 0.85rem 0', letterSpacing: '0.05em' }}>SCAN ME</h4>
 
                                   <div style={{ position: 'relative', padding: '10px' }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, width: '16px', height: '16px', borderTop: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '4px 0 0 0' }}></div>
@@ -1225,21 +1239,35 @@ See you at *SRISHTI 2.7*! 🚀`;
                                     />
                                   </div>
 
-                                  <span style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.85rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold', letterSpacing: '0.05em' }}>{passCode}</span>
+                                  <span style={{ fontSize: '0.85rem', color: '#0f172a', marginTop: '0.85rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.7)', padding: '2px 8px', borderRadius: '6px' }}>{passCode}</span>
                                 </div>
                               </div>
                             }
                           >
-                            <div style={{ position: 'relative', width: '100%', height: '100%', padding: '1.75rem 2.25rem', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box' }}>
-                              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, background: 'radial-gradient(circle at 30% 50%, rgba(14,165,233,0.2) 0%, transparent 60%)' }}></div>
-                              <div style={{ position: 'absolute', top: '-10%', left: '20%', width: '150%', height: '120%', zIndex: 0, background: 'repeating-linear-gradient(90deg, rgba(14,165,233,0) 0px, rgba(14,165,233,0) 40px, rgba(14,165,233,0.3) 40px, rgba(14,165,233,0.6) 60px, rgba(14,165,233,0.6) 60px, rgba(14,165,233,0.8) 80px)', transform: 'skewX(-15deg)', opacity: 0.6 }}></div>
-
-                              {/* Decorative dot matrix on ticket body */}
-                              <div style={{ position: 'absolute', top: '50%', right: '25px', transform: 'translateY(-50%)', display: 'grid', gridTemplateColumns: 'repeat(2, 4px)', gap: '6px', opacity: 0.35, zIndex: 1 }}>
-                                {[...Array(6)].map((_, i) => (
-                                  <div key={i} style={{ width: '4px', height: '4px', borderRadius: '1px', background: '#38bdf8' }} />
-                                ))}
-                              </div>
+                            <div style={{
+                              position: 'relative',
+                              width: '100%',
+                              height: '100%',
+                              padding: '1.75rem 2.25rem',
+                              overflow: 'hidden',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              boxSizing: 'border-box',
+                              backgroundImage: "url('/assets/ticket-bg-dark.png')",
+                              backgroundPosition: 'right center',
+                              backgroundSize: 'cover',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundColor: '#070a13'
+                            }}>
+                              {/* Sleek cyber vignette to ensure text contrast while displaying the 3D cyber emblem on the right */}
+                              <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                zIndex: 0,
+                                background: 'linear-gradient(90deg, rgba(3, 5, 12, 0.94) 0%, rgba(3, 5, 12, 0.72) 55%, rgba(3, 5, 12, 0.25) 100%)',
+                                pointerEvents: 'none'
+                              }} />
 
                               <div style={{ position: 'relative', zIndex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.65rem' }}>
