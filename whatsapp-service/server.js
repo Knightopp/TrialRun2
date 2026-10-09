@@ -293,29 +293,21 @@ app.post('/send-pass', async (req, res) => {
         .replace(/{eventName}/g, eventName)
         .replace(/{college}/g, college || '')
         .replace(/{passUrl}/g, passUrl);
-    } else {
       caption = 
-`🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
-━━━━━━━━━━━━━━━━━━━━━━
-Hello *${displayName}*,
+`🎟️ *SRISHTI 2.7 | OFFICIAL DELEGATE PASS*
 
-Your registration has been confirmed! Here are your official festival credentials:
+Hello *${displayName}*, your registration is confirmed!
 
-👤 *Participant:* ${displayName}
-🆔 *Delegate ID:* *${displayCode}*
-🏆 *Event:* ${eventName}
-${college ? `🏛️ *College:* ${college}\n` : ''}
-📱 *View / Download Pass:*
+🆔 *Delegate ID:* ${displayCode}  
+🏆 *Event:* ${eventName}  
+🏛️ *College:* ${college || 'Delegate'}
+
+📱 *Your Digital Pass & QR Code:*  
 ${passUrl}
 
-━━━━━━━━━━━━━━━━━━━━━━
-⚡ *VENUE INSTRUCTIONS:*
-• Present your QR code on arrival at the Gate Turnstile.
-• Carry your college ID card for physical verification.
-• Save this message or screenshot your QR code for offline access.
+Please present your QR code and college ID at the entrance.
 
-See you at *SRISHTI 2.7*! 🚀
-_Govt Model Engineering College_`;
+See you at *SRISHTI 2.7*! 🚀`;
     }
 
     let sendResult;

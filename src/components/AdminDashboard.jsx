@@ -138,68 +138,102 @@ export default function AdminDashboard() {
     }
   });
 
-  // Default and Custom WhatsApp Message Template
-  const DEFAULT_WA_TEMPLATE = 
-`🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
-━━━━━━━━━━━━━━━━━━━━━━
-Hello *{name}*,
+  // Default and Custom WhatsApp Message Templates
+  const DEFAULT_WA_REG_TEMPLATE = 
+`🎟️ *SRISHTI 2.7 | OFFICIAL DELEGATE PASS*
 
-Your festival registration has been confirmed! Here are your official entry credentials:
+Hello *{name}*, your registration is confirmed!
 
-👤 *Participant:* {name}
-🆔 *Delegate ID:* *{participantCode}*
-🏆 *Event(s):* {eventName}
+🆔 *Delegate ID:* {participantCode}  
+🏆 *Event:* {eventName}  
 🏛️ *College:* {college}
 
-📱 *Access Your Live Digital Pass & QR:*
+📱 *Your Digital Pass & QR Code:*  
 {passUrl}
 
-━━━━━━━━━━━━━━━━━━━━━━
-⚡ *VENUE INSTRUCTIONS:*
-• Present your QR code on arrival at the Gate Turnstile.
-• Carry your college ID card for physical verification.
-• Save this message or screenshot your QR code for offline access.
+Please present your QR code and college ID at the entrance.
 
-See you at *SRISHTI 2.7*! 🚀
-_Govt Model Engineering College_`;
+See you at *SRISHTI 2.7*! 🚀`;
+
+  const DEFAULT_WA_RESEND_TEMPLATE = 
+`🎟️ *SRISHTI 2.7 | OFFICIAL DELEGATE PASS*
+
+Hello *{name}*, here is your requested entry pass:
+
+🆔 *Delegate ID:* {participantCode}  
+🏆 *Event:* {eventName}  
+🏛️ *College:* {college}
+
+📱 *Your Digital Pass & QR Code:*  
+{passUrl}
+
+Please present your QR code and college ID at the entrance.
+
+See you at *SRISHTI 2.7*! 🚀`;
+
+  const [activeWaTemplateTab, setActiveWaTemplateTab] = useState('reg'); // 'reg' or 'resend'
 
   const [whatsAppTemplate, setWhatsAppTemplate] = useState(() => {
     try {
-      return localStorage.getItem('srishti_wa_custom_template') || DEFAULT_WA_TEMPLATE;
+      return localStorage.getItem('srishti_wa_custom_template') || DEFAULT_WA_REG_TEMPLATE;
     } catch (_) {
-      return DEFAULT_WA_TEMPLATE;
+      return DEFAULT_WA_REG_TEMPLATE;
     }
   });
+
+  const [whatsAppResendTemplate, setWhatsAppResendTemplate] = useState(() => {
+    try {
+      return localStorage.getItem('srishti_wa_profile_template') || DEFAULT_WA_RESEND_TEMPLATE;
+    } catch (_) {
+      return DEFAULT_WA_RESEND_TEMPLATE;
+    }
+  });
+
   const [isCustomizingWhatsApp, setIsCustomizingWhatsApp] = useState(false);
 
   const handleSaveWhatsAppTemplate = () => {
     try {
-      localStorage.setItem('srishti_wa_custom_template', whatsAppTemplate);
+      if (activeWaTemplateTab === 'reg') {
+        localStorage.setItem('srishti_wa_custom_template', whatsAppTemplate);
+        showToast('Registration WhatsApp template saved successfully!', 'success');
+      } else {
+        localStorage.setItem('srishti_wa_profile_template', whatsAppResendTemplate);
+        showToast('Profile "Send Again" WhatsApp template saved successfully!', 'success');
+      }
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('srishti_wa_template_update'));
       logActivity(
         'UPDATE_SETTINGS',
         'WHATSAPP_TEMPLATE',
-        'Admin updated custom WhatsApp pass message template',
+        `Admin updated ${activeWaTemplateTab === 'reg' ? 'Registration' : 'Profile Re-send'} WhatsApp template`,
         currentStaff?.username || currentStaff?.email || 'admin',
         'SUCCESS'
       );
-      showToast('Custom WhatsApp template saved successfully!', 'success');
     } catch (err) {
       showToast('Failed to save template: ' + err.message, 'error');
     }
   };
 
   const handleResetWhatsAppTemplate = () => {
-    setWhatsAppTemplate(DEFAULT_WA_TEMPLATE);
-    localStorage.removeItem('srishti_wa_custom_template');
+    if (activeWaTemplateTab === 'reg') {
+      setWhatsAppTemplate(DEFAULT_WA_REG_TEMPLATE);
+      localStorage.removeItem('srishti_wa_custom_template');
+      showToast('Reset to default Registration template.', 'info');
+    } else {
+      setWhatsAppResendTemplate(DEFAULT_WA_RESEND_TEMPLATE);
+      localStorage.removeItem('srishti_wa_profile_template');
+      showToast('Reset to default Profile "Send Again" template.', 'info');
+    }
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('srishti_wa_template_update'));
-    showToast('Reset to default Srishti template.', 'info');
   };
 
   const handleInsertWhatsAppTag = (tag) => {
-    setWhatsAppTemplate(prev => prev + ' ' + tag);
+    if (activeWaTemplateTab === 'reg') {
+      setWhatsAppTemplate(prev => prev + ' ' + tag);
+    } else {
+      setWhatsAppResendTemplate(prev => prev + ' ' + tag);
+    }
   };
 
   const handleTogglePortalStatus = (newStatus) => {
@@ -1951,6 +1985,44 @@ _Govt Model Engineering College_`;
                         </span>
                       </div>
 
+                      {/* Tabs: Registration Welcome vs Profile Re-send */}
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveWaTemplateTab('reg')}
+                          style={{
+                            padding: '0.45rem 0.95rem',
+                            borderRadius: '8px',
+                            fontSize: '0.8rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            background: activeWaTemplateTab === 'reg' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                            color: activeWaTemplateTab === 'reg' ? '#38bdf8' : '#a1a1aa',
+                            border: activeWaTemplateTab === 'reg' ? '1px solid rgba(56, 189, 248, 0.45)' : '1px solid rgba(255, 255, 255, 0.1)',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Registration Welcome Message
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveWaTemplateTab('resend')}
+                          style={{
+                            padding: '0.45rem 0.95rem',
+                            borderRadius: '8px',
+                            fontSize: '0.8rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            background: activeWaTemplateTab === 'resend' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                            color: activeWaTemplateTab === 'resend' ? '#4ade80' : '#a1a1aa',
+                            border: activeWaTemplateTab === 'resend' ? '1px solid rgba(34, 197, 94, 0.45)' : '1px solid rgba(255, 255, 255, 0.1)',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Profile "Send Again" Message
+                        </button>
+                      </div>
+
                       {/* Dynamic Tags Insertion Pills */}
                       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
                         {[
@@ -1982,8 +2054,14 @@ _Govt Model Engineering College_`;
                       </div>
 
                       <textarea
-                        value={whatsAppTemplate}
-                        onChange={(e) => setWhatsAppTemplate(e.target.value)}
+                        value={activeWaTemplateTab === 'reg' ? whatsAppTemplate : whatsAppResendTemplate}
+                        onChange={(e) => {
+                          if (activeWaTemplateTab === 'reg') {
+                            setWhatsAppTemplate(e.target.value);
+                          } else {
+                            setWhatsAppResendTemplate(e.target.value);
+                          }
+                        }}
                         rows={12}
                         style={{
                           width: '100%',
@@ -2014,7 +2092,7 @@ _Govt Model Engineering College_`;
                           textDecoration: 'underline'
                         }}
                       >
-                        Reset to Default Srishti Template
+                        Reset to Default {activeWaTemplateTab === 'reg' ? 'Registration' : 'Profile "Send Again"'} Template
                       </button>
 
                       <div style={{ display: 'flex', gap: '0.75rem' }}>

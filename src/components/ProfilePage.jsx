@@ -45,6 +45,15 @@ export default function ProfilePage() {
   const [emailingPass, setEmailingPass] = useState(false);
   const [downloadingPass, setDownloadingPass] = useState(false);
   const [emailPassMsg, setEmailPassMsg] = useState(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [whatsAppPassMsg, setWhatsAppPassMsg] = useState(null);
+  const [hasSentWhatsApp, setHasSentWhatsApp] = useState(() => {
+    try {
+      return localStorage.getItem('srishti_wa_pass_sent') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
   const [arrivalCheckin, setArrivalCheckin] = useState(null);
   const [eventAttendance, setEventAttendance] = useState({});
   const [signedPassQr, setSignedPassQr] = useState('');
@@ -487,6 +496,110 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSendWhatsAppToUser = async () => {
+    const hasRegistered = registrations.length > 0;
+    if (!hasRegistered) {
+      alert('Your delegate pass is locked. Please register for at least one event first.');
+      return;
+    }
+    const data = getPassData();
+    if (!data.isVerified) {
+      alert('Your registration is pending payment verification by the FEST coordinator. Your official entry pass will be issued once payment is approved.');
+      return;
+    }
+
+    let targetPhone = (participantData?.phone || localStorage.getItem('srishti_user_phone') || '').trim();
+    if (!targetPhone) {
+      const entered = window.prompt('Please enter your 10-digit WhatsApp number to receive your pass:');
+      if (!entered || !entered.trim()) return;
+      targetPhone = entered.replace(/\D/g, '').trim();
+      if (targetPhone.length < 10) {
+        alert('Please enter a valid 10-digit mobile number.');
+        return;
+      }
+      localStorage.setItem('srishti_user_phone', targetPhone);
+      if (participantData) {
+        participantData.phone = targetPhone;
+      }
+    }
+
+    setSendingWhatsApp(true);
+    setWhatsAppPassMsg(null);
+
+    try {
+      // 1. Generate full-resolution pass PNG image
+      const cardPng = await generateCardImagePng({
+        attendeeName: data.attendeeName,
+        college: data.college,
+        passCode: data.passCode,
+        passToken: data.passToken,
+        events: data.events,
+        isVerified: data.isVerified,
+        statusText: data.statusText
+      });
+
+      // 2. Default Profile Re-send template
+      const defaultResendTemplate = 
+`🎟️ *SRISHTI 2.7 | OFFICIAL DELEGATE PASS*
+
+Hello *{name}*, here is your requested entry pass:
+
+🆔 *Delegate ID:* {participantCode}  
+🏆 *Event:* {eventName}  
+🏛️ *College:* {college}
+
+📱 *Your Digital Pass & QR Code:*  
+{passUrl}
+
+Please present your QR code and college ID at the entrance.
+
+See you at *SRISHTI 2.7*! 🚀`;
+
+      const customTemplate = localStorage.getItem('srishti_wa_profile_template') || defaultResendTemplate;
+      const eventNames = data.events.length > 0 ? data.events.join(', ') : 'All Registered Competitions';
+
+      const res = await fetch('https://trialrun2.onrender.com/send-pass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: targetPhone,
+          name: data.attendeeName,
+          participantCode: data.passCode,
+          eventName: eventNames,
+          college: data.college || '',
+          passUrl: 'https://srishti2-7.vercel.app/profile',
+          imageBase64: cardPng,
+          customMessage: customTemplate
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok || !resData.success) {
+        throw new Error(resData.error || 'Failed to dispatch pass via WhatsApp bot.');
+      }
+
+      setHasSentWhatsApp(true);
+      try {
+        localStorage.setItem('srishti_wa_pass_sent', 'true');
+      } catch (_) {}
+
+      setWhatsAppPassMsg({
+        type: 'success',
+        text: `Pass & QR code sent to your WhatsApp (+${targetPhone})!`
+      });
+      setTimeout(() => setWhatsAppPassMsg(null), 8000);
+    } catch (err) {
+      console.error('WhatsApp dispatch error:', err);
+      setWhatsAppPassMsg({
+        type: 'error',
+        text: err.message || 'WhatsApp bot temporarily busy. Try again or share via web.'
+      });
+      setTimeout(() => setWhatsAppPassMsg(null), 9000);
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
   const handleWhatsAppSharePass = () => {
     const hasRegistered = registrations.length > 0;
     if (!hasRegistered) {
@@ -499,17 +612,19 @@ export default function ProfilePage() {
     const eventNames = data.events.length > 0 ? data.events.join(', ') : 'All Registered Competitions';
 
     const text = 
-`🎟️ *SRISHTI 2.7 • OFFICIAL DELEGATE PASS*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 *Participant:* ${data.attendeeName}
-🆔 *Delegate ID:* *${data.passCode}*
-🏆 *Event(s):* ${eventNames}
+`🎟️ *SRISHTI 2.7 | OFFICIAL DELEGATE PASS*
+
+Hello *${data.attendeeName}*, here is your requested entry pass:
+
+🆔 *Delegate ID:* ${data.passCode}  
+🏆 *Event:* ${eventNames}  
 ${data.college ? `🏛️ *College:* ${data.college}\n` : ''}
-📱 *View & Scan My Live Pass:*
+📱 *Your Digital Pass & QR Code:*  
 ${profileLink}
 
-⚡ *National Level Technical & Cultural Festival*
-Govt Model Engineering College`;
+Please present your QR code and college ID at the entrance.
+
+See you at *SRISHTI 2.7*! 🚀`;
 
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -1377,9 +1492,9 @@ Govt Model Engineering College`;
                             </button>
 
                             <button
-                              onClick={handleWhatsAppSharePass}
-                              disabled={!hasRegistered}
-                              title={!hasRegistered ? 'Pass is locked. Register for an event first.' : 'Save / Share Pass on WhatsApp'}
+                              onClick={handleSendWhatsAppToUser}
+                              disabled={!hasRegistered || sendingWhatsApp}
+                              title={!hasRegistered ? 'Pass is locked. Register for an event first.' : 'Send Official Pass & QR directly to my WhatsApp'}
                               style={{
                                 padding: '0.7rem 1.4rem',
                                 backgroundColor: !hasRegistered ? 'rgba(37, 211, 102, 0.04)' : 'rgba(37, 211, 102, 0.12)',
@@ -1389,7 +1504,7 @@ Govt Model Engineering College`;
                                 fontWeight: '600',
                                 fontSize: '0.88rem',
                                 opacity: !hasRegistered ? 0.45 : 1,
-                                cursor: !hasRegistered ? 'not-allowed' : 'pointer',
+                                cursor: !hasRegistered ? 'not-allowed' : sendingWhatsApp ? 'wait' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.5rem',
@@ -1397,7 +1512,7 @@ Govt Model Engineering College`;
                                 backdropFilter: 'blur(8px)'
                               }}
                             >
-                              <FiPhone /> Save to WhatsApp
+                              <FiPhone /> {sendingWhatsApp ? 'Dispatching to WhatsApp...' : (hasSentWhatsApp ? 'Send Again to WhatsApp' : 'Send Pass to WhatsApp')}
                             </button>
 
                             <button
@@ -1439,6 +1554,39 @@ Govt Model Engineering College`;
                             }}>
                               {emailPassMsg.text}
                             </span>
+                          )}
+
+                          {whatsAppPassMsg && (
+                            <div style={{
+                              fontSize: '0.85rem',
+                              color: whatsAppPassMsg.type === 'success' ? '#4ade80' : '#ef4444',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.45rem',
+                              flexWrap: 'wrap'
+                            }}>
+                              {whatsAppPassMsg.type === 'success' ? <FiCheckCircle size={14} /> : <FiAlertCircle size={14} />}
+                              <span>{whatsAppPassMsg.text}</span>
+                              {whatsAppPassMsg.type === 'error' && (
+                                <button
+                                  type="button"
+                                  onClick={handleWhatsAppSharePass}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#38bdf8',
+                                    textDecoration: 'underline',
+                                    cursor: 'pointer',
+                                    fontSize: '0.82rem',
+                                    padding: 0,
+                                    marginLeft: '0.3rem'
+                                  }}
+                                >
+                                  Share via Web WhatsApp instead
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

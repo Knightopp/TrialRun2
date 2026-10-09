@@ -934,7 +934,23 @@ export default function App() {
         // Automatic 24/7 WhatsApp Pass Dispatch to Participant
         if (formPhone.trim()) {
           try {
-            const customMsg = localStorage.getItem('srishti_wa_custom_template') || null;
+            const defaultRegTemplate = 
+`🎟️ *SRISHTI 2.7 | OFFICIAL DELEGATE PASS*
+
+Hello *{name}*, your registration is confirmed!
+
+🆔 *Delegate ID:* {participantCode}  
+🏆 *Event:* {eventName}  
+🏛️ *College:* {college}
+
+📱 *Your Digital Pass & QR Code:*  
+{passUrl}
+
+Please present your QR code and college ID at the entrance.
+
+See you at *SRISHTI 2.7*! 🚀`;
+
+            const customMsg = localStorage.getItem('srishti_wa_custom_template') || defaultRegTemplate;
             fetch('https://trialrun2.onrender.com/send-pass', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
