@@ -68,16 +68,6 @@ serve(async (req: Request) => {
       );
     }
 
-    // Registrations for SRISHTI 2.7 are officially closed
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Registrations for SRISHTI 2.7 are officially closed. No new registrations are being accepted.",
-        code: "REGISTRATIONS_CLOSED"
-      }),
-      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
     // 3. Initialize Supabase Admin Client using server-side service role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceRoleKey = getServiceKey();

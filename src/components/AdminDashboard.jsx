@@ -6,7 +6,7 @@ import {
   FiCalendar, FiCheckCircle, FiClock, FiSearch, FiEdit2, FiPlus, 
   FiTrash2, FiDownload, FiEye, FiRefreshCw, FiShield, 
   FiCheck, FiX, FiActivity, FiPhone, FiMail, FiBookOpen, 
-  FiAlertCircle, FiLayers, FiUserCheck, FiAward, FiMapPin
+  FiAlertCircle, FiLayers, FiUserCheck, FiAward, FiMapPin, FiLock
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { generateCardImagePng } from '../utils/cardImageGenerator';
@@ -128,6 +128,39 @@ export default function AdminDashboard() {
     events: false
   });
   const [isResetting, setIsResetting] = useState(false);
+
+  // Registration Portal Status Settings
+  const [regPortalStatus, setRegPortalStatus] = useState(() => {
+    try {
+      return localStorage.getItem('srishti_reg_portal_status') || 'open';
+    } catch (_) {
+      return 'open';
+    }
+  });
+
+  const handleTogglePortalStatus = (newStatus) => {
+    try {
+      localStorage.setItem('srishti_reg_portal_status', newStatus);
+      setRegPortalStatus(newStatus);
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('srishti_reg_portal_update'));
+      logActivity(
+        'UPDATE_SETTINGS',
+        'PORTAL_LOCK',
+        `Admin switched public registration status to ${newStatus.toUpperCase()}`,
+        currentStaff?.username || currentStaff?.email || 'admin',
+        'SUCCESS'
+      );
+      showToast(
+        newStatus === 'closed' 
+          ? 'Registration Portal CLOSED. Notice banner is active on /register.' 
+          : 'Registration Portal OPENED. Visitors can freely register for all events.',
+        'success'
+      );
+    } catch (err) {
+      showToast(`Failed to update status: ${err.message}`, 'error');
+    }
+  };
 
   // Toast feedback
   const [toast, setToast] = useState(null);
@@ -1396,6 +1429,25 @@ export default function AdminDashboard() {
                 )}
               </div>
 
+              {adminRole === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => handleTogglePortalStatus(regPortalStatus === 'closed' ? 'open' : 'closed')}
+                  className="admin-btn"
+                  style={{
+                    background: regPortalStatus === 'closed' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
+                    border: regPortalStatus === 'closed' ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(34, 197, 94, 0.5)',
+                    color: regPortalStatus === 'closed' ? '#f87171' : '#4ade80',
+                    fontSize: '0.78rem',
+                    fontWeight: '700'
+                  }}
+                  title="Click to toggle Public Event Registrations"
+                >
+                  {regPortalStatus === 'closed' ? <FiLock /> : <FiCheckCircle />}
+                  <span>PORTAL: {regPortalStatus.toUpperCase()}</span>
+                </button>
+              )}
+
               <button 
                 onClick={() => fetchAllData(adminRole, currentStaff?.id)}
                 className="admin-btn admin-btn-secondary"
@@ -1551,6 +1603,96 @@ export default function AdminDashboard() {
           {/* ========================================================================= */}
           {activeTab === 'overview' && (
             <div>
+              {/* REGISTRATION PORTAL STATUS CONTROL */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(18, 18, 24, 0.95), rgba(10, 10, 14, 0.98))',
+                border: regPortalStatus === 'closed' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(34, 197, 94, 0.4)',
+                borderRadius: '16px',
+                padding: '1.25rem 1.5rem',
+                marginBottom: '1.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1.5rem',
+                flexWrap: 'wrap',
+                boxShadow: regPortalStatus === 'closed' ? '0 8px 30px rgba(239, 68, 68, 0.15)' : '0 8px 30px rgba(34, 197, 94, 0.12)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.1rem' }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: regPortalStatus === 'closed' ? 'rgba(239, 68, 68, 0.18)' : 'rgba(34, 197, 94, 0.18)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: regPortalStatus === 'closed' ? '#f87171' : '#4ade80',
+                    fontSize: '1.3rem'
+                  }}>
+                    {regPortalStatus === 'closed' ? <FiLock /> : <FiCheckCircle />}
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <h4 style={{ margin: 0, color: '#ffffff', fontSize: '1.05rem', fontWeight: '800', letterSpacing: '0.02em' }}>
+                        Public Registration Portal
+                      </h4>
+                      <span style={{
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '20px',
+                        fontSize: '0.7rem',
+                        fontWeight: '800',
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        background: regPortalStatus === 'closed' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+                        color: regPortalStatus === 'closed' ? '#f87171' : '#4ade80',
+                        border: regPortalStatus === 'closed' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(34, 197, 94, 0.4)'
+                      }}>
+                        {regPortalStatus === 'closed' ? 'LOCKED / CLOSED' : 'ACTIVE / OPEN'}
+                      </span>
+                    </div>
+                    <p style={{ margin: '0.35rem 0 0 0', color: '#a1a1aa', fontSize: '0.84rem', lineHeight: '1.4' }}>
+                      {regPortalStatus === 'closed' 
+                        ? 'Registrations are locked. Visitors see the closed banner on /register and cannot submit new entries.'
+                        : 'Registration portal is live. Attendees can freely choose solo & team tracks and register.'}
+                    </p>
+                  </div>
+                </div>
+
+                {adminRole === 'admin' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePortalStatus(regPortalStatus === 'closed' ? 'open' : 'closed')}
+                      style={{
+                        padding: '0.75rem 1.4rem',
+                        borderRadius: '12px',
+                        fontWeight: '700',
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.55rem',
+                        transition: 'all 0.2s ease',
+                        background: regPortalStatus === 'closed' ? '#22c55e' : '#ef4444',
+                        color: '#ffffff',
+                        border: 'none',
+                        boxShadow: regPortalStatus === 'closed' ? '0 4px 14px rgba(34, 197, 94, 0.35)' : '0 4px 14px rgba(239, 68, 68, 0.35)'
+                      }}
+                    >
+                      {regPortalStatus === 'closed' ? (
+                        <>
+                          <FiCheckCircle size={16} /> Re-Open Registrations
+                        </>
+                      ) : (
+                        <>
+                          <FiLock size={16} /> Close Registrations
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Stat Cards - 6 Clean Monochromatic Cards */}
               <div className="admin-stats-grid">
                 <div className="admin-stat-card">

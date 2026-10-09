@@ -318,6 +318,30 @@ export default function App() {
   const [isFormMenuOpen, setIsFormMenuOpen] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [participantCode, setParticipantCode] = useState('');
+  const [regPortalStatus, setRegPortalStatus] = useState(() => {
+    try {
+      return localStorage.getItem('srishti_reg_portal_status') || 'open';
+    } catch (_) {
+      return 'open';
+    }
+  });
+
+  useEffect(() => {
+    const handlePortalStatusSync = () => {
+      try {
+        const current = localStorage.getItem('srishti_reg_portal_status') || 'open';
+        setRegPortalStatus(current);
+      } catch (_) {}
+    };
+    window.addEventListener('storage', handlePortalStatusSync);
+    window.addEventListener('srishti_reg_portal_update', handlePortalStatusSync);
+    return () => {
+      window.removeEventListener('storage', handlePortalStatusSync);
+      window.removeEventListener('srishti_reg_portal_update', handlePortalStatusSync);
+    };
+  }, []);
+
+  const isPortalClosed = regPortalStatus === 'closed';
 
   // Track all events registered by the current user session
   const [userRegistrations, setUserRegistrations] = useState(() => {
@@ -723,11 +747,208 @@ export default function App() {
 
   const handleRegisterSubmit = async (e) => {
     if (e) e.preventDefault();
-    alert('Registrations for SRISHTI 2.7 events are officially closed.');
-    setIsRegistering(false);
-    setFormStatus('idle');
-    return;
+    if (!formName.trim() || !formEmail.trim()) return;
+    setFormStatus('working');
+    
+    // Prepare members array
+    const members = [];
+    for (let i = 2; i <= formTeamSize; i++) {
+      if (teamMembers[i]) {
+        members.push({
+          member_index: i,
+          name: teamMembers[i].name,
+          email: teamMembers[i].email,
+          phone: teamMembers[i].phone,
+          roll: teamMembers[i].roll
+        });
+      }
+    }
+
+    if (activeEventData && isEventAlreadyRegistered(activeEventData)) {
+      setIsRegistering(false);
+      setFormStatus('idle');
+      alert(`You are already registered for ${activeEventData.label}! Duplicate registrations for the same event are not permitted.`);
+      return;
+    }
+
+    if (requiresPayment && (!utrNumber.trim() || utrNumber.trim().length < 6)) {
+      alert('Please enter a valid UTR / Transaction Reference ID before submitting.');
+      setFormStatus('idle');
+      return;
+    }
+
+    if (!otpVerified) {
+      alert('Please verify your email with the 6-digit OTP before submitting registration.');
+      setFormStatus('idle');
+      return;
+    }
+
+    try {
+      const cleanEmail = formEmail.trim().toLowerCase();
+      let participantPassCode = '';
+      let pData = null;
+
+      // Public registration must go through the server-controlled function.
+      // The browser must not read or write participant/registration tables.
+      const edgePayload = {
+        name: formName.trim(),
+        email: cleanEmail,
+        phone: formPhone.trim(),
+        college: formCollege.trim(),
+        department: formRoll.trim() || 'General',
+        year: '2026',
+        event_id: activeEventData?.dbId || undefined,
+        event_code: activeEventData.id.startsWith('SRI27-')
+          ? activeEventData.id
+          : `SRI27-${activeEventData.id.toUpperCase()}`,
+        team_members: members,
+        payment_method: requiresPayment ? 'upi' : 'waived',
+        payment_reference: requiresPayment ? utrNumber.trim() : null,
+        otp: otpCode.trim() || undefined
+      };
+
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('web-register', {
+        body: edgePayload
+      });
+
+      if (edgeError || !edgeData?.success || !edgeData?.data?.participant) {
+        const message = edgeData?.error || edgeError?.message || 'Registration could not be completed.';
+        if (edgeData?.code === 'DUPLICATE_REGISTRATION') {
+          alert(`You are already registered for ${activeEventData.label}! Duplicate registrations are not permitted.`);
+          setIsRegistering(false);
+          setFormStatus('idle');
+          return;
+        }
+        throw new Error(message);
+      }
+
+      pData = {
+        ...edgeData.data.participant
+      };
+      participantPassCode = pData.participant_code;
+      const resolvedEventId = edgeData.data.event?.id || activeEventData?.dbId || null;
+      const paymentStatus = edgeData.data.payment_status;
+      const isVerified = paymentStatus === 'verified';
+      const registrationStatus = isVerified ? 'VERIFIED' : 'PAYMENT PENDING';
+
+      // Save user profile locally
+      if (pData) {
+        localStorage.setItem(`srishti_profile_${cleanEmail}`, JSON.stringify(pData));
+        if (pData.name) localStorage.setItem('srishti_user_name', pData.name);
+        if (pData.college) localStorage.setItem('srishti_user_college', pData.college);
+        if (pData.phone) localStorage.setItem('srishti_user_phone', pData.phone);
+        if (pData.department) localStorage.setItem('srishti_user_roll', pData.department);
+        localStorage.setItem('srishti_session', cleanEmail);
+      }
+
+      // Keep this device's ticket cache in sync. Private registration rows are read by
+      // authenticated users or admins, never by an anonymous email lookup.
+      let userAllRegs = [];
+      try {
+        const cached = JSON.parse(localStorage.getItem(`srishti_user_registrations_${cleanEmail}`) || '[]');
+        if (Array.isArray(cached)) userAllRegs = cached;
+      } catch (_) {}
+
+      const addedReg = {
+        event_id: resolvedEventId,
+        event_code: activeEventData.id,
+        event_name: activeEventData.label,
+        status: 'registered',
+        payment_status: paymentStatus,
+        payment_reference: requiresPayment ? utrNumber.trim() : null,
+        events: {
+          name: activeEventData.label,
+          event_code: activeEventData.id,
+          venue: activeEventData.venue || 'Campus Venue',
+          date: activeEventData.date || 'Dec 10, 2026',
+          start_time: activeEventData.time || '10:00 AM'
+        }
+      };
+      userAllRegs = [...userAllRegs.filter(r => r.event_id !== resolvedEventId), addedReg];
+      setUserRegistrations(userAllRegs);
+
+      try {
+        localStorage.setItem(`srishti_user_registrations_${cleanEmail}`, JSON.stringify(userAllRegs));
+      } catch (_) {}
+
+      setParticipantCode(participantPassCode);
+
+      // ONLY FOR VERIFIED / FREE EVENTS:
+      // Generate confirmed entry pass, generate card PNG, send pass email
+      if (isVerified) {
+        let allEventsList = [activeEventData.label];
+        const mapped = userAllRegs.map(r => r.events?.name || r.event_name).filter(Boolean);
+        allEventsList = [...new Set([...mapped, ...allEventsList])];
+
+        let qrCodeString = participantPassCode;
+        try {
+          const { generatePassPayload } = await import('./utils/cryptoSecurity');
+          qrCodeString = generatePassPayload(participantPassCode, pData?.pass_token || '', formName.trim());
+        } catch (_) {}
+
+        const qrDataUrl = await QRCode.toDataURL(qrCodeString, {
+           width: 320,
+           margin: 2,
+           errorCorrectionLevel: 'H',
+           color: { dark: '#020617', light: '#ffffff' }
+        });
+        setQrCodeDataUrl(qrDataUrl);
+
+        let cardPng = null;
+        try {
+          cardPng = await generateCardImagePng({
+            attendeeName: formName,
+            college: formCollege,
+            passCode: participantPassCode,
+            passToken: pData?.pass_token || '',
+            events: allEventsList,
+            isVerified: true,
+            statusText: 'VERIFIED'
+          });
+        } catch (pngErr) {
+          console.warn('PNG card generation notice:', pngErr);
+        }
+
+        const ticketHtml = generateEntryPassEmailHtml({
+          attendeeName: formName,
+          college: formCollege,
+          passCode: participantPassCode,
+          eventName: activeEventData.label,
+          status: 'VERIFIED'
+        });
+
+        try {
+          await supabase.functions.invoke('participant-profile', {
+            body: {
+              action: 'send-registration-pass',
+              to: formEmail,
+              subject: `Your Srishti 2.7 Digital Entry Pass — ${formName}`,
+              html: ticketHtml,
+              image: cardPng
+            }
+          });
+        } catch (emailErr) {
+          console.error('Failed to send registration pass email:', emailErr);
+        }
+
+        setIsPaymentPending(false);
+      } else {
+        // FOR PAID / PENDING EVENT:
+        // Do NOT generate entry pass QR or card PNG.
+        // Do NOT send verified entry pass email.
+        setQrCodeDataUrl('');
+        setIsPaymentPending(true);
+      }
+
+      setFormStatus('done');
+      setIsRegistered(true);
+    } catch (error) {
+      console.error('Error saving registration:', error);
+      alert(error.message || 'There was an error saving your registration to the database. Please contact support.');
+      setFormStatus('idle'); // Let them try again
+    }
   };
+
   useEffect(() => {
     // Lock scroll to top initially and prevent browser scroll restoration
     if ('scrollRestoration' in window.history) {
@@ -1126,73 +1347,72 @@ export default function App() {
         </button>
       </div>
 
-      {/* Official Registration Closed Notice Banner */}
-      <div style={{
-        margin: '0 0 2rem 0',
-        padding: '1.25rem 1.75rem',
-        borderRadius: '16px',
-        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%)',
-        border: '1px solid rgba(239, 68, 68, 0.35)',
-        boxShadow: '0 8px 32px rgba(239, 68, 68, 0.12)',
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        alignItems: isMobile ? 'flex-start' : 'center',
-        justifyContent: 'space-between',
-        gap: '1rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: 'rgba(239, 68, 68, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#f87171',
-            flexShrink: 0
-          }}>
-            <FiLock size={20} />
-          </div>
-          <div>
+      {isPortalClosed && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.08)',
+          border: '1px solid rgba(239, 68, 68, 0.35)',
+          borderRadius: '16px',
+          padding: '1.25rem 1.5rem',
+          marginBottom: '2rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1.25rem',
+          flexWrap: 'wrap',
+          boxShadow: '0 8px 32px rgba(239, 68, 68, 0.1)',
+          backdropFilter: 'blur(8px)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{
-              fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '0.75rem',
-              fontWeight: '700',
-              letterSpacing: '0.12em',
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: 'rgba(239, 68, 68, 0.18)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               color: '#f87171',
-              textTransform: 'uppercase',
-              marginBottom: '0.2rem'
+              flexShrink: 0
             }}>
-              PORTAL NOTICE • REGISTRATIONS CLOSED
+              <FiLock size={20} />
             </div>
-            <div style={{ color: '#e2e8f0', fontSize: '0.9rem', lineHeight: '1.4' }}>
-              Online and spot registrations for all SRISHTI 2.7 events are officially closed. Registered participants can access their official Delegate Pass in Profile.
+            <div>
+              <div style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.72rem',
+                letterSpacing: '0.12em',
+                color: '#f87171',
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                marginBottom: '0.2rem'
+              }}>
+                PORTAL NOTICE • REGISTRATIONS CLOSED
+              </div>
+              <div style={{ color: '#e4e4e7', fontSize: '0.88rem', lineHeight: '1.4' }}>
+                Online and spot registrations for all SRISHTI 2.7 events are officially closed. Registered participants can access their official Delegate Pass in Profile.
+              </div>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            style={{
+              padding: '0.65rem 1.25rem',
+              background: '#ffffff',
+              color: '#000000',
+              fontWeight: '700',
+              fontSize: '0.85rem',
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 14px rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            Go to My Profile →
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/profile')}
-          style={{
-            padding: '0.75rem 1.4rem',
-            background: '#ffffff',
-            color: '#000000',
-            fontWeight: '700',
-            fontSize: '0.85rem',
-            borderRadius: '12px',
-            border: 'none',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            boxShadow: '0 4px 14px rgba(255, 255, 255, 0.15)'
-          }}
-        >
-          Go to My Profile →
-        </button>
-      </div>
+      )}
 
       {['Solo Events', 'Team Events'].map(groupName => {
         const filteredGroupEvents = liveEvents.filter(ev => ev.group === groupName);
@@ -1225,6 +1445,11 @@ export default function App() {
                   onClick={() => {
                     if (isAlreadyEnrolled) {
                       alert(`Already Registered: You are already registered for ${ev.label}! You cannot register for the same event again.`);
+                      return;
+                    }
+                    if (isPortalClosed) {
+                      alert(`Registrations for ${ev.label} are currently closed by festival administration. Registered participants can access their Delegate Pass in Profile.`);
+                      return;
                     }
                     setSelectedEventTrack(ev.label);
                     navigate(`/register/${ev.id}`);
@@ -1266,7 +1491,7 @@ export default function App() {
                         }}>
                           <FiCheckCircle size={12} /> Already Registered
                         </div>
-                      ) : (
+                      ) : isPortalClosed ? (
                         <div style={{
                           position: 'absolute',
                           top: '12px',
@@ -1288,7 +1513,7 @@ export default function App() {
                         }}>
                           <FiLock size={11} /> Closed
                         </div>
-                      )}
+                      ) : null}
                       <div className="reg-event-card-content">
                         <div className="reg-event-card-title">{ev.label}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
@@ -1549,7 +1774,7 @@ export default function App() {
                                 </button>
                               </div>
                             </div>
-                          ) : true ? (
+                          ) : isPortalClosed ? (
                             <div style={{
                               display: 'flex',
                               flexDirection: 'column',
@@ -2415,8 +2640,16 @@ export default function App() {
             )
           },
           { 
-            label: isEventAlreadyRegistered(selectedEventDetails) ? '✓ View in Profile' : '✕ Registrations Closed', 
-            ariaLabel: isEventAlreadyRegistered(selectedEventDetails) ? 'View in Profile' : 'Registrations Closed', 
+            label: isEventAlreadyRegistered(selectedEventDetails) 
+              ? '✓ View in Profile' 
+              : isPortalClosed 
+                ? '✕ Registrations Closed' 
+                : 'Register Now', 
+            ariaLabel: isEventAlreadyRegistered(selectedEventDetails) 
+              ? 'View in Profile' 
+              : isPortalClosed 
+                ? 'Registrations Closed' 
+                : 'Register', 
             onClick: (e) => {
               e.preventDefault();
               if (isEventAlreadyRegistered(selectedEventDetails)) {
@@ -2424,7 +2657,14 @@ export default function App() {
                 navigate('/profile');
                 return;
               }
-              alert(`Registrations for ${selectedEventDetails.label} are officially closed.`);
+              if (isPortalClosed) {
+                alert(`Registrations for ${selectedEventDetails.label} are officially closed.`);
+                return;
+              }
+              const eventId = selectedEventDetails.id;
+              setSelectedEventTrack(selectedEventDetails.label);
+              setSelectedEventDetails(null);
+              navigate(`/register/${eventId}`);
             }
           }
         ] : []}

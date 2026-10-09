@@ -1204,22 +1204,15 @@ export default function ProfilePage() {
                                 lineHeight: 1.45,
                                 margin: '0 0 1.15rem 0'
                               }}>
-                                Registrations for SRISHTI 2.7 are officially closed. If your registered event is still synchronizing, please click Refresh Tickets below.
+                                You haven't registered for any events yet. Register for an event to unlock your official Delegate Pass, QR entry badge, and card download.
                               </p>
 
                               <button
-                                onClick={async () => {
-                                  const em = session?.user?.email || localStorage.getItem('srishti_session');
-                                  if (em) {
-                                    setLoading(true);
-                                    await fetchUserData(em);
-                                    setLoading(false);
-                                  }
-                                }}
+                                onClick={() => navigate('/register')}
                                 style={{
                                   padding: '0.7rem 1.6rem',
-                                  background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
-                                  color: '#ffffff',
+                                  background: '#ffffff',
+                                  color: '#000000',
                                   border: 'none',
                                   borderRadius: '10px',
                                   fontWeight: 'bold',
@@ -1228,10 +1221,10 @@ export default function ProfilePage() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '0.5rem',
-                                  boxShadow: '0 4px 14px rgba(56, 189, 248, 0.35)'
+                                  boxShadow: '0 4px 14px rgba(255, 255, 255, 0.2)'
                                 }}
                               >
-                                <FiRotateCcw size={14} /> Refresh Pass Status
+                                Browse Events & Register Now →
                               </button>
                             </div>
                           ) : !isVerified ? (
@@ -1462,13 +1455,13 @@ export default function ProfilePage() {
                     <div style={{ padding: '4rem 2rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', textAlign: 'center' }}>
                       <FiCalendar size={48} color="#444" style={{ marginBottom: '1.5rem' }} />
                       <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>No Tickets Yet</h2>
-                      <p style={{ color: '#888', fontSize: '1.05rem', marginBottom: '2rem' }}>You don't have any registered events. Registrations for SRISHTI 2.7 are officially closed.</p>
+                      <p style={{ color: '#888', fontSize: '1.05rem', marginBottom: '2rem' }}>You haven't registered for any events yet or your registration is syncing.</p>
                       <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button
-                          onClick={() => navigate('/')}
+                          onClick={() => navigate('/register')}
                           style={{ padding: '0.9rem 1.8rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
                         >
-                          Return to Homepage
+                          Explore Events
                         </button>
                         <button
                           onClick={async () => {
@@ -1564,15 +1557,15 @@ export default function ProfilePage() {
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#f87171' }}>
               <FiAlertCircle size={32} />
             </div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>Participant Pass Not Found</h2>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>Participant Registration Required</h2>
             <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem', lineHeight: '1.6' }}>
               No registered participant was found for <strong style={{ color: '#fff' }}>{email || session?.user?.email || 'this email'}</strong>.<br /><br />
-              Registrations for SRISHTI 2.7 events are officially closed. If you already registered using a different email, please sign out and enter that address.
+              Participant passes and profiles are reserved for students registered for SRISHTI 2.7 events.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <button
                 type="button"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/register')}
                 style={{
                   width: '100%', padding: '1.1rem', backgroundColor: '#fff',
                   color: '#000', border: 'none', borderRadius: '16px',
@@ -1582,7 +1575,7 @@ export default function ProfilePage() {
                 onMouseOver={e => e.currentTarget.style.backgroundColor = '#e5e5e5'}
                 onMouseOut={e => e.currentTarget.style.backgroundColor = '#fff'}
               >
-                Return to Homepage
+                Browse Events & Register Now →
               </button>
               <button
                 type="button"
