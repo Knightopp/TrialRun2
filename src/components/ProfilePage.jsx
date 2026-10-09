@@ -15,7 +15,8 @@ import ProfileCard from './ProfileCard';
 export default function ProfilePage() {
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [step, setStep] = useState('email'); // 'email', 'otp', 'onboarding', 'dashboard'
   const [error, setError] = useState(null);
@@ -78,7 +79,7 @@ export default function ProfilePage() {
       if (!alive) return;
       if (!authSession?.user?.email) {
         localStorage.removeItem('srishti_session');
-        setLoading(false);
+        setInitialLoading(false);
         return;
       }
       const savedEmail = authSession.user.email.trim().toLowerCase();
@@ -94,7 +95,7 @@ export default function ProfilePage() {
           setStep('not_registered');
         }
       } finally {
-        if (alive) setLoading(false);
+        if (alive) setInitialLoading(false);
       }
     });
     return () => { alive = false; };
@@ -492,20 +493,32 @@ export default function ProfilePage() {
     return false;
   };
 
-  if (loading && !session && step !== 'email' && step !== 'otp') {
+  if (initialLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+      <div style={{
+        minHeight: '100vh',
+        width: '100vw',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#000000',
+        color: '#ffffff',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* React Bits Volumetric SideRays Ambient Background */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
           <SafeVisual>
             <SideRays
               speed={2.2}
               rayColor1="#38bdf8"
               rayColor2="#1d4ed8"
-              intensity={2.2}
+              intensity={2.4}
               spread={2}
               origin="top-right"
               tilt={0}
-              saturation={1.5}
+              saturation={1.6}
               blend={0.7}
               falloff={1.5}
               opacity={0.85}
@@ -513,27 +526,185 @@ export default function ProfilePage() {
           </SafeVisual>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+        {/* Futuristic Cyber Holographic HUD Container */}
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '3rem 2.25rem',
+          maxWidth: '440px',
+          width: '90%',
+          background: 'rgba(10, 15, 30, 0.78)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderRadius: '28px',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 35px rgba(56, 189, 248, 0.15)',
+          textAlign: 'center'
+        }}>
+          {/* Top CAD Cyber Accent line */}
           <div style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '50%',
-            border: '2px solid rgba(56, 189, 248, 0.2)',
-            borderTopColor: '#38bdf8',
-            boxShadow: '0 0 20px rgba(56, 189, 248, 0.3)',
-            animation: 'srishtiSpin 0.9s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite'
+            position: 'absolute',
+            top: 0,
+            left: '20%',
+            right: '20%',
+            height: '2px',
+            background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
+            boxShadow: '0 0 10px #38bdf8'
           }} />
+
+          {/* Srishti Portal Badge */}
           <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            padding: '0.35rem 0.85rem',
+            borderRadius: '50px',
+            background: 'rgba(56, 189, 248, 0.08)',
+            border: '1px solid rgba(56, 189, 248, 0.25)',
+            color: '#38bdf8',
+            fontSize: '0.72rem',
             fontFamily: 'var(--font-mono, monospace)',
-            fontSize: '0.82rem',
-            letterSpacing: '0.18em',
+            fontWeight: '700',
+            letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: '#94a3b8'
+            marginBottom: '2rem'
+          }}>
+            <span style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: '#38bdf8',
+              boxShadow: '0 0 8px #38bdf8',
+              animation: 'srishtiPulse 1.5s infinite'
+            }} />
+            SRISHTI 2.7 • PORTAL SYSTEM
+          </div>
+
+          {/* Central Animated Cyber Core with Logo */}
+          <div style={{
+            position: 'relative',
+            width: '100px',
+            height: '100px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '1.75rem'
+          }}>
+            {/* Outer Rotating Cyber Tech Ring */}
+            <div style={{
+              position: 'absolute',
+              inset: '-8px',
+              borderRadius: '50%',
+              border: '2px dashed rgba(56, 189, 248, 0.45)',
+              animation: 'srishtiSpin 12s linear infinite'
+            }} />
+
+            {/* Inner Glowing Spinner */}
+            <div style={{
+              position: 'absolute',
+              inset: '0px',
+              borderRadius: '50%',
+              border: '2px solid rgba(56, 189, 248, 0.15)',
+              borderTopColor: '#38bdf8',
+              boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)',
+              animation: 'srishtiSpin 1.1s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite'
+            }} />
+
+            {/* Center Logo Icon */}
+            <div style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(3, 7, 18, 0.95) 70%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              boxShadow: 'inset 0 0 15px rgba(56, 189, 248, 0.2)'
+            }}>
+              <img
+                src="/assets/logo.png"
+                alt="Srishti Logo"
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.5))'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Loading Headings */}
+          <h2 style={{
+            fontSize: '1.35rem',
+            fontWeight: '800',
+            letterSpacing: '-0.02em',
+            color: '#ffffff',
+            margin: '0 0 0.5rem 0'
           }}>
             Authenticating Session
+          </h2>
+
+          <p style={{
+            color: '#94a3b8',
+            fontSize: '0.85rem',
+            margin: '0 0 1.75rem 0',
+            lineHeight: 1.5
+          }}>
+            Synchronizing delegate profile & entry pass...
+          </p>
+
+          {/* Animated Cyber Progress Bar */}
+          <div style={{
+            width: '100%',
+            maxWidth: '260px',
+            height: '4px',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: '4px',
+            overflow: 'hidden',
+            position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: '45%',
+              background: 'linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent)',
+              borderRadius: '4px',
+              boxShadow: '0 0 12px #38bdf8',
+              animation: 'srishtiScan 1.6s ease-in-out infinite'
+            }} />
+          </div>
+
+          {/* High-tech Telemetry Line */}
+          <div style={{
+            marginTop: '1.25rem',
+            fontFamily: 'var(--font-mono, monospace)',
+            fontSize: '0.68rem',
+            color: '#64748b',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase'
+          }}>
+            SECURE LINK • 256-BIT ENCRYPTION
           </div>
         </div>
-        <style>{`@keyframes srishtiSpin { to { transform: rotate(360deg); } }`}</style>
+
+        <style>{`
+          @keyframes srishtiSpin { to { transform: rotate(360deg); } }
+          @keyframes srishtiScan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(350%); }
+          }
+          @keyframes srishtiPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -1033,11 +1204,18 @@ export default function ProfilePage() {
                                 lineHeight: 1.45,
                                 margin: '0 0 1.15rem 0'
                               }}>
-                                You haven't registered for any events yet. Register for an event to unlock your official Delegate Pass, QR entry badge, and card download.
+                                Registrations for SRISHTI 2.7 are officially closed. If your registered event is still synchronizing, please click Refresh Tickets below.
                               </p>
 
                               <button
-                                onClick={() => navigate('/register')}
+                                onClick={async () => {
+                                  const em = session?.user?.email || localStorage.getItem('srishti_session');
+                                  if (em) {
+                                    setLoading(true);
+                                    await fetchUserData(em);
+                                    setLoading(false);
+                                  }
+                                }}
                                 style={{
                                   padding: '0.7rem 1.6rem',
                                   background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
@@ -1047,10 +1225,13 @@ export default function ProfilePage() {
                                   fontWeight: 'bold',
                                   fontSize: '0.88rem',
                                   cursor: 'pointer',
-                                  boxShadow: '0 4px 16px rgba(14, 165, 233, 0.4)'
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  boxShadow: '0 4px 14px rgba(56, 189, 248, 0.35)'
                                 }}
                               >
-                                Browse Events &amp; Register Now →
+                                <FiRotateCcw size={14} /> Refresh Pass Status
                               </button>
                             </div>
                           ) : !isVerified ? (
@@ -1281,13 +1462,13 @@ export default function ProfilePage() {
                     <div style={{ padding: '4rem 2rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', textAlign: 'center' }}>
                       <FiCalendar size={48} color="#444" style={{ marginBottom: '1.5rem' }} />
                       <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>No Tickets Yet</h2>
-                      <p style={{ color: '#888', fontSize: '1.1rem', marginBottom: '2rem' }}>You haven't registered for any events yet or your registration is syncing.</p>
+                      <p style={{ color: '#888', fontSize: '1.05rem', marginBottom: '2rem' }}>You don't have any registered events. Registrations for SRISHTI 2.7 are officially closed.</p>
                       <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button
-                          onClick={() => navigate('/register')}
+                          onClick={() => navigate('/')}
                           style={{ padding: '0.9rem 1.8rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
                         >
-                          Explore Events
+                          Return to Homepage
                         </button>
                         <button
                           onClick={async () => {
@@ -1380,18 +1561,18 @@ export default function ProfilePage() {
           </div>
         ) : step === 'not_registered' ? (
           <div style={{ maxWidth: '500px', margin: '4rem auto 0', padding: '3rem', backgroundColor: '#0a0a0a', borderRadius: '32px', border: '1px solid #222', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(255, 149, 0, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#ff9500' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: '#f87171' }}>
               <FiAlertCircle size={32} />
             </div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>Participant Registration Required</h2>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>Participant Pass Not Found</h2>
             <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem', lineHeight: '1.6' }}>
-              No registered participant was found for <strong style={{ color: '#fff' }}>{email || session?.user?.email || 'this email'}</strong>.
-              Participant passes and profiles are reserved for students registered for SRISHTI 2.7 events.
+              No registered participant was found for <strong style={{ color: '#fff' }}>{email || session?.user?.email || 'this email'}</strong>.<br /><br />
+              Registrations for SRISHTI 2.7 events are officially closed. If you already registered using a different email, please sign out and enter that address.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <button
                 type="button"
-                onClick={() => navigate('/events')}
+                onClick={() => navigate('/')}
                 style={{
                   width: '100%', padding: '1.1rem', backgroundColor: '#fff',
                   color: '#000', border: 'none', borderRadius: '16px',
@@ -1401,7 +1582,7 @@ export default function ProfilePage() {
                 onMouseOver={e => e.currentTarget.style.backgroundColor = '#e5e5e5'}
                 onMouseOut={e => e.currentTarget.style.backgroundColor = '#fff'}
               >
-                Browse Events & Register
+                Return to Homepage
               </button>
               <button
                 type="button"

@@ -29,6 +29,12 @@ serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ success: false, error: "Method not allowed" }, 405);
 
+  // Registrations for SRISHTI 2.7 are officially closed
+  return json({
+    success: false,
+    error: "Registrations for SRISHTI 2.7 are officially closed. No new registrations are being accepted."
+  }, 403);
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const key = serviceKey();
   if (!supabaseUrl || !key) {
