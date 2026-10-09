@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle, FiAlertCircle, FiShield, FiMapPin, FiClock } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
@@ -8,6 +8,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { generateEntryPassEmailHtml } from '../utils/entryPassEmail';
 import { generateCardImagePng, downloadPngFromDataUrl } from '../utils/cardImageGenerator';
 import { supabase } from '../supabaseClient';
+import SideRays from './SideRays';
+import SafeVisual from './SafeVisual';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -47,6 +49,7 @@ export default function ProfilePage() {
   const [isTicketTorn, setIsTicketTorn] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isAdminUser, setIsAdminUser] = useState(false);
 
   // 60-second cooldown timer for resending OTP
   useEffect(() => {
@@ -130,6 +133,28 @@ export default function ProfilePage() {
     } else {
       setEventAttendance({});
     }
+
+    // Check if current user is an authorized administrator
+    try {
+      if (clean === 'tsrknight@gmail.com') {
+        setIsAdminUser(true);
+      } else {
+        const { data: vStaff } = await supabase
+          .from('volunteers')
+          .select('id, role, status')
+          .ilike('email', clean)
+          .eq('status', 'active')
+          .maybeSingle();
+        if (vStaff && (vStaff.role === 'admin' || vStaff.role === 'registration')) {
+          setIsAdminUser(true);
+        } else {
+          setIsAdminUser(false);
+        }
+      }
+    } catch (_) {
+      if (clean === 'tsrknight@gmail.com') setIsAdminUser(true);
+    }
+
     return !!currentParticipant || regs.length > 0;
   }
   const handleSendOtp = async (e) => {
@@ -468,9 +493,46 @@ export default function ProfilePage() {
 
   if (loading && !session && step !== 'email' && step !== 'otp') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#fff' }}>
-        <div style={{ width: '40px', height: '40px', border: '2px solid rgba(255, 255, 255, 0.1)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+          <SafeVisual>
+            <SideRays
+              speed={2.2}
+              rayColor1="#38bdf8"
+              rayColor2="#1d4ed8"
+              intensity={2.2}
+              spread={2}
+              origin="top-right"
+              tilt={0}
+              saturation={1.5}
+              blend={0.7}
+              falloff={1.5}
+              opacity={0.85}
+            />
+          </SafeVisual>
+        </div>
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+          <div style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            border: '2px solid rgba(56, 189, 248, 0.2)',
+            borderTopColor: '#38bdf8',
+            boxShadow: '0 0 20px rgba(56, 189, 248, 0.3)',
+            animation: 'srishtiSpin 0.9s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite'
+          }} />
+          <div style={{
+            fontFamily: 'var(--font-mono, monospace)',
+            fontSize: '0.82rem',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: '#94a3b8'
+          }}>
+            Authenticating Session
+          </div>
+        </div>
+        <style>{`@keyframes srishtiSpin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -485,6 +547,30 @@ export default function ProfilePage() {
       position: 'relative',
       overflowX: 'hidden'
     }}>
+      {/* React Bits Volumetric SideRays Ambient Background */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 0,
+        overflow: 'hidden'
+      }}>
+        <SafeVisual>
+          <SideRays
+            speed={2.2}
+            rayColor1="#38bdf8"
+            rayColor2="#1d4ed8"
+            intensity={1.8}
+            spread={2.2}
+            origin="top-right"
+            tilt={-5}
+            saturation={1.4}
+            blend={0.75}
+            falloff={1.6}
+            opacity={0.85}
+          />
+        </SafeVisual>
+      </div>
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: '1000px', margin: '0 auto', paddingTop: '4rem' }}>
 
@@ -513,7 +599,39 @@ export default function ProfilePage() {
                   <span>Logged in as <span style={{ color: '#fff', fontWeight: '600' }}>{session?.user?.email}</span></span>
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {(isAdminUser || (session?.user?.email || '').toLowerCase().trim() === 'tsrknight@gmail.com') && (
+                  <button
+                    onClick={() => navigate('/admin')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1.4rem',
+                      background: 'linear-flex',
+                      backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                      color: '#38bdf8',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      letterSpacing: '0.04em',
+                      fontSize: '0.88rem',
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      boxShadow: '0 0 15px rgba(56, 189, 248, 0.15)'
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.22)';
+                      e.currentTarget.style.borderColor = '#38bdf8';
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.12)';
+                      e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+                    }}
+                  >
+                    <FiShield size={16} /> Admin Command Center
+                  </button>
+                )}
                 <button
                   onClick={handleLogout}
                   style={{
@@ -1105,11 +1223,25 @@ export default function ProfilePage() {
                 {/* Events List */}
                 <div style={{ flex: '1 1 100%', marginTop: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <FiCalendar style={{ color: '#00f2fe' }} />
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff', margin: 0 }}>
-                        My Registered Competitions {registrations.length > 0 && <span style={{ fontSize: '0.85rem', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.3)', marginLeft: '0.4rem' }}>{registrations.length} Active</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <FiCalendar style={{ color: '#38bdf8' }} size={18} />
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>
+                        Registered Competitions
                       </h3>
+                      {registrations.length > 0 && (
+                        <span style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: '0.72rem',
+                          color: '#38bdf8',
+                          background: 'rgba(56, 189, 248, 0.08)',
+                          padding: '0.15rem 0.55rem',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(56, 189, 248, 0.25)',
+                          letterSpacing: '0.06em'
+                        }}>
+                          {registrations.length} ENROLLED
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={async () => {
@@ -1172,88 +1304,226 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                      {registrations.map(reg => (
-                        <div key={reg.id} style={{
-                          padding: '2rem',
-                          backgroundColor: '#0a0a0a',
-                          borderRadius: '24px',
-                          border: '1px solid #222',
-                          position: 'relative',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            padding: '0.5rem 1.5rem',
-                            background: '#111',
-                            color: (reg.payment_status === 'verified' || reg.status === 'verified') ? '#34d399' : '#fbbf24',
-                            borderBottomLeftRadius: '16px',
-                            borderLeft: '1px solid #222',
-                            borderBottom: '1px solid #222',
-                            fontSize: '0.8rem',
-                            fontWeight: 'bold',
-                            letterSpacing: '1px'
-                          }}>
-                            {String(reg.payment_status || reg.status || 'VERIFIED').toUpperCase()}
-                          </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem' }}>
+                      {registrations.map(reg => {
+                        const isVerified = reg.payment_status === 'verified' || reg.status === 'verified';
+                        const isGateChecked = Boolean(arrivalCheckin);
+                        const isRoomChecked = Boolean(eventAttendance[reg.event_id]);
+                        const codeVal = participantData?.participant_code || reg.participant_code || reg.registration_code || reg.id?.substring(0, 8) || 'PASS';
 
-                          <h4 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#fff', fontWeight: 'bold' }}>
-                            {reg.events?.name || reg.event_name || reg.event_id}
-                          </h4>
+                        return (
+                          <div 
+                            key={reg.id} 
+                            style={{
+                              padding: '1.75rem',
+                              backgroundColor: 'rgba(12, 14, 18, 0.85)',
+                              backdropFilter: 'blur(16px)',
+                              WebkitBackdropFilter: 'blur(16px)',
+                              borderRadius: '20px',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+                              transition: 'transform 0.25s ease, border-color 0.25s ease',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between'
+                            }}
+                          >
+                            {/* Subtle ambient accent glow line */}
+                            <div style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: '2px',
+                              background: isVerified 
+                                ? 'linear-gradient(90deg, transparent, #38bdf8, transparent)' 
+                                : 'linear-gradient(90deg, transparent, #eab308, transparent)',
+                              opacity: 0.6
+                            }} />
 
-                          {reg.events && (
-                            <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 1rem 0' }}>
-                              📍 {reg.events.venue || 'Campus Venue'} • 🗓️ {reg.events.date} {reg.events.start_time ? `• ⏰ ${reg.events.start_time}` : ''}
-                            </p>
-                          )}
-
-                          {/* Attendance Status Badges */}
-                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
-                            {/* Gate Arrival */}
-                            <span style={{
-                              padding: '0.3rem 0.65rem',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: '600',
-                              background: arrivalCheckin ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 184, 0.1)',
-                              color: arrivalCheckin ? '#34d399' : '#94a3b8',
-                              border: arrivalCheckin ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'
-                            }}>
-                              {arrivalCheckin ? '✓ Gate Check-in Verified' : '⏳ Gate Arrival Pending'}
-                            </span>
-
-                            {/* Event Room Attendance */}
-                            <span style={{
-                              padding: '0.3rem 0.65rem',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: '600',
-                              background: eventAttendance[reg.event_id] ? 'rgba(56, 189, 248, 0.15)' : 'rgba(148, 163, 184, 0.1)',
-                              color: eventAttendance[reg.event_id] ? '#38bdf8' : '#94a3b8',
-                              border: eventAttendance[reg.event_id] ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid rgba(148, 163, 184, 0.2)'
-                            }}>
-                              {eventAttendance[reg.event_id] ? '✓ Present in Room' : '○ Room Attendance Pending'}
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.25rem' }}>
-                            <div style={{ flex: 1 }}>
-                              <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.25rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Participant Code</p>
-                              <p style={{ fontSize: '1.2rem', margin: 0, fontFamily: 'monospace', color: '#fff', letterSpacing: '1px' }}>
-                                {participantData?.participant_code || reg.participant_code || reg.registration_code || reg.id?.substring(0, 8) || 'PASS'}
-                              </p>
-                            </div>
-                            {reg.team_size > 1 && (
-                              <div>
-                                <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 0.25rem 0', textTransform: 'uppercase', letterSpacing: '1px' }}>Team</p>
-                                <p style={{ fontSize: '1.2rem', margin: 0 }}>{reg.team_size} <span style={{fontSize: '0.9rem', color: '#888'}}>Pax</span></p>
+                            <div>
+                              {/* Top Bar: Event Category / Status Indicator */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                                <span style={{
+                                  fontFamily: 'var(--font-mono, monospace)',
+                                  fontSize: '0.7rem',
+                                  letterSpacing: '0.14em',
+                                  textTransform: 'uppercase',
+                                  color: '#64748b'
+                                }}>
+                                  {reg.events?.category || 'COMPETITION'}
+                                </span>
+                                
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                                  <span style={{
+                                    width: '6px',
+                                    height: '6px',
+                                    borderRadius: '50%',
+                                    backgroundColor: isVerified ? '#10b981' : '#f59e0b',
+                                    boxShadow: isVerified ? '0 0 8px #10b981' : '0 0 8px #f59e0b'
+                                  }} />
+                                  <span style={{
+                                    fontFamily: 'var(--font-mono, monospace)',
+                                    fontSize: '0.72rem',
+                                    fontWeight: '700',
+                                    letterSpacing: '0.1em',
+                                    textTransform: 'uppercase',
+                                    color: isVerified ? '#34d399' : '#fbbf24'
+                                  }}>
+                                    {isVerified ? 'VERIFIED' : 'PENDING'}
+                                  </span>
+                                </div>
                               </div>
-                            )}
+
+                              {/* Competition Title */}
+                              <h4 style={{
+                                fontSize: '1.35rem',
+                                margin: '0 0 0.85rem 0',
+                                color: '#ffffff',
+                                fontWeight: '700',
+                                letterSpacing: '-0.01em',
+                                lineHeight: '1.25'
+                              }}>
+                                {reg.events?.name || reg.event_name || reg.event_id}
+                              </h4>
+
+                              {/* Venue & Time metadata */}
+                              {reg.events && (
+                                <div style={{
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  alignItems: 'center',
+                                  gap: '1rem',
+                                  marginBottom: '1.25rem',
+                                  color: '#94a3b8',
+                                  fontSize: '0.82rem'
+                                }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <FiMapPin size={13} style={{ color: '#38bdf8' }} />
+                                    <span>{reg.events.venue || 'Campus Venue'}</span>
+                                  </span>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <FiClock size={13} style={{ color: '#38bdf8' }} />
+                                    <span>{reg.events.date}{reg.events.start_time ? ` · ${reg.events.start_time.substring(0, 5)}` : ''}</span>
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Minimalist Live Attendance Trackers */}
+                              <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '0.65rem',
+                                padding: '0.85rem 1rem',
+                                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(255, 255, 255, 0.04)',
+                                marginBottom: '1.25rem'
+                              }}>
+                                <div>
+                                  <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>
+                                    Gate Check-In
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.78rem',
+                                    fontWeight: '600',
+                                    color: isGateChecked ? '#34d399' : '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem'
+                                  }}>
+                                    <span style={{
+                                      width: '5px',
+                                      height: '5px',
+                                      borderRadius: '50%',
+                                      backgroundColor: isGateChecked ? '#10b981' : '#475569'
+                                    }} />
+                                    {isGateChecked ? 'Confirmed' : 'Pending Entry'}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>
+                                    Hall Attendance
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.78rem',
+                                    fontWeight: '600',
+                                    color: isRoomChecked ? '#38bdf8' : '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem'
+                                  }}>
+                                    <span style={{
+                                      width: '5px',
+                                      height: '5px',
+                                      borderRadius: '50%',
+                                      backgroundColor: isRoomChecked ? '#38bdf8' : '#475569'
+                                    }} />
+                                    {isRoomChecked ? 'Present' : 'Pending Call'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Card Footer: Master Participant Code & Team Meta */}
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'flex-end',
+                              justifyContent: 'space-between',
+                              paddingTop: '0.85rem',
+                              borderTop: '1px solid rgba(255, 255, 255, 0.05)'
+                            }}>
+                              <div>
+                                <span style={{
+                                  display: 'block',
+                                  fontSize: '0.65rem',
+                                  color: '#64748b',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.12em',
+                                  marginBottom: '0.15rem'
+                                }}>
+                                  Participant Code
+                                </span>
+                                <span style={{
+                                  fontFamily: 'var(--font-mono, monospace)',
+                                  fontSize: '1.05rem',
+                                  fontWeight: '700',
+                                  color: '#e2e8f0',
+                                  letterSpacing: '0.06em'
+                                }}>
+                                  {codeVal}
+                                </span>
+                              </div>
+
+                              {reg.team_size > 1 && (
+                                <div style={{ textAlign: 'right' }}>
+                                  <span style={{
+                                    display: 'block',
+                                    fontSize: '0.65rem',
+                                    color: '#64748b',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.12em',
+                                    marginBottom: '0.15rem'
+                                  }}>
+                                    Squad
+                                  </span>
+                                  <span style={{
+                                    fontFamily: 'var(--font-mono, monospace)',
+                                    fontSize: '0.88rem',
+                                    fontWeight: '600',
+                                    color: '#cbd5e1'
+                                  }}>
+                                    {reg.team_size} Pax
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1382,15 +1652,42 @@ export default function ProfilePage() {
                   type="submit"
                   disabled={loading || !email.trim()}
                   style={{
-                    width: '100%', padding: '1.25rem', backgroundColor: '#fff',
-                    color: '#000', border: 'none', borderRadius: '16px',
-                    fontSize: '1rem', fontWeight: 'bold', cursor: (loading || !email.trim()) ? 'not-allowed' : 'pointer',
-                    opacity: (loading || !email.trim()) ? 0.7 : 1, transition: 'background-color 0.2s'
+                    width: '100%',
+                    padding: '1.15rem',
+                    backgroundColor: '#ffffff',
+                    color: '#000000',
+                    border: 'none',
+                    borderRadius: '14px',
+                    fontSize: '0.95rem',
+                    fontWeight: '700',
+                    letterSpacing: '0.04em',
+                    cursor: (loading || !email.trim()) ? 'not-allowed' : 'pointer',
+                    opacity: (loading || !email.trim()) ? 0.65 : 1,
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 20px rgba(255, 255, 255, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem'
                   }}
-                  onMouseOver={e => { if(!loading && email.trim()) e.currentTarget.style.backgroundColor = '#e5e5e5'; }}
-                  onMouseOut={e => { e.currentTarget.style.backgroundColor = '#fff'; }}
+                  onMouseOver={e => { if(!loading && email.trim()) e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
+                  onMouseOut={e => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
                 >
-                  {loading ? 'Sending OTP...' : 'Send OTP'}
+                  {loading ? (
+                    <>
+                      <span style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid rgba(0,0,0,0.2)',
+                        borderTopColor: '#000',
+                        borderRadius: '50%',
+                        animation: 'srishtiSpin 0.7s linear infinite'
+                      }} />
+                      <span>Transmitting Access Pass...</span>
+                    </>
+                  ) : (
+                    <span>Request Access Pass</span>
+                  )}
                 </button>
               </form>
             ) : (

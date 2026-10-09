@@ -1468,8 +1468,7 @@ export default function App() {
               width: '80px', 
               height: '80px', 
               objectFit: 'contain',
-              background: 'transparent',
-              filter: 'drop-shadow(0 0 30px rgba(56, 189, 248, 0.75))'
+              background: 'transparent'
             }} 
           />
         </div>
@@ -1484,27 +1483,6 @@ export default function App() {
           to={{ opacity: 1, y: 0 }}
           useScrollTrigger={false}
         />
-        <div style={{ marginTop: '3rem' }}>
-          <LatticeLoader
-            status="working"
-            label=""
-            doneLabel=""
-            errorLabel=""
-            pattern="orbit"
-            grid={3}
-            shape="round"
-            color="#ffffff"
-            doneColor="#ffffff"
-            cellSize={10}
-            gap={4}
-            fontSize={16}
-            step={120}
-            idleOpacity={0.15}
-            glow={true}
-            glowColor="#0036ff"
-            showTimer={false}
-          />
-        </div>
       </div>
 
       {/* Main App Content that slides up */}

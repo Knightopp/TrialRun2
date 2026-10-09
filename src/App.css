@@ -1194,15 +1194,25 @@
 /* Loader Title */
 .srishti-loader-title {
   font-family: 'Akira Expanded', sans-serif;
-  font-size: clamp(3rem, 10vw, 5.5rem);
+  font-size: clamp(3.5rem, 12vw, 7rem);
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: #fff;
   margin: 0;
+  text-align: center;
+  line-height: 1.1;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform: translateZ(0);
   -webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 480px) {
+  .srishti-loader-title {
+    font-size: clamp(2.6rem, 10.5vw, 3.4rem);
+    letter-spacing: 0.04em;
+    padding: 0 1rem;
+  }
 }
 
 .srishti-loader-title .split-char {

@@ -271,24 +271,53 @@ export default function AdminDashboard() {
     setAuthLoading(true);
     setAuthError(null);
     try {
-      if (!authUser?.id) throw new Error('Sign in with your administrator account.');
-      const { data: matchedStaff, error } = await supabase
-        .from('volunteers')
-        .select('id, auth_user_id, username, name, email, role, status')
-        .eq('auth_user_id', authUser.id)
-        .eq('status', 'active')
-        .maybeSingle();
-      if (error) throw error;
-      if (!matchedStaff || matchedStaff.role !== 'admin') {
+      if (!authUser?.id && !authUser?.email) throw new Error('Sign in with your administrator account.');
+      const userEmail = (authUser.email || '').trim().toLowerCase();
+      
+      let staffProfile = null;
+      // 1. Try matching by auth_user_id
+      if (authUser.id) {
+        const { data: matchedStaff } = await supabase
+          .from('volunteers')
+          .select('id, auth_user_id, username, name, email, role, status')
+          .eq('auth_user_id', authUser.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        if (matchedStaff) staffProfile = matchedStaff;
+      }
+
+      // 2. Fallback to matching by email if auth_user_id is unlinked
+      if (!staffProfile && userEmail) {
+        const { data: matchedByEmail } = await supabase
+          .from('volunteers')
+          .select('id, auth_user_id, username, name, email, role, status')
+          .ilike('email', userEmail)
+          .maybeSingle();
+        if (matchedByEmail) staffProfile = matchedByEmail;
+      }
+
+      // 3. Superadmin authorization check (tsrknight@gmail.com or role === 'admin')
+      const isSuperAdminEmail = userEmail === 'tsrknight@gmail.com';
+      if (!isSuperAdminEmail && (!staffProfile || (staffProfile.role !== 'admin' && staffProfile.role !== 'registration'))) {
         await supabase.auth.signOut();
         throw new Error('This account is not an active SRISHTI administrator.');
       }
-      setCurrentStaff(matchedStaff);
+
+      const activeStaff = staffProfile || {
+        id: 'superadmin',
+        name: 'Master Superadmin',
+        email: userEmail,
+        username: 'superadmin',
+        role: 'admin',
+        status: 'active'
+      };
+
+      setCurrentStaff(activeStaff);
       setAdminRole('admin');
       setActiveTab('overview');
       setStep('dashboard');
-      showToast(`Welcome back, ${matchedStaff.name || matchedStaff.email}`, 'success');
-      await fetchAllData('admin', matchedStaff.id);
+      showToast(`Welcome back, ${activeStaff.name || activeStaff.email}`, 'success');
+      await fetchAllData('admin', activeStaff.id);
     } catch (err) {
       setAuthError(err.message || 'Unable to verify administrator access.');
     } finally {
