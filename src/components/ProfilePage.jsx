@@ -507,26 +507,26 @@ export default function ProfilePage() {
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* React Bits Volumetric SideRays Ambient Background */}
+        {/* React Bits Volumetric SideRays Ambient Background - Black & White Monochrome */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
           <SafeVisual>
             <SideRays
-              speed={2.2}
-              rayColor1="#38bdf8"
-              rayColor2="#1d4ed8"
-              intensity={2.4}
+              speed={2.0}
+              rayColor1="#ffffff"
+              rayColor2="#52525b"
+              intensity={1.6}
               spread={2}
               origin="top-right"
               tilt={0}
-              saturation={1.6}
-              blend={0.7}
-              falloff={1.5}
-              opacity={0.85}
+              saturation={0}
+              blend={0.5}
+              falloff={1.6}
+              opacity={0.65}
             />
           </SafeVisual>
         </div>
 
-        {/* Futuristic Cyber Holographic HUD Container */}
+        {/* Futuristic Cyber Holographic HUD Container - Monochrome Edition */}
         <div style={{
           position: 'relative',
           zIndex: 1,
@@ -536,35 +536,35 @@ export default function ProfilePage() {
           padding: '3rem 2.25rem',
           maxWidth: '440px',
           width: '90%',
-          background: 'rgba(10, 15, 30, 0.78)',
+          background: 'rgba(12, 12, 12, 0.88)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderRadius: '28px',
-          border: '1px solid rgba(56, 189, 248, 0.25)',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 35px rgba(56, 189, 248, 0.15)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 255, 255, 0.04)',
           textAlign: 'center'
         }}>
-          {/* Top CAD Cyber Accent line */}
+          {/* Top CAD Cyber Accent line - Monochrome */}
           <div style={{
             position: 'absolute',
             top: 0,
             left: '20%',
             right: '20%',
             height: '2px',
-            background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
-            boxShadow: '0 0 10px #38bdf8'
+            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent)',
+            boxShadow: '0 0 12px rgba(255, 255, 255, 0.6)'
           }} />
 
-          {/* Srishti Portal Badge */}
+          {/* Srishti Portal Badge - Monochrome */}
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.45rem',
             padding: '0.35rem 0.85rem',
             borderRadius: '50px',
-            background: 'rgba(56, 189, 248, 0.08)',
-            border: '1px solid rgba(56, 189, 248, 0.25)',
-            color: '#38bdf8',
+            background: 'rgba(255, 255, 255, 0.06)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            color: '#ffffff',
             fontSize: '0.72rem',
             fontFamily: 'var(--font-mono, monospace)',
             fontWeight: '700',
@@ -576,14 +576,14 @@ export default function ProfilePage() {
               width: '6px',
               height: '6px',
               borderRadius: '50%',
-              backgroundColor: '#38bdf8',
-              boxShadow: '0 0 8px #38bdf8',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 0 8px rgba(255, 255, 255, 0.9)',
               animation: 'srishtiPulse 1.5s infinite'
             }} />
             SRISHTI 2.7 • PORTAL SYSTEM
           </div>
 
-          {/* Central Animated Cyber Core with Logo */}
+          {/* Central Animated Cyber Core with Logo - Monochrome */}
           <div style={{
             position: 'relative',
             width: '100px',
@@ -598,7 +598,7 @@ export default function ProfilePage() {
               position: 'absolute',
               inset: '-8px',
               borderRadius: '50%',
-              border: '2px dashed rgba(56, 189, 248, 0.45)',
+              border: '2px dashed rgba(255, 255, 255, 0.25)',
               animation: 'srishtiSpin 12s linear infinite'
             }} />
 
@@ -607,9 +607,9 @@ export default function ProfilePage() {
               position: 'absolute',
               inset: '0px',
               borderRadius: '50%',
-              border: '2px solid rgba(56, 189, 248, 0.15)',
-              borderTopColor: '#38bdf8',
-              boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)',
+              border: '2px solid rgba(255, 255, 255, 0.08)',
+              borderTopColor: '#ffffff',
+              boxShadow: '0 0 20px rgba(255, 255, 255, 0.4)',
               animation: 'srishtiSpin 1.1s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite'
             }} />
 
@@ -618,12 +618,12 @@ export default function ProfilePage() {
               width: '68px',
               height: '68px',
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(3, 7, 18, 0.95) 70%)',
+              background: 'radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(5, 5, 5, 0.95) 70%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              boxShadow: 'inset 0 0 15px rgba(56, 189, 248, 0.2)'
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: 'inset 0 0 15px rgba(255, 255, 255, 0.08)'
             }}>
               <img
                 src="/assets/logo.png"
@@ -632,7 +632,7 @@ export default function ProfilePage() {
                   width: '42px',
                   height: '42px',
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.5))'
+                  filter: 'grayscale(100%) brightness(1.2) drop-shadow(0 0 8px rgba(255, 255, 255, 0.4))'
                 }}
               />
             </div>
@@ -650,7 +650,7 @@ export default function ProfilePage() {
           </h2>
 
           <p style={{
-            color: '#94a3b8',
+            color: '#a1a1aa',
             fontSize: '0.85rem',
             margin: '0 0 1.75rem 0',
             lineHeight: 1.5
@@ -658,12 +658,12 @@ export default function ProfilePage() {
             Synchronizing delegate profile & entry pass...
           </p>
 
-          {/* Animated Cyber Progress Bar */}
+          {/* Animated Cyber Progress Bar - Monochrome */}
           <div style={{
             width: '100%',
             maxWidth: '260px',
             height: '4px',
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
             borderRadius: '4px',
             overflow: 'hidden',
             position: 'relative'
@@ -674,9 +674,9 @@ export default function ProfilePage() {
               bottom: 0,
               left: 0,
               width: '45%',
-              background: 'linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent)',
+              background: 'linear-gradient(90deg, transparent, #ffffff, #a1a1aa, transparent)',
               borderRadius: '4px',
-              boxShadow: '0 0 12px #38bdf8',
+              boxShadow: '0 0 12px rgba(255, 255, 255, 0.75)',
               animation: 'srishtiScan 1.6s ease-in-out infinite'
             }} />
           </div>
@@ -686,7 +686,7 @@ export default function ProfilePage() {
             marginTop: '1.25rem',
             fontFamily: 'var(--font-mono, monospace)',
             fontSize: '0.68rem',
-            color: '#64748b',
+            color: '#71717a',
             letterSpacing: '0.12em',
             textTransform: 'uppercase'
           }}>
@@ -729,17 +729,17 @@ export default function ProfilePage() {
       }}>
         <SafeVisual>
           <SideRays
-            speed={2.2}
-            rayColor1="#38bdf8"
-            rayColor2="#1d4ed8"
-            intensity={1.8}
+            speed={2.0}
+            rayColor1="#ffffff"
+            rayColor2="#52525b"
+            intensity={1.5}
             spread={2.2}
             origin="top-right"
             tilt={-5}
-            saturation={1.4}
-            blend={0.75}
+            saturation={0}
+            blend={0.6}
             falloff={1.6}
-            opacity={0.85}
+            opacity={0.5}
           />
         </SafeVisual>
       </div>
@@ -1622,18 +1622,18 @@ export default function ProfilePage() {
             position: 'relative',
             overflow: 'hidden'
           }}>
-            {/* Top Cyan Accent Beam */}
+            {/* Top Monochrome Accent Beam */}
             <div style={{
               position: 'absolute',
               top: 0,
               left: '10%',
               right: '10%',
               height: '2px',
-              background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
-              boxShadow: '0 0 12px #38bdf8'
+              background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent)',
+              boxShadow: '0 0 12px rgba(255, 255, 255, 0.5)'
             }} />
 
-            {/* Header Badge */}
+            {/* Header Badge - Monochrome */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
               <span style={{
                 display: 'inline-flex',
@@ -1641,9 +1641,9 @@ export default function ProfilePage() {
                 gap: '0.45rem',
                 padding: '0.35rem 0.85rem',
                 borderRadius: '50px',
-                background: 'rgba(56, 189, 248, 0.08)',
-                border: '1px solid rgba(56, 189, 248, 0.25)',
-                color: '#38bdf8',
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#ffffff',
                 fontSize: '0.72rem',
                 fontFamily: 'var(--font-mono, monospace)',
                 fontWeight: '700',
@@ -1790,8 +1790,8 @@ export default function ProfilePage() {
                   }}
                   onMouseOver={e => {
                     if (!loading && email.trim()) {
-                      e.currentTarget.style.backgroundColor = '#38bdf8';
-                      e.currentTarget.style.boxShadow = '0 8px 28px rgba(56, 189, 248, 0.35)';
+                      e.currentTarget.style.backgroundColor = '#e2e8f0';
+                      e.currentTarget.style.boxShadow = '0 8px 28px rgba(255, 255, 255, 0.3)';
                     }
                   }}
                   onMouseOut={e => {
@@ -1832,7 +1832,7 @@ export default function ProfilePage() {
                       onChange={(val) => setOtpCode(val)}
                       onComplete={(code) => handleVerifyOtp(code)}
                       autoFocus
-                      accentColor="#38bdf8"
+                      accentColor="#ffffff"
                       inkColor="#ffffff"
                       slotColor="rgba(0,0,0,0.6)"
                       digitColor="#ffffff"
@@ -1849,8 +1849,8 @@ export default function ProfilePage() {
                     style={{
                       width: '100%',
                       padding: '1.15rem',
-                      backgroundColor: '#38bdf8',
-                      color: '#000',
+                      backgroundColor: '#ffffff',
+                      color: '#000000',
                       border: 'none',
                       borderRadius: '16px',
                       fontSize: '0.98rem',
@@ -1859,14 +1859,14 @@ export default function ProfilePage() {
                       cursor: (loading || otpCode.trim().length < 6) ? 'not-allowed' : 'pointer',
                       opacity: (loading || otpCode.trim().length < 6) ? 0.5 : 1,
                       transition: 'all 0.2s',
-                      boxShadow: '0 8px 24px rgba(56, 189, 248, 0.25)'
+                      boxShadow: '0 8px 24px rgba(255, 255, 255, 0.2)'
                     }}
                     onMouseOver={e => {
                       if (!loading && otpCode.trim().length >= 6) {
-                        e.currentTarget.style.backgroundColor = '#7dd3fc';
+                        e.currentTarget.style.backgroundColor = '#e2e8f0';
                       }
                     }}
-                    onMouseOut={e => { e.currentTarget.style.backgroundColor = '#38bdf8'; }}
+                    onMouseOut={e => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
                   >
                     {loading ? 'Verifying Credentials...' : 'Unlock Delegate Portal'}
                   </button>
