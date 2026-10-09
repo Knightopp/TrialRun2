@@ -610,8 +610,8 @@ export default function App() {
 
   const handleVerifyOtp = async (codeToVerify) => {
     const code = (codeToVerify || otpCode || '').trim();
-    if (!code || code.length !== 6) {
-      setOtpError('Please enter the complete 6-digit verification code.');
+    if (!code || (code.length !== 4 && code.length !== 6)) {
+      setOtpError('Please enter the complete 4-digit verification code.');
       return;
     }
     const cleanEmail = formEmail.trim().toLowerCase();
@@ -778,7 +778,7 @@ export default function App() {
     }
 
     if (!otpVerified) {
-      alert('Please verify your email with the 6-digit OTP before submitting registration.');
+      alert('Please verify your email with the 4-digit OTP before submitting registration.');
       setFormStatus('idle');
       return;
     }
@@ -2008,7 +2008,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                                   Email Verification
                                 </h4>
                                 <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-                                  To secure your registration, enter the 6-digit verification code sent to:
+                                  To secure your registration, enter the 4-digit verification code sent to:
                                 </p>
                                 <div style={{
                                   display: 'inline-block',
@@ -2065,17 +2065,17 @@ See you at *SRISHTI 2.7*! 🚀`;
                                     ) : (
                                       <>
                                         <div className="form-group-item">
-                                          <label className="field-caption" style={{ color: '#cbd5e1' }}>Enter 6-Digit OTP</label>
+                                          <label className="field-caption" style={{ color: '#cbd5e1' }}>Enter 4-Digit OTP</label>
                                           <input
                                             type="text"
-                                            maxLength={6}
+                                            maxLength={4}
                                             className="app-input"
-                                            placeholder="123456"
+                                            placeholder="1234"
                                             value={otpCode}
                                             onChange={(e) => {
-                                              const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                              const val = e.target.value.replace(/\D/g, '').slice(0, 4);
                                               setOtpCode(val);
-                                              if (val.length === 6) {
+                                              if (val.length === 4) {
                                                 handleVerifyOtp(val);
                                               }
                                             }}
@@ -2092,15 +2092,15 @@ See you at *SRISHTI 2.7*! 🚀`;
                                         <button
                                           type="button"
                                           onClick={() => handleVerifyOtp()}
-                                          disabled={isVerifyingOtp || otpCode.length !== 6}
+                                          disabled={isVerifyingOtp || otpCode.length !== 4}
                                           style={{
-                                            background: otpCode.length === 6 ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
-                                            color: otpCode.length === 6 ? '#ffffff' : '#64748b',
+                                            background: otpCode.length === 4 ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
+                                            color: otpCode.length === 4 ? '#ffffff' : '#64748b',
                                             border: 'none',
                                             padding: '0.75rem 1.5rem',
                                             borderRadius: '8px',
                                             fontWeight: 'bold',
-                                            cursor: (isVerifyingOtp || otpCode.length !== 6) ? 'not-allowed' : 'pointer',
+                                            cursor: (isVerifyingOtp || otpCode.length !== 4) ? 'not-allowed' : 'pointer',
                                             fontFamily: 'var(--font-mono)'
                                           }}
                                         >

@@ -235,7 +235,7 @@ export default function ProfilePage() {
         return;
       }
 
-      setMessage('A new 6-digit OTP has been sent to your email.');
+      setMessage('A new 4-digit OTP has been sent to your email.');
       setResendCooldown(60);
     } catch (err) {
       setError(err.message || 'Network error resending code.');
@@ -250,8 +250,8 @@ export default function ProfilePage() {
       setError('Please enter the verification code.');
       return;
     }
-    if (cleanToken.length !== 6) {
-      setError('Please enter the complete 6-digit verification code.');
+    if (cleanToken.length !== 4 && cleanToken.length !== 6) {
+      setError('Please enter the complete 4-digit verification code.');
       return;
     }
 
@@ -1867,7 +1867,7 @@ See you at *SRISHTI 2.7*! 🚀`;
             }}>
               {step === 'email'
                 ? 'Enter your registered email address to retrieve your digital entry pass and access your festival schedule.'
-                : `We dispatched a 6-digit verification code to ${email}`}
+                : `We dispatched a 4-digit verification code to ${email}`}
             </p>
 
             {message && (
@@ -2015,11 +2015,11 @@ See you at *SRISHTI 2.7*! 🚀`;
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ width: '100%', marginBottom: '1.75rem' }}>
                   <label style={{ display: 'block', color: '#64748b', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.85rem', textAlign: 'center' }}>
-                    Enter 6-Digit Passcode
+                    Enter 4-Digit Passcode
                   </label>
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <CodeSlots
-                      length={6}
+                      length={4}
                       value={otpCode}
                       onChange={(val) => setOtpCode(val)}
                       onComplete={(code) => handleVerifyOtp(code)}
@@ -2037,7 +2037,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                   <button
                     type="button"
                     onClick={() => handleVerifyOtp(otpCode)}
-                    disabled={loading || otpCode.trim().length < 6}
+                    disabled={loading || otpCode.trim().length < 4}
                     style={{
                       width: '100%',
                       padding: '1.15rem',
@@ -2048,13 +2048,13 @@ See you at *SRISHTI 2.7*! 🚀`;
                       fontSize: '0.98rem',
                       fontWeight: '700',
                       letterSpacing: '0.03em',
-                      cursor: (loading || otpCode.trim().length < 6) ? 'not-allowed' : 'pointer',
-                      opacity: (loading || otpCode.trim().length < 6) ? 0.5 : 1,
+                      cursor: (loading || otpCode.trim().length < 4) ? 'not-allowed' : 'pointer',
+                      opacity: (loading || otpCode.trim().length < 4) ? 0.5 : 1,
                       transition: 'all 0.2s',
                       boxShadow: '0 8px 24px rgba(255, 255, 255, 0.2)'
                     }}
                     onMouseOver={e => {
-                      if (!loading && otpCode.trim().length >= 6) {
+                      if (!loading && otpCode.trim().length >= 4) {
                         e.currentTarget.style.backgroundColor = '#e2e8f0';
                       }
                     }}

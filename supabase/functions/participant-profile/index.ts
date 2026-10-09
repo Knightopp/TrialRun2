@@ -180,10 +180,10 @@ serve(async (req: Request) => {
         }
       }
 
-      // 5. Generate Cryptographically Secure 6-digit numeric OTP
+      // 5. Generate Cryptographically Secure 4-digit numeric OTP
       const cryptoArray = new Uint32Array(1);
       crypto.getRandomValues(cryptoArray);
-      const otpCode = String((cryptoArray[0] % 900000) + 100000); // 100000 - 999999
+      const otpCode = String((cryptoArray[0] % 9000) + 1000); // 1000 - 9999
 
       // 6. Store ONLY SHA-256 Hash with salt in database (Never plaintext)
       const otpHash = await hashOtp(targetEmail, otpCode);
@@ -289,14 +289,14 @@ serve(async (req: Request) => {
     }
 
     // -------------------------------------------------------------------------
-    // ACTION: verify-otp (Verify 6-digit numeric OTP and issue auth tokens)
+    // ACTION: verify-otp (Verify 4-digit numeric OTP and issue auth tokens)
     // -------------------------------------------------------------------------
     if (action === "verify-otp") {
       const targetEmail = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
       const otpInput = typeof body?.otp === "string" ? body.otp.trim() : "";
 
-      if (!targetEmail || !otpInput || otpInput.length !== 6) {
-        return json({ success: false, error: "Please enter the complete 6-digit verification code." }, 400);
+      if (!targetEmail || !otpInput || (otpInput.length !== 4 && otpInput.length !== 6)) {
+        return json({ success: false, error: "Please enter the complete 4-digit verification code." }, 400);
       }
 
       // 1. Fetch OTP record from database

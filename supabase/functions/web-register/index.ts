@@ -152,7 +152,7 @@ serve(async (req: Request) => {
     let isEmailVerified = false;
     if (verifiedCallerEmail && verifiedCallerEmail === cleanEmail) {
       isEmailVerified = true;
-    } else if (otp && typeof otp === "string" && otp.trim().length === 6) {
+    } else if (otp && typeof otp === "string" && (otp.trim().length === 4 || otp.trim().length === 6)) {
       const otpInput = otp.trim();
       const { data: otpRecord } = await supabase
         .from("participant_otps")
