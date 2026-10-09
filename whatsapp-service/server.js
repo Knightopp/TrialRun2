@@ -5,7 +5,8 @@ import qrcodeTerminal from 'qrcode-terminal';
 import makeWASocket, { 
   useMultiFileAuthState, 
   DisconnectReason, 
-  fetchLatestBaileysVersion 
+  fetchLatestBaileysVersion,
+  Browsers
 } from '@whiskeysockets/baileys';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -62,9 +63,9 @@ async function startWhatsAppBot() {
     sock = makeWASocket({
       version,
       auth: state,
-      printQRInTerminal: false, // We'll handle terminal printing cleanly ourselves
-      logger: pino({ level: 'silent' }), // Suppress raw socket noise
-      browser: ['SRISHTI 2.7 Command Center', 'Chrome', '1.0.0'],
+      printQRInTerminal: false,
+      logger: pino({ level: 'silent' }),
+      browser: Browsers.macOS('Desktop'),
       syncFullHistory: false
     });
 
@@ -100,7 +101,9 @@ async function startWhatsAppBot() {
         if (shouldReconnect) {
           setTimeout(startWhatsAppBot, 3000);
         } else {
-          console.log('[WHATSAPP] ❌ Logged out. Delete auth_info_baileys folder and restart to re-scan.');
+          console.log('[WHATSAPP] ❌ Logged out. Re-initializing session...');
+          latestQR = null;
+          setTimeout(startWhatsAppBot, 3000);
         }
       }
     });
@@ -125,6 +128,7 @@ app.get('/', (req, res) => {
     endpoints: {
       status: 'GET /status',
       qrScanner: 'GET /qr',
+      qrData: 'GET /qr-data',
       sendPass: 'POST /send-pass',
       sendMessage: 'POST /send-message'
     }
@@ -141,53 +145,17 @@ app.get('/status', (req, res) => {
   });
 });
 
-// 3. Browser-friendly QR Code Scanner Webpage
+// 2.1 Live QR Data API
+app.get('/qr-data', (req, res) => {
+  res.json({
+    connected: isConnected,
+    phone: botUser?.id ? botUser.id.split(':')[0] : null,
+    qr: latestQR
+  });
+});
+
+// 3. Browser-friendly Reactive QR Code Scanner Webpage
 app.get('/qr', (req, res) => {
-  if (isConnected) {
-    return res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>SRISHTI 2.7 WhatsApp Connected</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: system-ui, sans-serif; background: #09090b; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-            .box { background: #18181b; padding: 2.5rem; border-radius: 20px; text-align: center; border: 1px solid #27272a; max-width: 420px; }
-            .badge { background: #22c55e22; color: #4ade80; border: 1px solid #22c55e66; padding: 0.3rem 0.8rem; border-radius: 99px; font-weight: bold; font-size: 0.85rem; }
-            h2 { margin: 1.2rem 0 0.5rem; }
-            p { color: #a1a1aa; font-size: 0.95rem; }
-          </style>
-        </head>
-        <body>
-          <div class="box">
-            <span class="badge">● CONNECTED & ACTIVE</span>
-            <h2>WhatsApp Bot Online</h2>
-            <p>Logged in as: <strong>+${botUser?.id ? botUser.id.split(':')[0] : 'Connected'}</strong></p>
-            <p style="margin-top: 1.5rem; font-size: 0.82rem; color: #71717a;">You can close this tab. The service is actively ready to dispatch passes.</p>
-          </div>
-        </body>
-      </html>
-    `);
-  }
-
-  if (!latestQR) {
-    return res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Generating QR...</title>
-          <meta http-equiv="refresh" content="3">
-          <style>body { font-family: system-ui; background: #09090b; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; }</style>
-        </head>
-        <body>
-          <div style="text-align: center;">
-            <p>Initializing WhatsApp session... Page will refresh automatically.</p>
-          </div>
-        </body>
-      </html>
-    `);
-  }
-
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -196,21 +164,32 @@ app.get('/qr', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
         <style>
-          body { font-family: system-ui, -apple-system, sans-serif; background: #09090b; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; box-sizing: border-box; }
-          .card { background: #121217; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 2.2rem; text-align: center; max-width: 380px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
-          .eyebrow { font-size: 0.75rem; letter-spacing: 0.15em; color: #38bdf8; text-transform: uppercase; font-weight: 700; }
-          h2 { margin: 0.5rem 0 1rem; font-size: 1.35rem; }
-          #qrcode { background: #ffffff; padding: 16px; border-radius: 16px; display: inline-block; margin: 1rem 0; }
-          .instructions { color: #a1a1aa; font-size: 0.85rem; line-height: 1.5; text-align: left; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; margin-top: 1rem; }
-          ol { margin: 0; padding-left: 1.2rem; }
-          li { margin-bottom: 0.3rem; }
+          body { font-family: system-ui, -apple-system, sans-serif; background: #09090b; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1.25rem; box-sizing: border-box; }
+          .card { background: #121217; border: 1px solid rgba(255,255,255,0.12); border-radius: 24px; padding: 2rem; text-align: center; max-width: 380px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.8); }
+          .eyebrow { font-size: 0.72rem; letter-spacing: 0.16em; color: #38bdf8; text-transform: uppercase; font-weight: 700; margin-bottom: 0.35rem; }
+          h2 { margin: 0.2rem 0 1rem; font-size: 1.35rem; }
+          .qr-wrapper { background: #ffffff; padding: 16px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; min-width: 240px; min-height: 240px; margin: 0.75rem 0; box-shadow: 0 10px 30px rgba(0,0,0,0.6); position: relative; }
+          .instructions { color: #a1a1aa; font-size: 0.85rem; line-height: 1.5; text-align: left; background: rgba(255,255,255,0.04); padding: 1rem; border-radius: 14px; margin-top: 1rem; border: 1px solid rgba(255,255,255,0.06); }
+          ol { margin: 0; padding-left: 1.25rem; }
+          li { margin-bottom: 0.35rem; }
+          .status-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.75rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.75rem; }
+          .badge-waiting { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); }
+          .badge-connected { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35); }
+          .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
         </style>
       </head>
       <body>
-        <div class="card">
+        <div class="card" id="mainCard">
           <div class="eyebrow">SRISHTI 2.7 COMMAND CENTER</div>
           <h2>Link WhatsApp Bot</h2>
-          <div id="qrcode"></div>
+          <div id="statusBadge" class="status-badge badge-waiting">
+            <span class="dot"></span> <span id="statusText">Generating Live QR...</span>
+          </div>
+
+          <div class="qr-wrapper" id="qrContainer">
+            <div id="qrcode"></div>
+          </div>
+
           <div class="instructions">
             <strong>How to pair:</strong>
             <ol>
@@ -220,23 +199,51 @@ app.get('/qr', (req, res) => {
             </ol>
           </div>
         </div>
+
         <script>
-          new QRCode(document.getElementById("qrcode"), {
-            text: ${JSON.stringify(latestQR)},
-            width: 240,
-            height: 240,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.M
-          });
-          // Poll status every 4 seconds to auto-redirect once connected
-          setInterval(async () => {
+          let currentQR = null;
+          let qrCodeObj = null;
+
+          async function checkQR() {
             try {
-              const res = await fetch('/status');
+              const res = await fetch('/qr-data');
               const data = await res.json();
-              if (data.connected) window.location.reload();
-            } catch(_) {}
-          }, 4000);
+
+              if (data.connected) {
+                document.getElementById('mainCard').innerHTML = \`
+                  <div class="status-badge badge-connected" style="margin-bottom: 1rem;">
+                    <span class="dot"></span> CONNECTED & ONLINE
+                  </div>
+                  <h2 style="color: #ffffff; margin-bottom: 0.5rem;">WhatsApp Bot Active!</h2>
+                  <p style="color: #a1a1aa; font-size: 0.95rem; margin-top: 0.25rem;">
+                    Logged in as: <strong style="color: #ffffff;">+\${data.phone || 'Connected Device'}</strong>
+                  </p>
+                  <p style="margin-top: 1.5rem; font-size: 0.82rem; color: #71717a; background: rgba(255,255,255,0.04); padding: 0.85rem; border-radius: 12px;">
+                    ✅ The bot is now permanently running and ready to dispatch passes automatically.
+                  </p>
+                \`;
+                return;
+              }
+
+              if (data.qr && data.qr !== currentQR) {
+                currentQR = data.qr;
+                document.getElementById('statusText').innerText = 'Live QR • Scan Now';
+                const el = document.getElementById('qrcode');
+                el.innerHTML = '';
+                new QRCode(el, {
+                  text: data.qr,
+                  width: 240,
+                  height: 240,
+                  colorDark: "#000000",
+                  colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.M
+                });
+              }
+            } catch (_) {}
+          }
+
+          checkQR();
+          setInterval(checkQR, 2000);
         </script>
       </body>
     </html>
