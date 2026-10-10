@@ -2662,6 +2662,7 @@ See you at *SRISHTI 2.7*! 🚀`;
               </div>
             )
           } />
+          <Route path="/copper" element={<CopperDashboard />} />
           <Route path="/events" element={<Navigate to="/register" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
