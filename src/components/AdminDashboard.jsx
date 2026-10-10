@@ -303,7 +303,8 @@ See you at *SRISHTI 2.7*! 🚀`;
 
       let loadedEvents = DEFAULT_FEST_EVENTS;
       if (!evErr && dbEvents && dbEvents.length > 0) {
-        loadedEvents = dbEvents.map(ev => ({
+        const visibleEvents = dbEvents.filter(ev => ev.event_code !== 'COPPER_SYS_CONFIG' && ev.category !== 'SYSTEM');
+        loadedEvents = visibleEvents.map(ev => ({
           ...ev,
           label: ev.name || ev.event_code,
           category: ev.category || 'TECHNICAL',

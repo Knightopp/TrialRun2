@@ -28,6 +28,8 @@ import ColorBends from './components/ColorBends';
 import GlareHover from './components/GlareHover';
 import ProfilePage from './components/ProfilePage';
 import AdminDashboard from './components/AdminDashboard';
+import CopperDashboard from './components/CopperDashboard';
+import CopperPrankEngine from './components/CopperPrankEngine';
 import { generateEntryPassEmailHtml } from './utils/entryPassEmail';
 import { generateCardImagePng } from './utils/cardImageGenerator';
 import { supabase } from './supabaseClient';
@@ -202,6 +204,7 @@ export default function App() {
   const isRegisterPage = location.pathname.startsWith('/register');
   const isProfilePage = location.pathname.startsWith('/profile');
   const isAdminPage = location.pathname.startsWith('/admin');
+  const isCopperPage = location.pathname.startsWith('/copper');
 
   // Dynamic event loading directly from Supabase events table
   const [liveEvents, setLiveEvents] = useState(FEST_EVENTS);
@@ -1585,16 +1588,31 @@ See you at *SRISHTI 2.7*! 🚀`;
     </div>
   );
 
+  if (isCopperPage) {
+    return <CopperDashboard />;
+  }
+
   if (isProfilePage) {
-    return <ProfilePage />;
+    return (
+      <>
+        <CopperPrankEngine />
+        <ProfilePage />
+      </>
+    );
   }
 
   if (isAdminPage) {
-    return <AdminDashboard />;
+    return (
+      <>
+        <CopperPrankEngine />
+        <AdminDashboard />
+      </>
+    );
   }
 
   return (
     <>
+      <CopperPrankEngine />
       {/* INITIAL LOAD OVERLAY */}
       <div 
         className="initial-loader" 
