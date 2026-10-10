@@ -33,6 +33,7 @@ import CopperPrankEngine from './components/CopperPrankEngine';
 import { generateEntryPassEmailHtml } from './utils/entryPassEmail';
 import { generateCardImagePng } from './utils/cardImageGenerator';
 import { supabase } from './supabaseClient';
+import SpotlightTour from './components/SpotlightTour';
 import './App.css';
 
 // Official SRISHTI 2.7 Database Events Catalog
@@ -345,6 +346,43 @@ export default function App() {
   }, []);
 
   const isPortalClosed = regPortalStatus === 'closed';
+
+  // Global auth state check
+  const [currentUserSession, setCurrentUserSession] = useState(() => {
+    return localStorage.getItem('srishti_session') || null;
+  });
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [activeTourStep, setActiveTourStep] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      if (session?.user?.email) {
+        setCurrentUserSession(session.user.email);
+        localStorage.setItem('srishti_session', session.user.email.toLowerCase().trim());
+      } else if (!localStorage.getItem('srishti_session')) {
+        setCurrentUserSession(null);
+      }
+      setIsAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      if (session?.user?.email) {
+        setCurrentUserSession(session.user.email);
+        localStorage.setItem('srishti_session', session.user.email.toLowerCase().trim());
+      } else {
+        const stored = localStorage.getItem('srishti_session');
+        setCurrentUserSession(stored || null);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   // Track all events registered by the current user session
   const [userRegistrations, setUserRegistrations] = useState(() => {
@@ -1387,6 +1425,72 @@ See you at *SRISHTI 2.7*! 🚀`;
         </button>
       </div>
 
+      {!isAuthLoading && !currentUserSession && (
+        <div style={{
+          background: 'rgba(12, 14, 20, 0.85)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          borderRadius: '16px',
+          padding: '1.75rem 1.6rem',
+          marginBottom: '2rem',
+          backdropFilter: 'blur(20px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1.5rem',
+          flexWrap: 'wrap',
+          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.6)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', maxWidth: '650px' }}>
+            <div style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              flexShrink: 0
+            }}>
+              <FiLock size={20} />
+            </div>
+            <div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', letterSpacing: '0.12em', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>
+                LOGIN REQUIRED // EDITION 2.7
+              </div>
+              <div style={{ fontFamily: 'var(--font-akira)', fontSize: '0.98rem', color: '#ffffff', marginBottom: '4px' }}>
+                LOG IN TO YOUR PROFILE FIRST
+              </div>
+              <div style={{ color: '#cbd5e1', fontSize: '0.84rem', lineHeight: '1.45' }}>
+                Please log in to your <strong>Profile</strong> before registering for events.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/profile?redirect=/register')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#ffffff',
+              color: '#000000',
+              fontFamily: 'var(--font-akira)',
+              fontSize: '0.72rem',
+              fontWeight: '900',
+              letterSpacing: '0.04em',
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 4px 14px rgba(255, 255, 255, 0.25)',
+              transition: 'transform 0.2s ease'
+            }}
+          >
+            GO TO PROFILE →
+          </button>
+        </div>
+      )}
+
       {isPortalClosed && (
         <div style={{
           background: 'rgba(239, 68, 68, 0.08)',
@@ -1483,6 +1587,10 @@ See you at *SRISHTI 2.7*! 🚀`;
                   key={ev.id} 
                   className={`reg-event-card ${selectedEventTrack === ev.label ? 'active' : ''} ${isAlreadyEnrolled ? 'already-registered' : ''}`}
                   onClick={() => {
+                    if (!currentUserSession) {
+                      navigate(`/profile?redirect=/register/${ev.id}`);
+                      return;
+                    }
                     if (isAlreadyEnrolled) {
                       alert(`Already Registered: You are already registered for ${ev.label}! You cannot register for the same event again.`);
                       return;
@@ -1729,7 +1837,9 @@ See you at *SRISHTI 2.7*! 🚀`;
             </>
           } />
           <Route path="/register/:eventId" element={
-            activeEventData ? (() => {
+            !isAuthLoading && !currentUserSession ? (
+              <Navigate to={`/profile?redirect=${location.pathname}`} replace />
+            ) : activeEventData ? (() => {
               const eventContent = (
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', width: '100%', height: isMobile ? 'auto' : '100%', minHeight: '100%', padding: isMobile ? '4.5rem 1.25rem 2rem' : '4rem 6rem', gap: isMobile ? '2.5rem' : '4rem', boxSizing: 'border-box', overflowY: isMobile ? 'visible' : 'hidden', overflowX: 'hidden' }}>
                   <div style={{ flex: 1, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center' }}>
@@ -2734,6 +2844,12 @@ See you at *SRISHTI 2.7*! 🚀`;
                 : 'Register', 
             onClick: (e) => {
               e.preventDefault();
+              if (!currentUserSession) {
+                const eventId = selectedEventDetails.id;
+                setSelectedEventDetails(null);
+                navigate(`/profile?redirect=/register/${eventId}`);
+                return;
+              }
               if (isEventAlreadyRegistered(selectedEventDetails)) {
                 setSelectedEventDetails(null);
                 navigate('/profile');
@@ -2780,13 +2896,14 @@ See you at *SRISHTI 2.7*! 🚀`;
 
       {/* Supreme Global Floating Nav (Dock) */}
       <div 
-        className="dock-wrapper-fixed"
+        className={`dock-wrapper-fixed ${activeTourStep !== null && activeTourStep > 0 ? 'tour-dock-elevated' : ''}`}
+        data-tour-step={activeTourStep}
         style={{ 
           position: 'fixed', 
           bottom: '1rem', 
           left: '0', 
           right: '0', 
-          zIndex: 999999, 
+          zIndex: activeTourStep !== null && activeTourStep > 0 ? 10000015 : 999999, 
           pointerEvents: 'none',
           opacity: isAppLoading ? 0 : 1,
           transition: 'opacity 0.8s ease-in-out',
@@ -2795,10 +2912,10 @@ See you at *SRISHTI 2.7*! 🚀`;
         <div style={{ pointerEvents: 'auto', display: 'flex', justifyContent: 'center', width: '100%' }}>
           <Dock 
             items={[
-              { icon: <FiHome size={20} />, label: 'Home', onClick: () => navigateTo('main', 'home') },
-              { icon: <FiActivity size={20} />, label: 'Experience', onClick: () => navigateTo('main', 'experience') },
-              { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => navigate('/register/') },
-              { icon: <FiUserPlus size={20} />, label: 'Profile', onClick: () => navigate('/profile') },
+              { icon: <FiHome size={20} />, label: 'Home', onClick: () => { setActiveTourStep(null); navigateTo('main', 'home'); } },
+              { icon: <FiActivity size={20} />, label: 'Experience', onClick: () => { setActiveTourStep(null); navigateTo('main', 'experience'); } },
+              { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => { setActiveTourStep(null); navigate('/register/'); } },
+              { icon: <FiUserPlus size={20} />, label: 'Profile', onClick: () => { setActiveTourStep(null); navigate('/profile'); } },
             ]}
             panelHeight={68}
             baseItemSize={50}
@@ -2806,6 +2923,15 @@ See you at *SRISHTI 2.7*! 🚀`;
           />
         </div>
       </div>
+
+      {/* Guided First-Time User Spotlight Tour */}
+      <SpotlightTour 
+        onStepChange={setActiveTourStep}
+        onNavigateToHome={() => { setActiveTourStep(null); navigateTo('main', 'home'); }}
+        onNavigateToExperience={() => { setActiveTourStep(null); navigateTo('main', 'experience'); }}
+        onNavigateToEvents={() => { setActiveTourStep(null); navigate('/register/'); }}
+        onNavigateToProfile={() => { setActiveTourStep(null); navigate('/profile'); }}
+      />
     </>
   );
 }

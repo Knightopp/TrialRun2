@@ -1,0 +1,439 @@
+/* Spotlight Tour Styles */
+.spotlight-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000000;
+  pointer-events: auto;
+}
+
+.spotlight-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 5, 8, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity 0.3s ease;
+}
+
+/* Card Styling */
+.spotlight-card {
+  position: fixed;
+  z-index: 10000020;
+  background: rgba(14, 16, 22, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  padding: 1.75rem 1.6rem;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.9),
+    0 0 1px 1px rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  animation: cardFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translate(-50%, 15px) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+/* Step 0: Welcome modal centered in screen */
+.card-welcome {
+  width: 90%;
+  max-width: 440px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Steps 1 to 4: Positioned directly above the bottom Dock */
+.card-step {
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  bottom: 6.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Pointer arrow from card pointing down to the dock */
+.spotlight-pointer-arrow {
+  position: absolute;
+  bottom: -10px;
+  width: 18px;
+  height: 18px;
+  background: rgba(14, 16, 22, 0.96);
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  transform: rotate(45deg);
+  transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Step 1: Home (Index 0) */
+.spotlight-pointer-arrow.step-1 {
+  left: 22%;
+}
+
+/* Step 2: Experience (Index 1) */
+.spotlight-pointer-arrow.step-2 {
+  left: 41%;
+}
+
+/* Step 3: Events (Index 2) */
+.spotlight-pointer-arrow.step-3 {
+  left: 59%;
+}
+
+/* Step 4: Profile (Index 3) */
+.spotlight-pointer-arrow.step-4 {
+  left: 78%;
+}
+
+.spotlight-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spotlight-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.spotlight-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
+.spotlight-title {
+  font-family: var(--font-akira), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  margin: 0 0 0.85rem;
+  line-height: 1.2;
+}
+
+.spotlight-step-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.step-count {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.step-badge-tag {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  text-transform: uppercase;
+}
+
+.spotlight-step-title {
+  font-family: var(--font-akira), sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  margin: 0 0 0.65rem;
+  line-height: 1.25;
+}
+
+.spotlight-desc {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #94a3b8;
+  margin: 0 0 1.25rem;
+}
+
+.spotlight-desc strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.spotlight-summary-pills {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.65rem 0.5rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+
+.summary-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.pill-num {
+  font-family: var(--font-akira), sans-serif;
+  font-size: 0.68rem;
+  color: #ffffff;
+}
+
+.pill-txt {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.summary-arrow {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.spotlight-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.spotlight-btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-family: var(--font-akira), sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spotlight-btn-primary:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.spotlight-btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  transition: color 0.2s ease;
+}
+
+.spotlight-btn-ghost:hover {
+  color: #ffffff;
+}
+
+/* ========================================================= */
+/* DOCK SPOTLIGHT ILLUMINATION (Elevated above Tour Backdrop) */
+/* ========================================================= */
+
+.dock-wrapper-fixed.tour-dock-elevated {
+  z-index: 10000015 !important;
+  pointer-events: auto !important;
+}
+
+/* --- Step 1: Highlight Home (Index 0) --- */
+.dock-wrapper-fixed[data-tour-step="1"] .dock-item:not([data-dock-idx="0"]),
+.dock-wrapper-fixed[data-tour-step="1"] .dock-item-static:not([data-dock-idx="0"]) {
+  opacity: 0.2 !important;
+  filter: grayscale(1) !important;
+  transform: scale(0.9) !important;
+  transition: all 0.3s ease !important;
+}
+
+.dock-wrapper-fixed[data-tour-step="1"] .dock-item[data-dock-idx="0"],
+.dock-wrapper-fixed[data-tour-step="1"] .dock-item-static[data-dock-idx="0"] {
+  opacity: 1 !important;
+  background-color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+  color: #000000 !important;
+  transform: scale(1.18) !important;
+  box-shadow: 
+    0 0 0 4px rgba(255, 255, 255, 0.3),
+    0 0 35px rgba(255, 255, 255, 0.95),
+    0 0 65px rgba(255, 255, 255, 0.45) !important;
+  z-index: 10000025 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  animation: beaconPulse 1.8s infinite ease-in-out !important;
+}
+
+.dock-wrapper-fixed[data-tour-step="1"] .dock-item[data-dock-idx="0"] .dock-icon,
+.dock-wrapper-fixed[data-tour-step="1"] .dock-item-static[data-dock-idx="0"] .dock-icon,
+.dock-wrapper-fixed[data-tour-step="1"] .dock-item[data-dock-idx="0"] svg,
+.dock-wrapper-fixed[data-tour-step="1"] .dock-item-static[data-dock-idx="0"] svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+  transform: scale(1.1);
+}
+
+/* --- Step 2: Highlight Experience (Index 1) --- */
+.dock-wrapper-fixed[data-tour-step="2"] .dock-item:not([data-dock-idx="1"]),
+.dock-wrapper-fixed[data-tour-step="2"] .dock-item-static:not([data-dock-idx="1"]) {
+  opacity: 0.2 !important;
+  filter: grayscale(1) !important;
+  transform: scale(0.9) !important;
+  transition: all 0.3s ease !important;
+}
+
+.dock-wrapper-fixed[data-tour-step="2"] .dock-item[data-dock-idx="1"],
+.dock-wrapper-fixed[data-tour-step="2"] .dock-item-static[data-dock-idx="1"] {
+  opacity: 1 !important;
+  background-color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+  color: #000000 !important;
+  transform: scale(1.18) !important;
+  box-shadow: 
+    0 0 0 4px rgba(255, 255, 255, 0.3),
+    0 0 35px rgba(255, 255, 255, 0.95),
+    0 0 65px rgba(255, 255, 255, 0.45) !important;
+  z-index: 10000025 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  animation: beaconPulse 1.8s infinite ease-in-out !important;
+}
+
+.dock-wrapper-fixed[data-tour-step="2"] .dock-item[data-dock-idx="1"] .dock-icon,
+.dock-wrapper-fixed[data-tour-step="2"] .dock-item-static[data-dock-idx="1"] .dock-icon,
+.dock-wrapper-fixed[data-tour-step="2"] .dock-item[data-dock-idx="1"] svg,
+.dock-wrapper-fixed[data-tour-step="2"] .dock-item-static[data-dock-idx="1"] svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+  transform: scale(1.1);
+}
+
+/* --- Step 3: Highlight Events (Index 2) --- */
+.dock-wrapper-fixed[data-tour-step="3"] .dock-item:not([data-dock-idx="2"]),
+.dock-wrapper-fixed[data-tour-step="3"] .dock-item-static:not([data-dock-idx="2"]) {
+  opacity: 0.2 !important;
+  filter: grayscale(1) !important;
+  transform: scale(0.9) !important;
+  transition: all 0.3s ease !important;
+}
+
+.dock-wrapper-fixed[data-tour-step="3"] .dock-item[data-dock-idx="2"],
+.dock-wrapper-fixed[data-tour-step="3"] .dock-item-static[data-dock-idx="2"] {
+  opacity: 1 !important;
+  background-color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+  color: #000000 !important;
+  transform: scale(1.18) !important;
+  box-shadow: 
+    0 0 0 4px rgba(255, 255, 255, 0.3),
+    0 0 35px rgba(255, 255, 255, 0.95),
+    0 0 65px rgba(255, 255, 255, 0.45) !important;
+  z-index: 10000025 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  animation: beaconPulse 1.8s infinite ease-in-out !important;
+}
+
+.dock-wrapper-fixed[data-tour-step="3"] .dock-item[data-dock-idx="2"] .dock-icon,
+.dock-wrapper-fixed[data-tour-step="3"] .dock-item-static[data-dock-idx="2"] .dock-icon,
+.dock-wrapper-fixed[data-tour-step="3"] .dock-item[data-dock-idx="2"] svg,
+.dock-wrapper-fixed[data-tour-step="3"] .dock-item-static[data-dock-idx="2"] svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+  transform: scale(1.1);
+}
+
+/* --- Step 4: Highlight Profile (Index 3) --- */
+.dock-wrapper-fixed[data-tour-step="4"] .dock-item:not([data-dock-idx="3"]),
+.dock-wrapper-fixed[data-tour-step="4"] .dock-item-static:not([data-dock-idx="3"]) {
+  opacity: 0.2 !important;
+  filter: grayscale(1) !important;
+  transform: scale(0.9) !important;
+  transition: all 0.3s ease !important;
+}
+
+.dock-wrapper-fixed[data-tour-step="4"] .dock-item[data-dock-idx="3"],
+.dock-wrapper-fixed[data-tour-step="4"] .dock-item-static[data-dock-idx="3"] {
+  opacity: 1 !important;
+  background-color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+  color: #000000 !important;
+  transform: scale(1.18) !important;
+  box-shadow: 
+    0 0 0 4px rgba(255, 255, 255, 0.3),
+    0 0 35px rgba(255, 255, 255, 0.95),
+    0 0 65px rgba(255, 255, 255, 0.45) !important;
+  z-index: 10000025 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  animation: beaconPulse 1.8s infinite ease-in-out !important;
+}
+
+.dock-wrapper-fixed[data-tour-step="4"] .dock-item[data-dock-idx="3"] .dock-icon,
+.dock-wrapper-fixed[data-tour-step="4"] .dock-item-static[data-dock-idx="3"] .dock-icon,
+.dock-wrapper-fixed[data-tour-step="4"] .dock-item[data-dock-idx="3"] svg,
+.dock-wrapper-fixed[data-tour-step="4"] .dock-item-static[data-dock-idx="3"] svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+  transform: scale(1.1);
+}
+
+@keyframes beaconPulse {
+  0% {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 0 25px rgba(255, 255, 255, 0.85);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.15), 0 0 45px rgba(255, 255, 255, 1);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 0 25px rgba(255, 255, 255, 0.85);
+  }
+}
+
+@media (max-width: 480px) {
+  .card-welcome {
+    width: 92%;
+    padding: 1.35rem 1.2rem;
+  }
+  .card-step {
+    width: calc(100vw - 28px);
+    bottom: 5.5rem;
+    padding: 1.35rem 1.2rem;
+  }
+  .spotlight-title {
+    font-size: 1rem;
+  }
+  .spotlight-step-title {
+    font-size: 0.85rem;
+  }
+}

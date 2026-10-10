@@ -98,6 +98,14 @@ export default function ProfilePage() {
         const found = await fetchUserData(savedEmail);
         if (!alive) return;
         setStep(found ? 'dashboard' : 'not_registered');
+        if (found) {
+          const searchParams = new URLSearchParams(window.location.search);
+          const redirectUrl = searchParams.get('redirect');
+          if (redirectUrl && redirectUrl.startsWith('/')) {
+            navigate(redirectUrl);
+            return;
+          }
+        }
       } catch (err) {
         if (alive) {
           setError(err.message || 'Could not load your profile. Please try again.');
@@ -344,6 +352,12 @@ export default function ProfilePage() {
         setStep('not_registered');
       } else {
         setStep('dashboard');
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirectUrl = searchParams.get('redirect');
+        if (redirectUrl && redirectUrl.startsWith('/')) {
+          navigate(redirectUrl);
+          return;
+        }
       }
     } catch (err) {
       console.error('Verify OTP error:', err);
@@ -384,6 +398,12 @@ export default function ProfilePage() {
     await fetchUserData(userEmail);
     setStep('dashboard');
     setLoading(false);
+    const searchParams = new URLSearchParams(window.location.search);
+    const redirectUrl = searchParams.get('redirect');
+    if (redirectUrl && redirectUrl.startsWith('/')) {
+      navigate(redirectUrl);
+      return;
+    }
   };
   const handleLogout = () => {
     supabase.auth.signOut();
@@ -1915,19 +1935,19 @@ See you at *SRISHTI 2.7*! 🚀`;
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase'
               }}>
-                <FiKey size={13} /> SRISHTI 2.7 • DELEGATE PORTAL
+                <FiUser size={13} /> SRISHTI 2.7 • PROFILE
               </span>
             </div>
 
             <h2 style={{
-              fontSize: '1.9rem',
+              fontSize: '2.1rem',
               fontWeight: '800',
               marginBottom: '0.65rem',
               textAlign: 'center',
               letterSpacing: '-0.02em',
               color: '#ffffff'
             }}>
-              {step === 'email' ? 'Claim Your Delegate Pass' : 'Enter Secure Access Code'}
+              {step === 'email' ? 'Profile' : 'Enter Verification Code'}
             </h2>
 
             <p style={{
@@ -1939,7 +1959,7 @@ See you at *SRISHTI 2.7*! 🚀`;
               padding: '0 0.5rem'
             }}>
               {step === 'email'
-                ? 'Enter your registered email address to retrieve your digital entry pass and access your festival schedule.'
+                ? 'Enter your email address to access your profile, registrations, and account.'
                 : `We dispatched a 4-digit verification code to ${email}`}
             </p>
 

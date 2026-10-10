@@ -728,10 +728,16 @@
 
 .section-heading {
   font-family: var(--font-akira), sans-serif;
-  font-size: 1.75rem;
+  font-size: clamp(1.15rem, 3.5vw, 1.85rem);
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: #ffffff;
+  text-align: center;
+  max-width: 90vw;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
+  box-sizing: border-box;
 }
 
 /* EVENTS SECTION — FlowingMenu (flows directly from hero) */
@@ -758,7 +764,8 @@
   }
 
   .section-heading {
-    font-size: 1.35rem;
+    font-size: clamp(1.05rem, 4vw, 1.35rem);
+    padding: 0 0.75rem;
   }
 
   .section-wrapper {
@@ -1280,8 +1287,8 @@
 
 .hero-brand-badge-top:hover {
   transform: translateY(-2px);
-  border-color: rgba(56, 189, 248, 0.5);
-  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 .brand-logo-img {
@@ -1292,7 +1299,7 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.75));
+  filter: none !important;
 }
 
 .brand-logo-text {
@@ -1306,11 +1313,11 @@
 .brand-edition-pill {
   font-family: var(--font-mono);
   font-size: 0.65rem;
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 1px 6px;
   border-radius: 4px;
-  background: rgba(56, 189, 248, 0.12);
+  background: rgba(255, 255, 255, 0.06);
   font-weight: 600;
 }
 
