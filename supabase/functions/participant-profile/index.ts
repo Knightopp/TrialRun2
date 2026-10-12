@@ -461,16 +461,6 @@ serve(async (req: Request) => {
       return json({ success: false, error: "Could not load your participant profile." }, 503);
     }
 
-    if (!participant) {
-      return json({
-        success: true,
-        not_registered: true,
-        participant: null,
-        registrations: [],
-        message: "No registered participant profile found for this email. Please register for an event first."
-      }, 200);
-    }
-
     if (action === "save") {
       const profile = (body?.profile ?? {}) as Record<string, unknown>;
       const name = typeof profile.name === "string" ? profile.name.trim() : "";
@@ -483,18 +473,59 @@ serve(async (req: Request) => {
         return json({ success: false, error: "Name, phone number, and college are required." }, 400);
       }
 
-      const { data, error } = await admin
-        .from("participants")
-        .update({ name, phone, college, department, year })
-        .eq("id", participant.id)
-        .select("id, participant_code, name, email, phone, college, department, year")
-        .single();
+      if (participant) {
+        const { data, error } = await admin
+          .from("participants")
+          .update({ name, phone, college, department, year })
+          .eq("id", participant.id)
+          .select("id, participant_code, name, email, phone, college, department, year")
+          .single();
 
-      if (error) {
-        console.error("Participant profile update failed:", error);
-        return json({ success: false, error: "Could not save your profile." }, 500);
+        if (error) {
+          console.error("Participant profile update failed:", error);
+          return json({ success: false, error: "Could not save your profile." }, 500);
+        }
+        participant = data;
+      } else {
+        // Generate unique participant code
+        let newCode = "";
+        const { data: generatedCode, error: codeErr } = await admin.rpc("fn_generate_participant_code");
+        if (!codeErr && typeof generatedCode === "string" && generatedCode) {
+          newCode = generatedCode;
+        } else {
+          newCode = `SRI27-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        }
+
+        const { data: newParticipant, error: insertError } = await admin
+          .from("participants")
+          .insert([{
+            participant_code: newCode,
+            name,
+            email,
+            phone,
+            college,
+            department,
+            year
+          }])
+          .select("id, participant_code, name, email, phone, college, department, year")
+          .single();
+
+        if (insertError) {
+          console.error("Participant profile creation failed:", insertError);
+          return json({ success: false, error: "Could not create your profile." }, 500);
+        }
+        participant = newParticipant;
       }
-      participant = data;
+    }
+
+    if (!participant) {
+      return json({
+        success: true,
+        not_registered: true,
+        participant: null,
+        registrations: [],
+        message: "No registered participant profile found for this email. Please complete profile creation."
+      }, 200);
     }
 
     let registrations: unknown[] = [];

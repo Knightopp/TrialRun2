@@ -354,6 +354,13 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [activeTourStep, setActiveTourStep] = useState(null);
 
+  const hasParticipantProfile = Boolean(
+    currentUserSession && (
+      localStorage.getItem(`srishti_profile_${currentUserSession.toLowerCase().trim()}`) ||
+      localStorage.getItem('srishti_user_name')
+    )
+  );
+
   useEffect(() => {
     let isMounted = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1425,7 +1432,7 @@ See you at *SRISHTI 2.7*! 🚀`;
         </button>
       </div>
 
-      {!isAuthLoading && !currentUserSession && (
+      {!isAuthLoading && (!currentUserSession || !hasParticipantProfile) && (
         <div style={{
           background: 'rgba(12, 14, 20, 0.85)',
           border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -1457,13 +1464,16 @@ See you at *SRISHTI 2.7*! 🚀`;
             </div>
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', letterSpacing: '0.12em', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>
-                LOGIN REQUIRED // EDITION 2.7
+                {!currentUserSession ? 'LOGIN REQUIRED // EDITION 2.7' : 'PROFILE REQUIRED // EDITION 2.7'}
               </div>
               <div style={{ fontFamily: 'var(--font-akira)', fontSize: '0.98rem', color: '#ffffff', marginBottom: '4px' }}>
-                LOG IN TO YOUR PROFILE FIRST
+                {!currentUserSession ? 'LOG IN OR CREATE PROFILE FIRST' : 'MANDATORY PROFILE CREATION NEEDED'}
               </div>
               <div style={{ color: '#cbd5e1', fontSize: '0.84rem', lineHeight: '1.45' }}>
-                Please log in to your <strong>Profile</strong> before registering for events.
+                {!currentUserSession
+                  ? <>Please log in or create your official <strong>Participant Profile</strong> before registering for events.</>
+                  : <>You are logged in, but you must complete your <strong>Participant Profile</strong> before registering for events.</>
+                }
               </div>
             </div>
           </div>
@@ -1486,7 +1496,7 @@ See you at *SRISHTI 2.7*! 🚀`;
               transition: 'transform 0.2s ease'
             }}
           >
-            GO TO PROFILE →
+            {!currentUserSession ? 'GO TO PROFILE →' : 'COMPLETE PROFILE →'}
           </button>
         </div>
       )}
@@ -1587,7 +1597,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                   key={ev.id} 
                   className={`reg-event-card ${selectedEventTrack === ev.label ? 'active' : ''} ${isAlreadyEnrolled ? 'already-registered' : ''}`}
                   onClick={() => {
-                    if (!currentUserSession) {
+                    if (!currentUserSession || !hasParticipantProfile) {
                       navigate(`/profile?redirect=/register/${ev.id}`);
                       return;
                     }
@@ -1837,7 +1847,7 @@ See you at *SRISHTI 2.7*! 🚀`;
             </>
           } />
           <Route path="/register/:eventId" element={
-            !isAuthLoading && !currentUserSession ? (
+            !isAuthLoading && (!currentUserSession || !hasParticipantProfile) ? (
               <Navigate to={`/profile?redirect=${location.pathname}`} replace />
             ) : activeEventData ? (() => {
               const eventContent = (
@@ -2844,7 +2854,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                 : 'Register', 
             onClick: (e) => {
               e.preventDefault();
-              if (!currentUserSession) {
+              if (!currentUserSession || !hasParticipantProfile) {
                 const eventId = selectedEventDetails.id;
                 setSelectedEventDetails(null);
                 navigate(`/profile?redirect=/register/${eventId}`);
