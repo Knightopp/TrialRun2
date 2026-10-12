@@ -395,4 +395,17 @@ app.post('/send-message', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`[HTTP] 🌐 Dispatch API listening on http://localhost:${PORT}`);
   startWhatsAppBot();
+
+  // Self-ping to prevent Render Free Tier from spinning down (15 min inactivity timeout)
+  const renderUrl = process.env.RENDER_EXTERNAL_URL || 'https://trialrun2.onrender.com';
+  setInterval(async () => {
+    try {
+      const response = await fetch(`${renderUrl}/status`);
+      if (response.ok) {
+        console.log(`[KEEP-ALIVE] Pinged ${renderUrl}/status successfully. Service remains awake.`);
+      }
+    } catch (pingErr) {
+      console.warn(`[KEEP-ALIVE] Ping warning:`, pingErr.message);
+    }
+  }, 8 * 60 * 1000); // Ping every 8 minutes
 });
