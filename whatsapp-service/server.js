@@ -13,7 +13,9 @@ import { fileURLToPath } from 'url';
 import { 
   handleCommandMessage, 
   handleReaction, 
-  loadConfig 
+  loadConfig,
+  checkAntiLink,
+  handleAntiDelete 
 } from './autoDeleteManager.js';
 import { getMessage, storeMessage } from './messageStore.js';
 
@@ -137,17 +139,28 @@ async function startWhatsAppBot() {
       }
     });
 
-    // 2. Listen for incoming messages (commands: v -a, v -d, v -emoji, etc. & reactionMessages)
+    // 2. Listen for incoming messages (commands: v -..., reactions, anti-link, anti-delete)
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
       try {
         if (!Array.isArray(messages)) return;
         for (const msg of messages) {
           if (!msg || !msg.message) continue;
 
-          // Cache message so Baileys can re-encrypt on retry requests
+          // Cache message with full metadata so Baileys can re-encrypt on retry and for purge/anti-delete
           if (msg.key && msg.message) {
-            storeMessage(msg.key, msg.message);
+            storeMessage(msg.key, msg.message, msg);
           }
+
+          // Check for anti-delete revoke protocol message
+          if (msg.message?.protocolMessage?.type === 0 || msg.message?.protocolMessage?.type === 'REVOKE') {
+            const deletedKey = msg.message.protocolMessage.key;
+            if (deletedKey) {
+              await handleAntiDelete(sock, deletedKey, sock.user || botUser);
+            }
+          }
+
+          // Check Anti-Link protection in groups
+          await checkAntiLink(sock, msg, sock.user || botUser);
 
           // Check if message itself is a reaction (e.g. from mobile or web sync)
           if (msg.message.reactionMessage) {
@@ -166,6 +179,22 @@ async function startWhatsAppBot() {
         }
       } catch (err) {
         console.error('[WHATSAPP] Error processing message upsert:', err);
+      }
+    });
+
+    // 3. Listen for message updates (such as message revokes from other participants)
+    sock.ev.on('messages.update', async (updates) => {
+      try {
+        if (!Array.isArray(updates)) return;
+        for (const update of updates) {
+          if (update.update?.messageStubType === 1 || update.update?.message === null) {
+            if (update.key) {
+              await handleAntiDelete(sock, update.key, sock.user || botUser);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[WHATSAPP] Error in messages.update handler:', err);
       }
     });
 

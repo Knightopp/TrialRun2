@@ -6,5 +6,9 @@
       "emoji": "🗑️",
       "activatedAt": "2026-10-16T08:39:15.522Z"
     }
-  }
+  },
+  "antiLinkChats": {
+    "120363012345678901@g.us": true
+  },
+  "antiDeleteEnabled": true
 }

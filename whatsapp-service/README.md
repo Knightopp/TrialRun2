@@ -115,27 +115,39 @@ Content-Type: application/json
 
 ---
 
-### 4. Emoji Reaction Auto-Delete System (Prefix: `v`)
-A self-moderation feature that automatically deletes any message for everyone when you react to it with a designated emoji (default: `🗑️`).
+### 4. WhatsApp Bot Command Center (Prefix: `v`) & Reaction Triggers
 
-#### 🔒 Strict Security & Privacy
-- **Owner Only:** Only **YOU** (the linked WhatsApp phone number) can execute commands or trigger deletions.
-- If any other participant in a group or DM types `v -a` or reacts with emojis, it is completely ignored.
-- **Opt-in per chat:** Messages are only deleted in chats where you have explicitly enabled it with `v -a`.
+#### 🔒 Strict Owner Protection
+- **Owner Only:** Only **YOU** (the linked WhatsApp phone number) can run `v` commands or trigger deletions/pins/saves.
+- Messages and commands from other group members are ignored for security.
 
 #### 💬 WhatsApp Commands:
 | Command | Description |
 | :--- | :--- |
-| `v -a` | **Activate** auto-delete in the current chat (default emoji: `🗑️`) |
-| `v -a ❌` | Activate with a custom trigger emoji (e.g., `❌` or `💀`) |
-| `v -d` | **Deactivate** auto-delete in the current chat |
-| `v -emoji <emoji>` | Change the trigger emoji for this chat |
-| `v -status` | Check if auto-delete is active in this chat and view trigger emoji |
-| `v -list` | List all chats where auto-delete is currently active |
+| `v -a [emoji]` | **Activate** reaction auto-delete in this chat (replies `activated`) |
+| `v -d` | **Deactivate** reaction auto-delete in this chat (replies `deactivated`) |
+| `v -purge <count>` | **Bulk Delete** the last *N* messages in the chat/group (e.g. `v -purge 5` or `v -purge 20`) |
+| `v -mute` | **Lockdown Group:** Set group so only Admins can send messages |
+| `v -unmute` | **Unlock Group:** Allow all members to send messages |
+| `v -tagall [text]` | **Mention Everyone:** Tag all group members in one announcement message |
+| `v -antilink [on\|off]` | **Anti-Link Shield:** Automatically delete unauthorized WhatsApp group invite links |
+| `v -s` | **Sticker Maker:** Convert replied photo or attached photo into a transparent sticker |
+| `v -tts <text>` | **Text-to-Speech:** Convert text into an official WhatsApp voice note |
+| `v -remind <time> <msg>` | **Quick Reminder:** Set a timer alert (e.g. `v -remind 20m Check event hall 2`) |
+| `v -status` | View active settings for the current chat |
 | `v -help` | Display command help guide |
 
-#### 🌐 REST API:
-- `GET /auto-delete` - Returns list of active chats and configuration.
+#### 📌 Emoji Reactions (Owner Only):
+| Reaction | What it does |
+| :--- | :--- |
+| `🗑️` (or set emoji) | **Deletes that message for everyone** (in chats activated with `v -a`) |
+| `📌` | **Pins the message** in the chat for everyone (7-day pin) |
+| `📍` | **Unpins the message** from the chat |
+| `💾` or `⭐` | **Saves View-Once** photos/videos or text directly to your private "Message Yourself" chat |
+| `✨` | **Sticker Maker:** React to any image to instantly turn it into a sticker |
+
+#### 🕵️ Anti-Delete Logger (Automatic):
+- Whenever someone deletes/revokes a message in any group or chat, the bot intercepts it and forwards the recovered text and media directly to your private "Message Yourself" chat with the sender's details and timestamp.
 
 ---
 
