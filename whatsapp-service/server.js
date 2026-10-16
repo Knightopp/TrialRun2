@@ -15,6 +15,7 @@ import {
   handleReaction, 
   loadConfig 
 } from './autoDeleteManager.js';
+import { getMessage, storeMessage } from './messageStore.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,7 +72,8 @@ async function startWhatsAppBot() {
       printQRInTerminal: false,
       logger: pino({ level: 'silent' }),
       browser: Browsers.macOS('Desktop'),
-      syncFullHistory: false
+      syncFullHistory: false,
+      getMessage
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -141,6 +143,11 @@ async function startWhatsAppBot() {
         if (!Array.isArray(messages)) return;
         for (const msg of messages) {
           if (!msg || !msg.message) continue;
+
+          // Cache message so Baileys can re-encrypt on retry requests
+          if (msg.key && msg.message) {
+            storeMessage(msg.key, msg.message);
+          }
 
           // Check if message itself is a reaction (e.g. from mobile or web sync)
           if (msg.message.reactionMessage) {
@@ -416,6 +423,10 @@ See you at *SRISHTI 2.7*! 🚀`;
       sendResult = await sock.sendMessage(jid, { text: caption });
     }
 
+    if (sendResult?.key && sendResult?.message) {
+      storeMessage(sendResult.key, sendResult.message);
+    }
+
     console.log(`[WHATSAPP] ✉️ Pass dispatched successfully to ${phone} (${displayCode})`);
 
     return res.json({
@@ -455,6 +466,9 @@ app.post('/send-message', async (req, res) => {
     }
 
     const result = await sock.sendMessage(jid, { text: String(message) });
+    if (result?.key && result?.message) {
+      storeMessage(result.key, result.message);
+    }
     return res.json({ success: true, messageId: result?.key?.id, recipient: jid });
   } catch (error) {
     console.error('[WHATSAPP] Error sending message:', error);

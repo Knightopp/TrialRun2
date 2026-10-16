@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { areJidsSameUser, jidNormalizedUser, isJidGroup } from '@whiskeysockets/baileys';
+import { storeMessage } from './messageStore.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -208,27 +209,16 @@ export async function handleCommandMessage(sock, msg, botUser) {
     case 'activate':
     case 'on': {
       const emojiParam = extraParam || null;
-      const result = activateChat(chatJid, emojiParam);
-      replyText = 
-`⚡ *Auto-Delete on Reaction: ACTIVATED*
-━━━━━━━━━━━━━━━━━━━━━
-• *Status:* Active for this chat
-• *Trigger Emoji:* ${result.emoji}
-• *Permission:* Only *YOU* can delete messages by reacting with ${result.emoji}
-• *How to use:* React to any message with ${result.emoji} and it will be deleted for everyone.
-• *To Deactivate:* Send \`v -d\``;
+      activateChat(chatJid, emojiParam);
+      replyText = 'activated';
       break;
     }
 
     case 'd':
     case 'deactivate':
     case 'off': {
-      const deactivated = deactivateChat(chatJid);
-      if (deactivated) {
-        replyText = `⚪ *Auto-Delete on Reaction: DEACTIVATED*\nThis chat will no longer automatically delete messages on reaction.`;
-      } else {
-        replyText = `⚪ Auto-delete was not active in this chat.`;
-      }
+      deactivateChat(chatJid);
+      replyText = 'deactivated';
       break;
     }
 
@@ -295,7 +285,10 @@ ${keys.map((jid, i) => `${i + 1}. \`${jid}\` (Emoji: ${cfg.activeChats[jid]?.emo
   }
 
   try {
-    await sock.sendMessage(chatJid, { text: replyText }, { quoted: msg });
+    const sent = await sock.sendMessage(chatJid, { text: replyText });
+    if (sent?.key && sent?.message) {
+      storeMessage(sent.key, sent.message);
+    }
     return true;
   } catch (err) {
     console.error('[AUTO-DELETE] Failed to send command response:', err.message);

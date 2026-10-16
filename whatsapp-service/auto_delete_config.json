@@ -1,4 +1,10 @@
 {
   "defaultEmoji": "🗑️",
-  "activeChats": {}
+  "activeChats": {
+    "120363099999999999@g.us": {
+      "enabled": true,
+      "emoji": "🗑️",
+      "activatedAt": "2026-10-16T08:39:15.522Z"
+    }
+  }
 }
