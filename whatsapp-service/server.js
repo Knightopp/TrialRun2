@@ -10,6 +10,11 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { 
+  handleCommandMessage, 
+  handleReaction, 
+  loadConfig 
+} from './autoDeleteManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,6 +113,55 @@ async function startWhatsAppBot() {
       }
     });
 
+    // -------------------------------------------------------------------------
+    // AUTO-DELETE REACTION & COMMAND LISTENERS
+    // -------------------------------------------------------------------------
+
+    // 1. Listen for message reactions (delete message for everyone when owner reacts with trigger emoji)
+    sock.ev.on('messages.reaction', async (reactions) => {
+      try {
+        if (!Array.isArray(reactions)) return;
+        for (const item of reactions) {
+          if (!item || !item.key || !item.reaction) continue;
+          await handleReaction(sock, {
+            targetKey: item.key,
+            reactionText: item.reaction.text,
+            reactionKey: item.reaction.key,
+            botUser: sock.user || botUser
+          });
+        }
+      } catch (err) {
+        console.error('[WHATSAPP] Error processing reaction:', err);
+      }
+    });
+
+    // 2. Listen for incoming messages (commands: v -a, v -d, v -emoji, etc. & reactionMessages)
+    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+      try {
+        if (!Array.isArray(messages)) return;
+        for (const msg of messages) {
+          if (!msg || !msg.message) continue;
+
+          // Check if message itself is a reaction (e.g. from mobile or web sync)
+          if (msg.message.reactionMessage) {
+            const reaction = msg.message.reactionMessage;
+            await handleReaction(sock, {
+              targetKey: reaction.key,
+              reactionText: reaction.text,
+              reactionKey: msg.key,
+              botUser: sock.user || botUser
+            });
+            continue;
+          }
+
+          // Check for bot commands (prefix: v)
+          await handleCommandMessage(sock, msg, sock.user || botUser);
+        }
+      } catch (err) {
+        console.error('[WHATSAPP] Error processing message upsert:', err);
+      }
+    });
+
   } catch (error) {
     console.error('[WHATSAPP] Failed to start socket:', error);
     setTimeout(startWhatsAppBot, 5000);
@@ -120,19 +174,36 @@ async function startWhatsAppBot() {
 
 // 1. Service Health & Information
 app.get('/', (req, res) => {
+  const autoDelCfg = loadConfig();
   res.json({
     service: 'SRISHTI 2.7 WhatsApp Dispatch Microservice',
-    version: '2.2.0',
+    version: '2.3.0',
     status: isConnected ? 'online' : 'connecting',
     phone: botUser?.id ? botUser.id.split(':')[0] : null,
     qrReady: !isConnected && !!latestQR,
+    autoDelete: {
+      activeChatsCount: Object.keys(autoDelCfg.activeChats || {}).length,
+      defaultEmoji: autoDelCfg.defaultEmoji
+    },
     endpoints: {
       status: 'GET /status',
       qrScanner: 'GET /qr',
       qrData: 'GET /qr-data',
+      autoDelete: 'GET /auto-delete',
       sendPass: 'POST /send-pass',
       sendMessage: 'POST /send-message'
     }
+  });
+});
+
+// 1.1 Auto-Delete Status API
+app.get('/auto-delete', (req, res) => {
+  const cfg = loadConfig();
+  res.json({
+    success: true,
+    defaultEmoji: cfg.defaultEmoji,
+    activeChatsCount: Object.keys(cfg.activeChats || {}).length,
+    activeChats: cfg.activeChats || {}
   });
 });
 

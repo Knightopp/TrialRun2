@@ -115,7 +115,29 @@ Content-Type: application/json
 
 ---
 
-## 🛠️ Free Hosting Options for Production
+### 4. Emoji Reaction Auto-Delete System (Prefix: `v`)
+A self-moderation feature that automatically deletes any message for everyone when you react to it with a designated emoji (default: `🗑️`).
+
+#### 🔒 Strict Security & Privacy
+- **Owner Only:** Only **YOU** (the linked WhatsApp phone number) can execute commands or trigger deletions.
+- If any other participant in a group or DM types `v -a` or reacts with emojis, it is completely ignored.
+- **Opt-in per chat:** Messages are only deleted in chats where you have explicitly enabled it with `v -a`.
+
+#### 💬 WhatsApp Commands:
+| Command | Description |
+| :--- | :--- |
+| `v -a` | **Activate** auto-delete in the current chat (default emoji: `🗑️`) |
+| `v -a ❌` | Activate with a custom trigger emoji (e.g., `❌` or `💀`) |
+| `v -d` | **Deactivate** auto-delete in the current chat |
+| `v -emoji <emoji>` | Change the trigger emoji for this chat |
+| `v -status` | Check if auto-delete is active in this chat and view trigger emoji |
+| `v -list` | List all chats where auto-delete is currently active |
+| `v -help` | Display command help guide |
+
+#### 🌐 REST API:
+- `GET /auto-delete` - Returns list of active chats and configuration.
+
+---
 
 1. **Local Festival Laptop / Lab PC (Recommended for the Fest)**:
    Keep this running in a terminal during the 2 days of the festival on the spot registration desk machine.
