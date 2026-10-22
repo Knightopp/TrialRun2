@@ -18,7 +18,7 @@ export default function SrishtiFooter({
     setSubscribed(true);
     try {
       localStorage.setItem('srishti_subscriber_email', newsletterEmail);
-    } catch (_) {}
+    } catch (_) { }
     setTimeout(() => {
       setNewsletterEmail('');
     }, 2500);
@@ -246,9 +246,13 @@ export default function SrishtiFooter({
           <span>© 2026 SRISHTI. ALL RIGHTS RESERVED.</span>
         </div>
 
+
         <div className="footer-credits-right">
-          <span>Built by <strong className="credit-author">Abhiram C S</strong> &amp; <strong className="credit-author">Ansel R Williams</strong></span>
+          <span>Built by <strong className="credit-author">Srishti Tech Team</strong></span>
+          <span><strong className="credit-author">Abhiram C S</strong></span>
+          <span><strong className="credit-author">Ansel R Williams</strong></span>
         </div>
+
       </div>
     </footer>
   );
