@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import pino from 'pino';
 import qrcodeTerminal from 'qrcode-terminal';
+import NodeCache from 'node-cache';
 import makeWASocket, { 
   useMultiFileAuthState, 
   DisconnectReason, 
@@ -34,6 +35,9 @@ let sock = null;
 let isConnected = false;
 let latestQR = null;
 let botUser = null;
+
+// Retry counter cache to prevent decryption failure loops & "Waiting for this message"
+const msgRetryCounterCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 
 /**
  * Format Indian / international phone numbers to WhatsApp JID format
@@ -75,7 +79,13 @@ async function startWhatsAppBot() {
       logger: pino({ level: 'silent' }),
       browser: Browsers.macOS('Desktop'),
       syncFullHistory: false,
-      getMessage
+      msgRetryCounterCache,
+      getMessage,
+      defaultQueryTimeoutMs: 60000,
+      connectTimeoutMs: 60000,
+      keepAliveIntervalMs: 25000,
+      emitOwnEvents: true,
+      markOnlineOnConnect: true
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -389,6 +399,34 @@ app.post('/send-pass', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid phone number format.' });
     }
 
+    // 1. Verify recipient on WhatsApp & get canonical JID
+    let targetJid = jid;
+    try {
+      const results = await sock.onWhatsApp(jid);
+      if (results && results.length > 0) {
+        if (results[0].exists) {
+          targetJid = results[0].jid;
+        } else {
+          return res.status(400).json({
+            success: false,
+            error: `The phone number +${phone} is not registered on WhatsApp.`
+          });
+        }
+      }
+    } catch (checkErr) {
+      console.warn('[WHATSAPP] onWhatsApp check skipped/errored:', checkErr.message);
+    }
+
+    // 2. Pre-warm Signal Protocol session to prevent "Waiting for this message"
+    try {
+      await sock.presenceSubscribe(targetJid);
+      await sock.sendPresenceUpdate('composing', targetJid);
+      // Wait 650ms for recipient's WhatsApp client to fetch pre-keys and negotiate ratchet
+      await new Promise(r => setTimeout(r, 650));
+    } catch (presErr) {
+      console.warn('[WHATSAPP] Presence handshake warning:', presErr.message);
+    }
+
     const displayName = name || 'Delegate';
     const displayCode = participantCode || 'SRI27-PASS';
 
@@ -427,33 +465,36 @@ See you at *SRISHTI 2.7*! 🚀`;
         const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
         const imageBuffer = Buffer.from(cleanBase64, 'base64');
 
-        sendResult = await sock.sendMessage(jid, {
+        sendResult = await sock.sendMessage(targetJid, {
           image: imageBuffer,
           caption: caption,
           mimetype: 'image/png'
         });
       } catch (imgErr) {
         console.warn('[WHATSAPP] Failed sending base64 image, falling back to text:', imgErr);
-        sendResult = await sock.sendMessage(jid, { text: caption });
+        sendResult = await sock.sendMessage(targetJid, { text: caption });
       }
     } else if (imageUrl && typeof imageUrl === 'string') {
       try {
-        sendResult = await sock.sendMessage(jid, {
+        sendResult = await sock.sendMessage(targetJid, {
           image: { url: imageUrl },
           caption: caption,
           mimetype: 'image/png'
         });
       } catch (urlErr) {
         console.warn('[WHATSAPP] Failed sending image URL, falling back to text:', urlErr);
-        sendResult = await sock.sendMessage(jid, { text: caption });
+        sendResult = await sock.sendMessage(targetJid, { text: caption });
       }
     } else {
       // Send as pure text
-      sendResult = await sock.sendMessage(jid, { text: caption });
+      sendResult = await sock.sendMessage(targetJid, { text: caption });
     }
 
+    // Reset presence
+    sock.sendPresenceUpdate('paused', targetJid).catch(() => {});
+
     if (sendResult?.key && sendResult?.message) {
-      storeMessage(sendResult.key, sendResult.message);
+      storeMessage(sendResult.key, sendResult.message, sendResult);
     }
 
     console.log(`[WHATSAPP] ✉️ Pass dispatched successfully to ${phone} (${displayCode})`);
@@ -461,7 +502,7 @@ See you at *SRISHTI 2.7*! 🚀`;
     return res.json({
       success: true,
       messageId: sendResult?.key?.id,
-      recipient: jid,
+      recipient: targetJid,
       participantCode: displayCode
     });
 
@@ -494,11 +535,34 @@ app.post('/send-message', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid phone number format.' });
     }
 
-    const result = await sock.sendMessage(jid, { text: String(message) });
+    let targetJid = jid;
+    try {
+      const results = await sock.onWhatsApp(jid);
+      if (results && results.length > 0) {
+        if (results[0].exists) {
+          targetJid = results[0].jid;
+        } else {
+          return res.status(400).json({
+            success: false,
+            error: `The phone number +${phone} is not registered on WhatsApp.`
+          });
+        }
+      }
+    } catch (_) {}
+
+    try {
+      await sock.presenceSubscribe(targetJid);
+      await sock.sendPresenceUpdate('composing', targetJid);
+      await new Promise(r => setTimeout(r, 500));
+    } catch (_) {}
+
+    const result = await sock.sendMessage(targetJid, { text: String(message) });
+    sock.sendPresenceUpdate('paused', targetJid).catch(() => {});
+
     if (result?.key && result?.message) {
-      storeMessage(result.key, result.message);
+      storeMessage(result.key, result.message, result);
     }
-    return res.json({ success: true, messageId: result?.key?.id, recipient: jid });
+    return res.json({ success: true, messageId: result?.key?.id, recipient: targetJid });
   } catch (error) {
     console.error('[WHATSAPP] Error sending message:', error);
     return res.status(500).json({ success: false, error: error.message });

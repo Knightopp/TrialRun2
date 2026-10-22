@@ -31,6 +31,8 @@ __pycache__/
 # WhatsApp Bot Session Data
 auth_info_baileys/
 whatsapp-service/auth_info_baileys/
+messages_cache.json
+whatsapp-service/messages_cache.json
 
 # Supabase CLI temp
 supabase/.temp/

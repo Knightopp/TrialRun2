@@ -247,11 +247,17 @@ export default function SrishtiFooter({
         </div>
 
 
+
         <div className="footer-credits-right">
-          <span>Built by <strong className="credit-author">Srishti Tech Team</strong></span>
-          <span><strong className="credit-author">Abhiram C S</strong></span>
-          <span><strong className="credit-author">Ansel R Williams</strong></span>
+          <div>
+            Built by <strong className="credit-author">Srishti Tech Team</strong>
+          </div>
+          <div className="credit-names">
+            <strong className="credit-author">Abhiram C S</strong>
+            <strong className="credit-author">Ansel R Williams</strong>
+          </div>
         </div>
+
 
       </div>
     </footer>

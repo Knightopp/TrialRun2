@@ -3066,7 +3066,7 @@ See you at *SRISHTI 2.7*! 🚀`;
             items={[
               { icon: <FiHome size={20} />, label: 'Home', onClick: () => { setActiveTourStep(null); navigateTo('main', 'home'); } },
               { icon: <FiImage size={20} />, label: 'Gallery', onClick: () => { setActiveTourStep(null); navigateTo('main', 'gallery'); } },
-              { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => { setActiveTourStep(null); navigate('/register/'); } },
+              { icon: <FiCalendar size={20} />, label: 'Register', onClick: () => { setActiveTourStep(null); navigate('/register/'); } },
               { icon: <FiUserPlus size={20} />, label: 'Profile', onClick: () => { setActiveTourStep(null); navigate('/profile'); } },
             ]}
             panelHeight={68}

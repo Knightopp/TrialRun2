@@ -14,11 +14,20 @@ export default function SpotlightTour({
   const [currentStep, setCurrentStep] = useState(0); 
   const [isVisible, setIsVisible] = useState(false);
 
-  // Show tour on initial visit (or auto-timer for testing mode)
+  // Show tour max 1 time per device
   useEffect(() => {
+    try {
+      const views = parseInt(localStorage.getItem('srishti_tour_views_v2') || '0', 10);
+      if (views >= 1) return;
+    } catch (_) {}
+
     const timer = setTimeout(() => {
       setIsVisible(true);
       if (onStepChange) onStepChange(0);
+      try {
+        const views = parseInt(localStorage.getItem('srishti_tour_views_v2') || '0', 10);
+        localStorage.setItem('srishti_tour_views_v2', (views + 1).toString());
+      } catch (_) {}
     }, 1800);
     return () => clearTimeout(timer);
   }, []);
@@ -36,6 +45,12 @@ export default function SpotlightTour({
   }, [isVisible, currentStep]);
 
   const handleDismiss = () => {
+    try {
+      const views = parseInt(localStorage.getItem('srishti_tour_views_v2') || '0', 10);
+      if (views < 1) {
+        localStorage.setItem('srishti_tour_views_v2', '1');
+      }
+    } catch (_) {}
     setIsVisible(false);
     if (onStepChange) onStepChange(null);
     if (onComplete) onComplete();
@@ -113,7 +128,7 @@ export default function SpotlightTour({
               <div className="spotlight-nav-card">
                 <span className="nav-card-num">03</span>
                 <div className="nav-card-icon"><FiCalendar size={22} /></div>
-                <span className="nav-card-lbl">Events</span>
+                <span className="nav-card-lbl">Register</span>
               </div>
 
               <div className="spotlight-nav-card">
@@ -191,7 +206,7 @@ export default function SpotlightTour({
                 className="spotlight-btn-primary" 
                 onClick={handleNext}
               >
-                <span>NEXT: EVENTS</span>
+                <span>NEXT: REGISTER</span>
                 <FiArrowRight size={16} />
               </button>
               <button 
@@ -209,9 +224,9 @@ export default function SpotlightTour({
           <div className="spotlight-step-content">
             <div className="spotlight-step-meta">
               <span className="step-count">STEP 03 OF 04</span>
-              <span className="step-badge-tag">EVENTS</span>
+              <span className="step-badge-tag">REGISTER</span>
             </div>
-            <h4 className="spotlight-step-title">EVENTS &amp; WORKSHOPS</h4>
+            <h4 className="spotlight-step-title">REGISTER &amp; COMPETITIONS</h4>
             <p className="spotlight-desc">
               Browse technical and cultural competitions with an ₹80K+ prize pool. Register solo or with your squad in 1-click.
             </p>
