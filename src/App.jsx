@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from './supabaseClient';
 import QRCode from 'qrcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { createPortal } from 'react-dom';
@@ -291,7 +292,6 @@ export default function App() {
   useEffect(() => {
     const fetchLiveEvents = async () => {
       try {
-        const { supabase } = await import('./supabaseClient');
         const { data: dbEvents, error } = await supabase
           .from('events')
           .select('*')
