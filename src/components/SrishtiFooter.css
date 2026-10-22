@@ -280,15 +280,54 @@
 
 .footer-credits-right {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.credit-team-line {
+  display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #a1a1aa;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.credit-team-highlight {
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.45));
+}
+
+.credit-names {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
 }
 
 .credit-author {
-  color: #ffffff;
-  font-weight: 700;
+  color: #e2e8f0;
+  font-weight: 600;
   letter-spacing: 0.03em;
+  transition: all 0.2s ease;
+}
+
+.credit-author:hover {
+  color: #38bdf8;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+
+.credit-name-dot {
+  color: rgba(56, 189, 248, 0.5);
+  font-size: 0.65rem;
 }
 
 /* Responsive */
@@ -327,5 +366,8 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
+  }
+  .footer-credits-right {
+    align-items: flex-start;
   }
 }
