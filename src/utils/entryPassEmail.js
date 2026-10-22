@@ -86,7 +86,7 @@ export function generateEntryPassEmailHtml({
                 </a>
               </div>
               <p style="color: #64748b; font-size: 12px; margin-top: 28px;">
-                Srishti 2.7 • National Tech-Cultural Festival • Department of Computer Science • St Thomas College Thrissur
+                Srishti 2.7 • National Techno Cultural Fest • Department of Computer Science • St Thomas College Thrissur
               </p>
             </td>
           </tr>

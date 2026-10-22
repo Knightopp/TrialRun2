@@ -1,4 +1,4 @@
-/* Spotlight Tour Styles */
+/* Spotlight Tour Styles - Pixel-Matched to Reference Screenshots */
 .spotlight-tour-overlay {
   position: fixed;
   inset: 0;
@@ -9,9 +9,9 @@
 .spotlight-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(4, 5, 8, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(3, 4, 7, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   transition: opacity 0.3s ease;
 }
 
@@ -19,17 +19,18 @@
 .spotlight-card {
   position: fixed;
   z-index: 10000020;
-  background: rgba(14, 16, 22, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 18px;
+  background: linear-gradient(145deg, #0d0f16 0%, #07080c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  padding: 1.75rem 1.6rem;
+  padding: 2rem 2.25rem 2rem;
   box-shadow: 
-    0 24px 60px rgba(0, 0, 0, 0.9),
-    0 0 1px 1px rgba(255, 255, 255, 0.1);
+    0 30px 80px rgba(0, 0, 0, 0.95),
+    0 0 1px 1px rgba(255, 255, 255, 0.12);
   box-sizing: border-box;
   animation: cardFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
 @keyframes cardFadeIn {
@@ -37,10 +38,45 @@
   to { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 
+/* Decorative Background Accents */
+.spotlight-decor-lines-top-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 140px;
+  height: 140px;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(56, 189, 248, 0.08) 0px,
+    rgba(56, 189, 248, 0.08) 2px,
+    transparent 2px,
+    transparent 14px
+  );
+  border-bottom-left-radius: 40px;
+  pointer-events: none;
+  opacity: 0.65;
+  mask-image: radial-gradient(circle at top right, black 40%, transparent 80%);
+  -webkit-mask-image: radial-gradient(circle at top right, black 40%, transparent 80%);
+}
+
+.spotlight-decor-grid-bottom-left {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 120px;
+  height: 120px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+  background-size: 10px 10px;
+  pointer-events: none;
+  opacity: 0.55;
+  mask-image: radial-gradient(circle at bottom left, black 35%, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at bottom left, black 35%, transparent 75%);
+}
+
 /* Step 0: Welcome modal centered in screen */
 .card-welcome {
-  width: 90%;
-  max-width: 440px;
+  width: 92%;
+  max-width: 580px;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -48,24 +84,26 @@
 
 /* Steps 1 to 4: Positioned directly above the bottom Dock */
 .card-step {
-  width: 360px;
+  width: 440px;
   max-width: calc(100vw - 32px);
   bottom: 6.8rem;
   left: 50%;
   transform: translateX(-50%);
+  padding: 1.85rem 2rem 1.85rem;
 }
 
 /* Pointer arrow from card pointing down to the dock */
 .spotlight-pointer-arrow {
   position: absolute;
-  bottom: -10px;
+  bottom: -9px;
   width: 18px;
   height: 18px;
-  background: rgba(14, 16, 22, 0.96);
-  border-right: 1px solid rgba(255, 255, 255, 0.18);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  background: #090b10;
+  border-right: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
   transform: rotate(45deg);
   transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10;
 }
 
 /* Step 1: Home (Index 0) */
@@ -73,7 +111,7 @@
   left: 22%;
 }
 
-/* Step 2: Experience (Index 1) */
+/* Step 2: Gallery (Index 1) */
 .spotlight-pointer-arrow.step-2 {
   left: 41%;
 }
@@ -88,170 +126,240 @@
   left: 78%;
 }
 
+/* Close button - rounded square */
 .spotlight-close-btn {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  top: 1.25rem;
+  right: 1.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: #94a3b8;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  z-index: 15;
 }
 
 .spotlight-close-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
+  transform: scale(1.05);
 }
 
+/* Typography */
 .spotlight-tag {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
   letter-spacing: 0.16em;
-  color: #94a3b8;
-  margin-bottom: 0.5rem;
+  color: #71717a;
+  margin-bottom: 0.75rem;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .spotlight-title {
-  font-family: var(--font-akira), sans-serif;
-  font-size: 1.15rem;
+  font-family: var(--font-akira), -apple-system, sans-serif;
+  font-size: 1.55rem;
   font-weight: 900;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: #ffffff;
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.5rem;
   line-height: 1.2;
 }
 
-.spotlight-step-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.5rem;
-}
-
-.step-count {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.12em;
-  color: #64748b;
-  font-weight: 700;
-}
-
-.step-badge-tag {
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #cbd5e1;
-  text-transform: uppercase;
-}
-
-.spotlight-step-title {
-  font-family: var(--font-akira), sans-serif;
-  font-size: 0.92rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #ffffff;
-  margin: 0 0 0.65rem;
-  line-height: 1.25;
+.spotlight-title-glow-line {
+  width: 48px;
+  height: 3px;
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
+  border-radius: 2px;
+  margin: 0.5rem 0 1.25rem;
 }
 
 .spotlight-desc {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.84rem;
+  font-size: 0.95rem;
   line-height: 1.55;
   color: #94a3b8;
-  margin: 0 0 1.25rem;
+  margin: 0 0 1.6rem;
 }
 
-.spotlight-desc strong {
-  color: #ffffff;
-  font-weight: 600;
+/* ========================================================= */
+/* 4 CONNECTED NAVIGATION STEP CARDS (Welcome Modal)        */
+/* ========================================================= */
+
+.spotlight-cards-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding: 0 0.25rem;
 }
 
-.spotlight-summary-pills {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.4rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 0.65rem 0.5rem;
-  margin-bottom: 1.25rem;
-  text-align: center;
+/* Horizontal connecting line */
+.spotlight-track-line {
+  position: absolute;
+  top: 50%;
+  left: 8%;
+  right: 8%;
+  height: 1.5px;
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-50%);
+  z-index: 1;
 }
 
-.summary-pill {
+.spotlight-nav-card {
+  position: relative;
+  z-index: 2;
+  width: 102px;
+  height: 104px;
+  border-radius: 16px;
+  background: rgba(12, 14, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(12px);
 }
 
-.pill-num {
-  font-family: var(--font-akira), sans-serif;
-  font-size: 0.68rem;
+.nav-card-num {
+  font-family: var(--font-akira), var(--font-mono), sans-serif;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #71717a;
+}
+
+.nav-card-icon {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-card-lbl {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* Active card (Step 01 Home) */
+.spotlight-nav-card.active {
+  border: 1.5px solid #38bdf8;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 
+    0 0 24px rgba(56, 189, 248, 0.25),
+    inset 0 0 12px rgba(56, 189, 248, 0.1);
+}
+
+.spotlight-nav-card.active .nav-card-num {
   color: #ffffff;
 }
 
-.pill-txt {
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  color: #94a3b8;
-  white-space: nowrap;
+.spotlight-nav-card.active .nav-card-icon {
+  color: #ffffff;
 }
 
-.summary-arrow {
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 0.72rem;
-  flex-shrink: 0;
+.spotlight-nav-card.active .nav-card-lbl {
+  color: #ffffff;
 }
+
+/* ========================================================= */
+/* STEP TOOLTIP CONTENT (Steps 1 to 4)                      */
+/* ========================================================= */
+
+.spotlight-step-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.step-count {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: #71717a;
+  font-weight: 700;
+}
+
+.step-badge-tag {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.spotlight-step-title {
+  font-family: var(--font-akira), -apple-system, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  margin: 0 0 0.75rem;
+  line-height: 1.25;
+}
+
+/* ========================================================= */
+/* BUTTON ACTIONS                                           */
+/* ========================================================= */
 
 .spotlight-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.25rem;
 }
 
 .spotlight-btn-primary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  justify-content: center;
+  gap: 0.6rem;
   background: #ffffff;
   color: #000000;
   border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-family: var(--font-akira), sans-serif;
-  font-size: 0.68rem;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-family: var(--font-akira), -apple-system, sans-serif;
+  font-size: 0.75rem;
   letter-spacing: 0.05em;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
 }
 
 .spotlight-btn-primary:hover {
-  background: #e2e8f0;
-  transform: translateY(-1px);
+  background: #f1f5f9;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.35);
 }
 
 .spotlight-btn-ghost {
   background: transparent;
   color: #94a3b8;
   border: none;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
   cursor: pointer;
-  padding: 6px 10px;
+  padding: 6px 12px;
   transition: color 0.2s ease;
 }
 
@@ -283,7 +391,7 @@
   background-color: #ffffff !important;
   border: 2px solid #ffffff !important;
   color: #000000 !important;
-  transform: scale(1.18) !important;
+  transform: scale(1.15) !important;
   box-shadow: 
     0 0 0 4px rgba(255, 255, 255, 0.3),
     0 0 35px rgba(255, 255, 255, 0.95),
@@ -294,16 +402,13 @@
   animation: beaconPulse 1.8s infinite ease-in-out !important;
 }
 
-.dock-wrapper-fixed[data-tour-step="1"] .dock-item[data-dock-idx="0"] .dock-icon,
-.dock-wrapper-fixed[data-tour-step="1"] .dock-item-static[data-dock-idx="0"] .dock-icon,
 .dock-wrapper-fixed[data-tour-step="1"] .dock-item[data-dock-idx="0"] svg,
 .dock-wrapper-fixed[data-tour-step="1"] .dock-item-static[data-dock-idx="0"] svg {
   color: #000000 !important;
   stroke: #000000 !important;
-  transform: scale(1.1);
 }
 
-/* --- Step 2: Highlight Experience (Index 1) --- */
+/* --- Step 2: Highlight Gallery (Index 1) --- */
 .dock-wrapper-fixed[data-tour-step="2"] .dock-item:not([data-dock-idx="1"]),
 .dock-wrapper-fixed[data-tour-step="2"] .dock-item-static:not([data-dock-idx="1"]) {
   opacity: 0.2 !important;
@@ -318,7 +423,7 @@
   background-color: #ffffff !important;
   border: 2px solid #ffffff !important;
   color: #000000 !important;
-  transform: scale(1.18) !important;
+  transform: scale(1.15) !important;
   box-shadow: 
     0 0 0 4px rgba(255, 255, 255, 0.3),
     0 0 35px rgba(255, 255, 255, 0.95),
@@ -329,13 +434,10 @@
   animation: beaconPulse 1.8s infinite ease-in-out !important;
 }
 
-.dock-wrapper-fixed[data-tour-step="2"] .dock-item[data-dock-idx="1"] .dock-icon,
-.dock-wrapper-fixed[data-tour-step="2"] .dock-item-static[data-dock-idx="1"] .dock-icon,
 .dock-wrapper-fixed[data-tour-step="2"] .dock-item[data-dock-idx="1"] svg,
 .dock-wrapper-fixed[data-tour-step="2"] .dock-item-static[data-dock-idx="1"] svg {
   color: #000000 !important;
   stroke: #000000 !important;
-  transform: scale(1.1);
 }
 
 /* --- Step 3: Highlight Events (Index 2) --- */
@@ -353,7 +455,7 @@
   background-color: #ffffff !important;
   border: 2px solid #ffffff !important;
   color: #000000 !important;
-  transform: scale(1.18) !important;
+  transform: scale(1.15) !important;
   box-shadow: 
     0 0 0 4px rgba(255, 255, 255, 0.3),
     0 0 35px rgba(255, 255, 255, 0.95),
@@ -364,13 +466,10 @@
   animation: beaconPulse 1.8s infinite ease-in-out !important;
 }
 
-.dock-wrapper-fixed[data-tour-step="3"] .dock-item[data-dock-idx="2"] .dock-icon,
-.dock-wrapper-fixed[data-tour-step="3"] .dock-item-static[data-dock-idx="2"] .dock-icon,
 .dock-wrapper-fixed[data-tour-step="3"] .dock-item[data-dock-idx="2"] svg,
 .dock-wrapper-fixed[data-tour-step="3"] .dock-item-static[data-dock-idx="2"] svg {
   color: #000000 !important;
   stroke: #000000 !important;
-  transform: scale(1.1);
 }
 
 /* --- Step 4: Highlight Profile (Index 3) --- */
@@ -388,7 +487,7 @@
   background-color: #ffffff !important;
   border: 2px solid #ffffff !important;
   color: #000000 !important;
-  transform: scale(1.18) !important;
+  transform: scale(1.15) !important;
   box-shadow: 
     0 0 0 4px rgba(255, 255, 255, 0.3),
     0 0 35px rgba(255, 255, 255, 0.95),
@@ -399,41 +498,49 @@
   animation: beaconPulse 1.8s infinite ease-in-out !important;
 }
 
-.dock-wrapper-fixed[data-tour-step="4"] .dock-item[data-dock-idx="3"] .dock-icon,
-.dock-wrapper-fixed[data-tour-step="4"] .dock-item-static[data-dock-idx="3"] .dock-icon,
 .dock-wrapper-fixed[data-tour-step="4"] .dock-item[data-dock-idx="3"] svg,
 .dock-wrapper-fixed[data-tour-step="4"] .dock-item-static[data-dock-idx="3"] svg {
   color: #000000 !important;
   stroke: #000000 !important;
-  transform: scale(1.1);
 }
 
 @keyframes beaconPulse {
-  0% {
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 0 25px rgba(255, 255, 255, 0.85);
+  0%, 100% {
+    box-shadow: 
+      0 0 0 4px rgba(255, 255, 255, 0.3),
+      0 0 35px rgba(255, 255, 255, 0.95),
+      0 0 65px rgba(255, 255, 255, 0.45);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.15), 0 0 45px rgba(255, 255, 255, 1);
-  }
-  100% {
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 0 25px rgba(255, 255, 255, 0.85);
+    box-shadow: 
+      0 0 0 6px rgba(255, 255, 255, 0.4),
+      0 0 45px rgba(255, 255, 255, 1),
+      0 0 80px rgba(255, 255, 255, 0.6);
   }
 }
 
-@media (max-width: 480px) {
-  .card-welcome {
-    width: 92%;
-    padding: 1.35rem 1.2rem;
+@media (max-width: 640px) {
+  .spotlight-card {
+    padding: 1.5rem 1.25rem;
   }
-  .card-step {
-    width: calc(100vw - 28px);
-    bottom: 5.5rem;
-    padding: 1.35rem 1.2rem;
+  .card-welcome {
+    width: 95%;
+  }
+  .spotlight-cards-track {
+    gap: 6px;
+  }
+  .spotlight-nav-card {
+    width: 72px;
+    height: 82px;
+    border-radius: 12px;
+  }
+  .nav-card-num {
+    font-size: 0.68rem;
+  }
+  .nav-card-lbl {
+    font-size: 0.7rem;
   }
   .spotlight-title {
-    font-size: 1rem;
-  }
-  .spotlight-step-title {
-    font-size: 0.85rem;
+    font-size: 1.25rem;
   }
 }

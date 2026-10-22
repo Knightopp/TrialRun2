@@ -1224,7 +1224,7 @@ See you at *SRISHTI 2.7*! 🚀`;
         {/* Left top festival metadata */}
         <div className="hero-meta-left">
           <span className="meta-sub-tag">
-            NATIONAL LEVEL<br />TECH-CULTURAL FESTIVAL
+            NATIONAL LEVEL<br />TECHNO CULTURAL FEST
           </span>
           <div className="meta-line"></div>
           <div className="meta-pillars">

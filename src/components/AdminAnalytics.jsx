@@ -181,7 +181,7 @@ export default function AdminAnalytics({
   // Export Complete Analytics JSON
   const handleExportAnalyticsJSON = () => {
     const dataReport = {
-      festival: 'SRISHTI 2.7 National Tech-Cultural Fest',
+      festival: 'SRISHTI 2.7 National Techno Cultural Fest',
       generated_at: new Date().toISOString(),
       summary: {
         total_events: events.length,

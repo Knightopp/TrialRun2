@@ -5230,7 +5230,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                 marginBottom: '0.4rem',
                 fontWeight: '700'
               }}>
-                SRISHTI 2.7 • NATIONAL TECH FESTIVAL
+                SRISHTI 2.7 • NATIONAL TECHNO CULTURAL FEST
               </div>
 
               <div style={{

@@ -31,7 +31,7 @@ export default function LegalModal({ isOpen, onClose, type = 'privacy' }) {
           {type === 'privacy' && (
             <div className="legal-content">
               <p className="legal-lead">
-                Welcome to <strong>SRISHTI 2.7</strong>, the premier National Tech-Cultural Festival hosted by the 
+                Welcome to <strong>SRISHTI 2.7</strong>, the premier National Techno Cultural Fest hosted by the 
                 Department of Computer Science at St. Thomas College (Autonomous), Thrissur. We value the trust you 
                 place in us and are dedicated to protecting your privacy and confidential information.
               </p>

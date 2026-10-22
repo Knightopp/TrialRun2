@@ -49,7 +49,7 @@ export default function SrishtiFooter({
             <img src="/assets/logo.png" alt="Srishti Logo" className="footer-logo-glyph" />
             <div className="footer-brand-headings">
               <span className="footer-brand-title">SRISHTI 2.7</span>
-              <span className="footer-brand-tagline">NATIONAL TECH-CULTURAL FESTIVAL</span>
+              <span className="footer-brand-tagline">NATIONAL TECHNO CULTURAL FEST</span>
             </div>
           </div>
 
