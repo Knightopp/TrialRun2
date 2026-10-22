@@ -31,7 +31,7 @@ export default function SponsorMarquee() {
           <div className="sponsors-line" />
           <span>SRISHTI 2.7</span>
         </div>
-        <h3 className="sponsors-heading">OFFICIAL FESTIVAL PARTNERS</h3>
+        <h3 className="sponsors-heading">OFFICIAL FEST PARTNERS</h3>
       </div>
 
       <div className="marquee-wrapper">

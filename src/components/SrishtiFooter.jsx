@@ -73,7 +73,7 @@ export default function SrishtiFooter({
             <a
               href="mailto:srishti2.7stc@gmail.com"
               className="footer-social-pill"
-              title="Official Festival Email"
+              title="Official Fest Email"
               aria-label="Email"
             >
               <FiMail size={16} />
@@ -232,7 +232,7 @@ export default function SrishtiFooter({
           </form>
           {subscribed && (
             <span className="footer-subscribed-msg">
-              ✓ Subscribed! You will receive festival announcements.
+              ✓ Subscribed! You will receive fest announcements.
             </span>
           )}
         </div>

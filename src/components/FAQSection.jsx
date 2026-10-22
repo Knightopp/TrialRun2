@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiChevronDown, FiHelpCircle, FiArrowRight } from 'react-icons/fi';
+import { FiChevronDown, FiArrowRight } from 'react-icons/fi';
 import './FAQSection.css';
 
 const FAQS_DATA = [
@@ -21,7 +21,7 @@ const FAQS_DATA = [
   },
   {
     q: 'What awards and certificates will be presented?',
-    a: 'Winners and runners-up will be awarded substantial cash prizes, festival trophies, and certificates of excellence. All verified delegates attending competitions will receive official certificates of participation.'
+    a: 'Winners and runners-up will be awarded substantial cash prizes, fest trophies, and certificates of excellence. All verified delegates attending competitions will receive official certificates of participation.'
   },
   {
     q: 'How does entry gate check-in work?',
@@ -46,21 +46,43 @@ export default function FAQSection({ onRegisterClick }) {
 
   return (
     <section className="faq-section" id="faq-section">
+      {/* Background Cyber CAD Watermarks matching reference */}
+      <div className="faq-watermark-words">
+        <span>EVENTS</span>
+        <span>PEOPLE</span>
+        <span>IDEAS</span>
+        <span>BEYOND</span>
+      </div>
+
+      <div className="faq-watermark-cad-left">
+        <span className="cad-year-top">20</span>
+        <span className="cad-year-bot">27</span>
+      </div>
+
       <div className="faq-container">
+        {/* Header matching screenshot */}
         <div className="faq-header">
           <div className="faq-eyebrow">
-            <FiHelpCircle size={15} />
-            <span>KNOWLEDGE BASE // FESTIVAL GUIDE</span>
+            <span className="faq-eyebrow-circle" />
+            <span>KNOWLEDGE BASE // FEST GUIDE</span>
           </div>
-          <h2 className="faq-title">FREQUENTLY ASKED QUESTIONS</h2>
+
+          <h2 className="faq-title">
+            <span className="faq-title-line">FREQUENTLY</span>
+            <span className="faq-title-line">ASKED QUESTIONS</span>
+          </h2>
+
           <p className="faq-subtitle">
-            Everything you need to know about registrations, rules, passes, and campus guidelines for Srishti 2.7.
+            EVERYTHING YOU NEED TO KNOW ABOUT REGISTRATIONS, RULES, PASSES, AND CAMPUS GUIDELINES FOR SRISHTI 2.7.
           </p>
         </div>
 
+        {/* Accordion List with Smooth Animated Dropdowns */}
         <div className="faq-accordion-list">
           {FAQS_DATA.map((faq, idx) => {
             const isOpen = openIndex === idx;
+            const indexStr = idx < 9 ? `0${idx + 1}` : `${idx + 1}`;
+
             return (
               <div
                 key={idx}
@@ -68,36 +90,59 @@ export default function FAQSection({ onRegisterClick }) {
                 onClick={() => toggleFaq(idx)}
               >
                 <div className="faq-question-row">
-                  <span className="faq-index-num">0{idx + 1}</span>
-                  <h4 className="faq-question-text">{faq.q}</h4>
-                  <div className={`faq-chevron-box ${isOpen ? 'faq-chevron-rotated' : ''}`}>
-                    <FiChevronDown size={18} />
+                  <div className="faq-num-lockup">
+                    <span className="faq-index-num">{indexStr}</span>
+                    <span className="faq-divider">|</span>
                   </div>
+
+                  <h4 className="faq-question-text">{faq.q}</h4>
+
+                  <button 
+                    type="button" 
+                    className={`faq-chevron-box ${isOpen ? 'faq-chevron-rotated' : ''}`}
+                    aria-label={isOpen ? 'Collapse answer' : 'Expand answer'}
+                  >
+                    <FiChevronDown size={19} />
+                  </button>
                 </div>
 
-                {isOpen && (
-                  <div className="faq-answer-container">
+                {/* Smooth CSS Grid Dropdown Animation Container */}
+                <div className={`faq-answer-collapse ${isOpen ? 'open' : ''}`}>
+                  <div className="faq-answer-inner">
                     <p className="faq-answer-text">{faq.a}</p>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
         </div>
 
+        {/* Bottom CTA Banner matching screenshot */}
         <div className="faq-footer-cta">
-          <div className="faq-cta-text">
-            <span>Still have questions about events or team size?</span>
-            <span className="faq-cta-highlight">Our coordinators are ready to help.</span>
+          <div className="faq-cta-left">
+            <div className="faq-cta-thumb">
+              <div className="faq-cta-thumb-overlay" />
+            </div>
+            <div className="faq-cta-headings">
+              <span className="faq-cta-eyebrow">STILL HAVE QUESTIONS ABOUT EVENTS OR TEAM SIZE?</span>
+              <span className="faq-cta-highlight">OUR COORDINATORS ARE READY TO HELP.</span>
+            </div>
           </div>
+
           <div className="faq-cta-buttons">
             <a href="mailto:srishti2.7stc@gmail.com" className="faq-btn-secondary">
               Email Helpdesk
             </a>
-            {onRegisterClick && (
-              <button onClick={onRegisterClick} className="faq-btn-primary">
-                Register for Events <FiArrowRight />
+            {onRegisterClick ? (
+              <button type="button" onClick={onRegisterClick} className="faq-btn-primary">
+                <span>Register for Events</span>
+                <FiArrowRight size={15} />
               </button>
+            ) : (
+              <a href="/register/" className="faq-btn-primary">
+                <span>Register for Events</span>
+                <FiArrowRight size={15} />
+              </a>
             )}
           </div>
         </div>

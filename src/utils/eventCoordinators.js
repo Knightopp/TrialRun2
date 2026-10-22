@@ -1,5 +1,5 @@
 // Event Coordinators Store & Synchronizer
-// Enables festival coordinators for each event to be editable in the Admin Panel
+// Enables fest coordinators for each event to be editable in the Admin Panel
 // and seamlessly consumed by event details menus, registration screens, and popups.
 
 export const DEFAULT_EVENT_COORDINATORS = {

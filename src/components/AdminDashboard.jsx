@@ -912,21 +912,21 @@ See you at *SRISHTI 2.7*! 🚀`;
     try {
       const pEvents = registrations
         .filter(r => (r.participant_id === selectedParticipantForPass.id || r.participants?.id === selectedParticipantForPass.id))
-        .map(r => r.events?.name || r.events?.label || 'Festival Event');
+        .map(r => r.events?.name || r.events?.label || 'Fest Event');
 
       const cardPng = await generateCardImagePng({
         attendeeName: selectedParticipantForPass.name,
         college: selectedParticipantForPass.college || 'St. Thomas College Thrissur',
         passCode: selectedParticipantForPass.participant_code,
         passToken: `SRISHTI27-${selectedParticipantForPass.participant_code}`,
-        events: pEvents.length > 0 ? pEvents : ['General Festival Pass']
+        events: pEvents.length > 0 ? pEvents : ['General Fest Pass']
       });
 
       const link = document.createElement('a');
       link.download = `SRISHTI27_PASS_${selectedParticipantForPass.participant_code}.png`;
       link.href = cardPng;
       link.click();
-      showToast('Festival pass PNG downloaded!', 'success');
+      showToast('Fest pass PNG downloaded!', 'success');
     } catch (err) {
       showToast('Failed to generate card image: ' + (err.message || 'unknown error'), 'error');
     }
@@ -966,7 +966,7 @@ See you at *SRISHTI 2.7*! 🚀`;
     try {
       const pEvents = registrations
         .filter(r => (r.participant_id === participant.id || r.participants?.id === participant.id))
-        .map(r => r.events?.name || r.events?.label || 'Festival Event');
+        .map(r => r.events?.name || r.events?.label || 'Fest Event');
 
       cardPng = await generateCardImagePng({
         attendeeName: participant.name,
@@ -1434,7 +1434,7 @@ See you at *SRISHTI 2.7*! 🚀`;
     }
   };
 
-  const handleResetFestivalDataToZero = async (e) => {
+  const handleResetFestDataToZero = async (e) => {
     e.preventDefault();
     if (resetConfirmWord.trim().toUpperCase() !== 'RESET') {
       showToast('Please type RESET to confirm factory reset', 'error');
@@ -1491,12 +1491,12 @@ See you at *SRISHTI 2.7*! 🚀`;
       if (resetOptions.events) setEvents([]);
       setSelectedParticipantIds([]);
 
-      showToast('All festival data reset to zero successfully!', 'success');
+      showToast('All fest data reset to zero successfully!', 'success');
       setModalType(null);
       setResetConfirmWord('');
       fetchAllData(adminRole, currentStaff?.id);
     } catch (err) {
-      showToast(err.message || 'Failed to reset festival data', 'error');
+      showToast(err.message || 'Failed to reset fest data', 'error');
     } finally {
       setIsResetting(false);
     }
@@ -1730,7 +1730,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                 gap: '0.35rem'
               }}
             >
-              <FiArrowLeft /> Return to Main Festival Page
+              <FiArrowLeft /> Return to Main Fest Page
             </button>
           </div>
         </div>
@@ -1842,7 +1842,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                   onClick={() => setModalType('resetAllData')} 
                   className="admin-btn admin-btn-danger"
                   style={{ border: '1px solid rgba(255, 255, 255, 0.4)', background: 'rgba(255, 255, 255, 0.08)' }}
-                  title="Reset Festival Data & Counters to Zero"
+                  title="Reset Fest Data & Counters to Zero"
                 >
                   <FiTrash2 />
                   <span>Reset to Zero</span>
@@ -2365,7 +2365,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                     </div>
                   </div>
                   <div className="admin-stat-value">{stats.totalRegs}</div>
-                  <div className="admin-stat-sub">Confirmed festival entries</div>
+                  <div className="admin-stat-sub">Confirmed fest entries</div>
                 </div>
 
                 <div className="admin-stat-card">
@@ -2634,7 +2634,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                   {/* Registered Events List */}
                   <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1rem' }}>
                     <h4 style={{ margin: '0 0 0.75rem 0', color: '#a1a1aa', fontSize: '0.85rem', textTransform: 'uppercase' }}>
-                      Registered Festival Events ({stationAttendee.registrations?.length || 0}):
+                      Registered Fest Events ({stationAttendee.registrations?.length || 0}):
                     </h4>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       {stationAttendee.registrations && stationAttendee.registrations.length > 0 ? (
@@ -3069,7 +3069,7 @@ See you at *SRISHTI 2.7*! 🚀`;
           <div>
             <div className="admin-section-header" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h2>Festival Competitions &amp; Events ({events.length})</h2>
+                <h2>Fest Competitions &amp; Events ({events.length})</h2>
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                   {[
                     { key: 'all', label: `All (${events.length})` },
@@ -3317,7 +3317,7 @@ See you at *SRISHTI 2.7*! 🚀`;
           <div>
             <div className="admin-section-header" style={{ flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h2>Festival Participants ({participants.length})</h2>
+                <h2>Fest Participants ({participants.length})</h2>
                 <div style={{ color: '#a1a1aa', fontSize: '0.82rem', marginTop: '0.2rem' }}>
                   Manage attendee identities, gate passes, event enrollments, and check-in statuses
                 </div>
@@ -3345,7 +3345,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                   <button 
                     onClick={handleOpenAddParticipant} 
                     className="admin-btn admin-btn-primary"
-                    title="Add New Festival Participant"
+                    title="Add New Fest Participant"
                   >
                     <FiPlus /> Add Participant
                   </button>
@@ -3510,7 +3510,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                                   type="button"
                                   onClick={() => handleViewParticipantPass(p)}
                                   className="admin-btn admin-btn-sm admin-btn-secondary"
-                                  title="View Digital Festival Pass & QR Badge"
+                                  title="View Digital Fest Pass & QR Badge"
                                 >
                                   <FiEye />
                                 </button>
@@ -3695,7 +3695,7 @@ See you at *SRISHTI 2.7*! 🚀`;
         {activeTab === 'staff' && adminRole === 'admin' && (
           <div>
             <div className="admin-section-header">
-              <h2>Festival Staff &amp; Coordinators ({volunteers.length})</h2>
+              <h2>Fest Staff &amp; Coordinators ({volunteers.length})</h2>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button 
                   onClick={() => {
@@ -3868,7 +3868,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                   onClick={() => setModalType('resetAllData')}
                   className="admin-btn admin-btn-danger"
                   style={{ border: '1px solid rgba(255, 255, 255, 0.4)' }}
-                  title="Reset all festival operational data back to 0"
+                  title="Reset all fest operational data back to 0"
                 >
                   <FiAlertCircle /> Reset Everything to Zero
                 </button>
@@ -4339,7 +4339,7 @@ See you at *SRISHTI 2.7*! 🚀`;
             <div className="admin-action-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <FiStar style={{ color: '#00f2fe' }} /> Festival Sponsors & Partners
+                  <FiStar style={{ color: '#00f2fe' }} /> Fest Sponsors & Partners
                 </h2>
                 <p style={{ margin: '0.35rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
                   Manage logos displayed in the moving marquee on top of the gallery section.
@@ -4718,7 +4718,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                   onChange={e => setVolunteerFormData({ ...volunteerFormData, role: e.target.value })}
                   className="admin-select"
                 >
-                  <option value="admin">admin (Full Festival Administrator)</option>
+                  <option value="admin">admin (Full Fest Administrator)</option>
                   <option value="registration">registration (Gate Arrival Check-in Desk)</option>
                   <option value="event_staff">event_staff (Event Coordinator)</option>
                   <option value="volunteer">volunteer (General Support)</option>
@@ -4736,12 +4736,12 @@ See you at *SRISHTI 2.7*! 🚀`;
         </div>
       )}
 
-      {/* Modal: Add or Edit Festival Event */}
+      {/* Modal: Add or Edit Fest Event */}
       {(modalType === 'addEvent' || modalType === 'editEvent') && (
         <div className="admin-modal-backdrop">
           <div className="admin-modal-card" style={{ maxWidth: '640px' }}>
             <div className="admin-modal-header">
-              <h3>{modalType === 'addEvent' ? 'Add New Festival Event' : 'Edit Festival Event'}</h3>
+              <h3>{modalType === 'addEvent' ? 'Add New Fest Event' : 'Edit Fest Event'}</h3>
               <button onClick={() => setModalType(null)} className="admin-modal-close"><FiX /></button>
             </div>
             <form onSubmit={handleSaveEvent}>
@@ -5208,7 +5208,7 @@ See you at *SRISHTI 2.7*! 🚀`;
         <div className="admin-modal-backdrop">
           <div className="admin-modal-card" style={{ maxWidth: '520px' }}>
             <div className="admin-modal-header">
-              <h3>Official Festival Pass &amp; Entry Badge</h3>
+              <h3>Official Fest Pass &amp; Entry Badge</h3>
               <button onClick={() => setModalType(null)} className="admin-modal-close"><FiX /></button>
             </div>
 
@@ -5491,7 +5491,7 @@ See you at *SRISHTI 2.7*! 🚀`;
               </div>
 
               <div className="admin-form-group">
-                <label>Select Festival Event *</label>
+                <label>Select Fest Event *</label>
                 <select
                   value={quickRegData.event_id}
                   onChange={e => setQuickRegData({ ...quickRegData, event_id: e.target.value })}
@@ -5594,7 +5594,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                     onChange={e => setVolunteerFormData({ ...volunteerFormData, role: e.target.value })}
                     className="admin-select"
                   >
-                    <option value="admin">admin (Full Festival Administrator)</option>
+                    <option value="admin">admin (Full Fest Administrator)</option>
                     <option value="registration">registration (Gate Arrival Check-in Desk)</option>
                     <option value="event_staff">event_staff (Event Coordinator)</option>
                     <option value="volunteer">volunteer (General Support)</option>
@@ -5626,7 +5626,7 @@ See you at *SRISHTI 2.7*! 🚀`;
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: RESET FESTIVAL DATA TO ZERO (DANGER ZONE) */}
+      {/* MODAL: RESET FEST DATA TO ZERO (DANGER ZONE) */}
       {/* ========================================================================= */}
       {modalType === 'resetAllData' && (
         <div className="admin-modal-backdrop">
@@ -5634,7 +5634,7 @@ See you at *SRISHTI 2.7*! 🚀`;
             <div className="admin-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <FiTrash2 style={{ color: '#ffffff', fontSize: '1.25rem' }} />
-                <h3 style={{ color: '#ffffff' }}>Reset Festival Data to Zero</h3>
+                <h3 style={{ color: '#ffffff' }}>Reset Fest Data to Zero</h3>
               </div>
               <button onClick={() => { setModalType(null); setResetConfirmWord(''); }} className="admin-modal-close"><FiX /></button>
             </div>
@@ -5648,15 +5648,15 @@ See you at *SRISHTI 2.7*! 🚀`;
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ffffff', fontWeight: 'bold', fontSize: '0.95rem', marginBottom: '0.4rem' }}>
                 <FiAlertCircle size={18} />
-                <span>CRITICAL ACTION: ZERO OUT FESTIVAL DATA</span>
+                <span>CRITICAL ACTION: ZERO OUT FEST DATA</span>
               </div>
               <p style={{ color: '#a1a1aa', fontSize: '0.84rem', margin: 0, lineHeight: 1.5 }}>
-                This operation wipes test data and resets festival attendee records and live counters back to 0. 
+                This operation wipes test data and resets fest attendee records and live counters back to 0. 
                 Administrator accounts and core system configurations are preserved.
               </p>
             </div>
 
-            <form onSubmit={handleResetFestivalDataToZero}>
+            <form onSubmit={handleResetFestDataToZero}>
               {/* Impact Breakdown Table */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: '#a1a1aa', letterSpacing: '0.05em', fontWeight: 'bold', display: 'block', marginBottom: '0.5rem' }}>
@@ -5786,7 +5786,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                       />
                       <div>
                         <div style={{ color: '#ffffff', fontWeight: '600', fontSize: '0.88rem' }}>Events Catalog (public.events)</div>
-                        <div style={{ color: '#71717a', fontSize: '0.75rem' }}>Leave unchecked to keep all festival competition definitions</div>
+                        <div style={{ color: '#71717a', fontSize: '0.75rem' }}>Leave unchecked to keep all fest competition definitions</div>
                       </div>
                     </div>
                     <span style={{ fontFamily: 'var(--font-mono)', color: '#71717a', fontSize: '0.85rem' }}>
@@ -5838,14 +5838,14 @@ See you at *SRISHTI 2.7*! 🚀`;
         </div>
       )}
 
-      {/* Modal: Add Festival Sponsor */}
+      {/* Modal: Add Fest Sponsor */}
       {isSponsorModalOpen && (
         <div className="admin-modal-backdrop" onClick={() => setIsSponsorModalOpen(false)}>
           <div className="admin-modal-card" style={{ maxWidth: '540px' }} onClick={e => e.stopPropagation()}>
             <div className="admin-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <FiStar style={{ color: '#00f2fe' }} />
-                <h3>Add Festival Sponsor</h3>
+                <h3>Add Fest Sponsor</h3>
               </div>
               <button
                 type="button"

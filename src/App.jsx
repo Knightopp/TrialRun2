@@ -245,7 +245,7 @@ export default function App() {
     window.alert = (msg) => {
       const s = String(msg ?? '');
       const sLower = s.toLowerCase();
-      let title = 'Festival Notice';
+      let title = 'Fest Notice';
       let type = 'info';
       let actionText = null;
       let onAction = null;
@@ -314,7 +314,7 @@ export default function App() {
               category: ev.category || fallback?.category || 'TECHNICAL',
               group: isTeam ? 'Team Events' : 'Solo Events',
               image: fallback?.image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=900&auto=format&fit=crop',
-              details: ev.venue ? `Venue: ${ev.venue}. Fee: ₹${ev.registration_fee || 0}` : (fallback?.details || 'Festival event'),
+              details: ev.venue ? `Venue: ${ev.venue}. Fee: ₹${ev.registration_fee || 0}` : (fallback?.details || 'Fest event'),
               date: ev.date || fallback?.date || 'Dec 10, 2026',
               time: ev.start_time ? (ev.end_time ? `${ev.start_time.substring(0, 5)} - ${ev.end_time.substring(0, 5)}` : ev.start_time.substring(0, 5)) : (fallback?.time || '10:00 AM'),
               fee: ev.registration_fee || 0,
@@ -1728,7 +1728,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                     if (isPortalClosed) {
                       showNotice({
                         title: 'Registrations Closed',
-                        message: `Registrations for ${ev.label} are currently closed by festival administration. Registered participants can access their Delegate Pass in Profile.`,
+                        message: `Registrations for ${ev.label} are currently closed by fest administration. Registered participants can access their Delegate Pass in Profile.`,
                         type: 'warning',
                         actionText: 'Go to Profile',
                         onAction: () => navigate('/profile'),

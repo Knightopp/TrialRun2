@@ -151,7 +151,7 @@ export default function SpotlightTour({
             </div>
             <h4 className="spotlight-step-title">HOME &amp; HIGHLIGHTS</h4>
             <p className="spotlight-desc">
-              Your central hub for the festival overview, edition theme, teaser showcases, and live campus updates.
+              Your central hub for the fest overview, edition theme, teaser showcases, and live campus updates.
             </p>
 
             <div className="spotlight-actions">
@@ -182,7 +182,7 @@ export default function SpotlightTour({
             </div>
             <h4 className="spotlight-step-title">GALLERY &amp; MOMENTS</h4>
             <p className="spotlight-desc">
-              Explore captured Moments of Srishti, interactive visuals, and festival photo showcases.
+              Explore captured Moments of Srishti, interactive visuals, and fest photo showcases.
             </p>
 
             <div className="spotlight-actions">

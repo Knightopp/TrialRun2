@@ -563,7 +563,7 @@ export default function ProfilePage() {
   const handleEmailPassToUser = async () => {
     const hasRegistered = registrations.length > 0;
     if (!hasRegistered) {
-      alert('Your delegate pass is locked. Please register for at least one festival event to unlock your pass.');
+      alert('Your delegate pass is locked. Please register for at least one fest event to unlock your pass.');
       return;
     }
 
@@ -2236,7 +2236,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                       }}
                     />
                     <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.35rem', display: 'block' }}>
-                      Your festival pass and event registrations will be tied to this verified email address.
+                      Your fest pass and event registrations will be tied to this verified email address.
                     </span>
                   </div>
                 </div>
@@ -2441,7 +2441,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                 }}>
                   <FiCheckCircle size={18} color="#38bdf8" style={{ flexShrink: 0 }} />
                   <span style={{ fontSize: '0.82rem', color: '#93c5fd', lineHeight: 1.4 }}>
-                    Upon completion, your profile will be created and you can immediately proceed to register for festival events.
+                    Upon completion, your profile will be created and you can immediately proceed to register for fest events.
                   </span>
                 </div>
               </Step>

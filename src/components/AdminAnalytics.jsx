@@ -236,7 +236,7 @@ export default function AdminAnalytics({
             </h3>
           </div>
           <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#71717A' }}>
-            Live traffic, participant rankings per competition, and festival velocity metrics.
+            Live traffic, participant rankings per competition, and fest velocity metrics.
           </p>
         </div>
 
