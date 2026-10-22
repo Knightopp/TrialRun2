@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle, FiAlertCircle, FiShield, FiMapPin, FiClock, FiKey, FiArrowRight } from 'react-icons/fi';
+import { FiMail, FiLogOut, FiCalendar, FiArrowLeft, FiUser, FiPhone, FiBook, FiInfo, FiDownload, FiLock, FiRotateCcw, FiRefreshCw, FiCheckCircle, FiAlertCircle, FiShield, FiMapPin, FiClock, FiKey, FiArrowRight, FiEdit2, FiChevronRight, FiCreditCard } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import CodeSlots from './CodeSlots';
 import Stepper, { Step } from './Stepper';
@@ -10,7 +11,6 @@ import { generateCardImagePng, downloadPngFromDataUrl } from '../utils/cardImage
 import { supabase } from '../supabaseClient';
 import SideRays from './SideRays';
 import SafeVisual from './SafeVisual';
-import ProfileCard from './ProfileCard';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -976,33 +976,58 @@ See you at *SRISHTI 2.7*! 🚀`;
         </SafeVisual>
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: '1000px', margin: '0 auto', paddingTop: '4rem' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: '1180px', margin: '0 auto', paddingTop: '3rem', paddingBottom: '5rem' }}>
 
         <button
           onClick={() => navigate('/')}
           style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: 'none', border: 'none', color: '#888',
-            cursor: 'pointer', marginBottom: '2rem', fontSize: '1rem',
-            padding: '0', transition: 'color 0.2s'
+            display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+            background: 'none', border: 'none', color: '#71717a',
+            cursor: 'pointer', marginBottom: '2rem', fontSize: '0.9rem',
+            padding: '0', transition: 'color 0.2s ease'
           }}
           onMouseOver={e => e.currentTarget.style.color = '#fff'}
-          onMouseOut={e => e.currentTarget.style.color = '#888'}
+          onMouseOut={e => e.currentTarget.style.color = '#71717a'}
         >
-          <FiArrowLeft /> Return Home
+          <FiArrowLeft size={16} /> Return Home
         </button>
 
         {step === 'dashboard' ? (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            {/* Header: SRISHTI 2.7 / My Space / Subtitle & Sign Out */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '3.5rem' }}>
               <div>
-                <h1 style={{ fontSize: '3.5rem', fontWeight: '800', margin: '0 0 0.5rem 0', letterSpacing: '-0.03em' }}>
-                  My Tickets
+                <div style={{
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontSize: '0.85rem',
+                  color: '#8c8c92',
+                  letterSpacing: '0.35em',
+                  textTransform: 'uppercase',
+                  marginBottom: '0.45rem',
+                  fontWeight: '500'
+                }}>
+                  SRISHTI 2.7
+                </div>
+                <h1 style={{
+                  fontSize: '3.2rem',
+                  fontWeight: '800',
+                  margin: '0 0 0.45rem 0',
+                  letterSpacing: '-0.02em',
+                  color: '#ffffff',
+                  lineHeight: 1.1
+                }}>
+                  My Space
                 </h1>
-                <p style={{ color: '#888', fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                  <span>Logged in as <span style={{ color: '#fff', fontWeight: '600' }}>{session?.user?.email}</span></span>
+                <p style={{
+                  color: '#8c8c92',
+                  fontSize: '1.05rem',
+                  margin: 0,
+                  fontWeight: '400'
+                }}>
+                  Your profile, passes and registrations.
                 </p>
               </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 {(isAdminUser || (session?.user?.email || '').toLowerCase().trim() === 'tsrknight@gmail.com') && (
                   <button
@@ -1011,672 +1036,822 @@ See you at *SRISHTI 2.7*! 🚀`;
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
-                      padding: '0.75rem 1.4rem',
-                      background: 'linear-flex',
-                      backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                      padding: '0.65rem 1.25rem',
+                      backgroundColor: 'rgba(56, 189, 248, 0.1)',
                       color: '#38bdf8',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      borderRadius: '12px',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                      borderRadius: '10px',
                       cursor: 'pointer',
-                      fontWeight: '700',
-                      letterSpacing: '0.04em',
+                      fontWeight: '600',
                       fontSize: '0.88rem',
-                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                      boxShadow: '0 0 15px rgba(56, 189, 248, 0.15)'
+                      transition: 'all 0.2s ease'
                     }}
-                    onMouseOver={e => {
-                      e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.22)';
-                      e.currentTarget.style.borderColor = '#38bdf8';
-                    }}
-                    onMouseOut={e => {
-                      e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.12)';
-                      e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.4)';
-                    }}
+                    onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.2)'}
+                    onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.1)'}
                   >
-                    <FiShield size={16} /> Admin Command Center
+                    <FiShield size={15} /> Admin Command Center
                   </button>
                 )}
+
                 <button
                   onClick={handleLogout}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    padding: '0.75rem 1.5rem', backgroundColor: 'transparent',
-                    color: '#888', border: '1px solid #333',
-                    borderRadius: '12px', cursor: 'pointer', fontWeight: '600',
-                    transition: 'all 0.2s'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    padding: '0.65rem 1.35rem',
+                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                    color: '#e4e4e7',
+                    border: '1px solid rgba(255, 255, 255, 0.14)',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    fontSize: '0.9rem',
+                    transition: 'all 0.2s ease'
                   }}
-                  onMouseOver={e => { e.currentTarget.style.borderColor = '#fff'; e.currentTarget.style.color = '#fff'; }}
-                  onMouseOut={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888'; }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.35)';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
+                    e.currentTarget.style.color = '#e4e4e7';
+                  }}
                 >
-                  <FiLogOut /> Sign Out
+                  <FiLogOut size={16} /> Sign Out
                 </button>
               </div>
             </div>
 
             {(error || message) && (
               <div style={{
-                marginTop: '1.5rem',
-                padding: '0.9rem 1.1rem',
+                marginBottom: '2rem',
+                padding: '0.9rem 1.25rem',
                 borderRadius: '12px',
                 color: error ? '#ff8b8b' : '#86efac',
                 background: error ? 'rgba(255,59,48,0.1)' : 'rgba(16,185,129,0.1)',
-                border: `1px solid ${error ? 'rgba(255,59,48,0.25)' : 'rgba(16,185,129,0.25)'}`
+                border: `1px solid ${error ? 'rgba(255,59,48,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                fontSize: '0.92rem'
               }}>
                 {error || message}
               </div>
             )}
 
             {loading ? (
-              <div style={{ marginTop: '4rem', textAlign: 'center' }}>Loading your data...</div>
+              <div style={{ padding: '5rem 0', textAlign: 'center', color: '#8c8c92', fontSize: '1.05rem' }}>
+                Loading your data...
+              </div>
             ) : (
-              <div style={{ marginTop: '4rem', display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+              <div>
+                {/* 2-Column Section: Left Profile, Right Digital Entry Pass */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '3.5rem',
+                  alignItems: 'flex-start'
+                }}>
 
-                {/* Profile Card */}
-                <div style={{ flex: '1 1 300px', maxWidth: '100%', padding: '2.5rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                    <h3 style={{ fontSize: '1.2rem', color: '#888', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <FiUser /> Profile Overview
-                    </h3>
-                    {!isEditing && (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        style={{ background: 'none', border: '1px solid #333', color: '#fff', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
-                      >
-                        Edit
-                      </button>
+                  {/* Left Column: Profile */}
+                  <div style={{ flex: '1 1 380px', minWidth: '280px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#ffffff', fontSize: '1.15rem', fontWeight: '600' }}>
+                        <FiUser size={18} />
+                        <span>Profile</span>
+                      </div>
+                      {!isEditing && (
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#38bdf8',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.45rem',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            padding: 0,
+                            transition: 'opacity 0.2s ease'
+                          }}
+                          onMouseOver={e => e.currentTarget.style.opacity = '0.75'}
+                          onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                        >
+                          <FiEdit2 size={14} />
+                          <span>Edit</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {isEditing ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div>
+                          <label style={{ color: '#71717a', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</label>
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={e => setEditName(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              color: '#fff',
+                              borderRadius: '8px',
+                              marginTop: '0.35rem',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ color: '#71717a', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email (Account Bound)</label>
+                          <input
+                            type="email"
+                            value={participantData?.email || session?.user?.email || ''}
+                            disabled
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              background: 'rgba(255, 255, 255, 0.02)',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              color: '#71717a',
+                              borderRadius: '8px',
+                              marginTop: '0.35rem',
+                              boxSizing: 'border-box',
+                              cursor: 'not-allowed'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ color: '#71717a', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>College</label>
+                          <input
+                            type="text"
+                            value={editCollege}
+                            onChange={e => setEditCollege(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              color: '#fff',
+                              borderRadius: '8px',
+                              marginTop: '0.35rem',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                          <div>
+                            <label style={{ color: '#71717a', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Department</label>
+                            <input
+                              type="text"
+                              value={editDepartment}
+                              onChange={e => setEditDepartment(e.target.value)}
+                              placeholder="e.g. Computer Science"
+                              style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                color: '#fff',
+                                borderRadius: '8px',
+                                marginTop: '0.35rem',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ color: '#71717a', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Year</label>
+                            <input
+                              type="text"
+                              value={editYear}
+                              onChange={e => setEditYear(e.target.value)}
+                              placeholder="e.g. 2026"
+                              style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                color: '#fff',
+                                borderRadius: '8px',
+                                marginTop: '0.35rem',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ color: '#71717a', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone</label>
+                          <input
+                            type="text"
+                            value={editPhone}
+                            onChange={e => setEditPhone(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid rgba(255, 255, 255, 0.15)',
+                              color: '#fff',
+                              borderRadius: '8px',
+                              marginTop: '0.35rem',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+                          <button
+                            onClick={handleSaveProfile}
+                            disabled={isSaving}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              background: '#fff',
+                              color: '#000',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {isSaving ? 'Saving...' : 'Save Changes'}
+                          </button>
+                          <button
+                            onClick={() => setIsEditing(false)}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              background: 'transparent',
+                              color: '#fff',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {[
+                          { label: 'Name', value: participantData?.name || 'Participant', bold: true },
+                          { label: 'Email', value: participantData?.email || session?.user?.email || '-' },
+                          { label: 'College', value: participantData?.college || '-' },
+                          { label: 'Department', value: participantData?.department || '-' },
+                          { label: 'Year', value: participantData?.year || '-' },
+                          { label: 'Phone', value: participantData?.phone || '-' }
+                        ].map((field) => (
+                          <div
+                            key={field.label}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '125px 1fr',
+                              alignItems: 'center',
+                              padding: '1.05rem 0',
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.07)'
+                            }}
+                          >
+                            <span style={{ color: '#71717a', fontSize: '0.95rem' }}>{field.label}</span>
+                            <span style={{
+                              color: '#ffffff',
+                              fontSize: '0.95rem',
+                              fontWeight: field.bold ? '700' : '400',
+                              wordBreak: 'break-word'
+                            }}>
+                              {field.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
 
-                  {isEditing ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div>
-                        <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Name</label>
-                        <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
-                      </div>
-                      <div>
-                        <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Email (Account Bound)</label>
-                        <input type="email" value={participantData?.email || session?.user?.email || ''} disabled style={{ width: '100%', padding: '0.75rem', background: '#181818', border: '1px solid #282828', color: '#888', borderRadius: '8px', marginTop: '0.25rem', cursor: 'not-allowed' }} />
-                      </div>
-                      <div>
-                        <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>College</label>
-                        <input type="text" value={editCollege} onChange={e => setEditCollege(e.target.value)} style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                        <div>
-                          <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Department</label>
-                          <input type="text" value={editDepartment} onChange={e => setEditDepartment(e.target.value)} placeholder="e.g. CSE" style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
-                        </div>
-                        <div>
-                          <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Year</label>
-                          <input type="text" value={editYear} onChange={e => setEditYear(e.target.value)} placeholder="e.g. 2nd Year" style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
-                        </div>
-                      </div>
-                      <div>
-                        <label style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase' }}>Phone</label>
-                        <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)} style={{ width: '100%', padding: '0.75rem', background: '#111', border: '1px solid #333', color: '#fff', borderRadius: '8px', marginTop: '0.25rem' }} />
-                      </div>
-                      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                        <button onClick={handleSaveProfile} disabled={isSaving} style={{ flex: 1, padding: '0.75rem', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                          {isSaving ? 'Saving...' : 'Save'}
-                        </button>
-                        <button onClick={() => setIsEditing(false)} style={{ flex: 1, padding: '0.75rem', background: 'transparent', color: '#fff', border: '1px solid #333', borderRadius: '8px', cursor: 'pointer' }}>
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                      <div>
-                        <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Name</p>
-                        <p style={{ fontSize: '1.2rem', margin: 0, fontWeight: '500' }}>{participantData?.name || 'Participant'}</p>
-                      </div>
-                      <div>
-                        <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Email</p>
-                        <p style={{ fontSize: '1rem', margin: 0, fontWeight: '500', color: '#aaa' }}>{participantData?.email || session?.user?.email || '-'}</p>
-                      </div>
-                      <div>
-                        <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>College</p>
-                        <p style={{ fontSize: '1.1rem', margin: 0, fontWeight: '500' }}>{participantData?.college || '-'}</p>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                          <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Department</p>
-                          <p style={{ fontSize: '1.05rem', margin: 0, fontWeight: '500' }}>{participantData?.department || '-'}</p>
-                        </div>
-                        <div>
-                          <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Year</p>
-                          <p style={{ fontSize: '1.05rem', margin: 0, fontWeight: '500' }}>{participantData?.year || '-'}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p style={{ color: '#666', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: '0 0 0.25rem 0' }}>Phone</p>
-                        <p style={{ fontSize: '1.1rem', margin: 0, fontWeight: '500' }}>{participantData?.phone || '-'}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  {/* Right Column: Digital Entry Pass */}
+                  <div style={{ flex: '1.4 1 540px', minWidth: '320px', maxWidth: '100%', overflow: 'visible' }}>
+                    {(() => {
+                      const passData = getPassData();
+                      const attendeeName = passData.attendeeName;
+                      const college = passData.college;
+                      const passCode = passData.passCode;
+                      const isVerified = passData.isVerified;
+                      const statusText = passData.statusText;
+                      const eventsList = passData.events;
+                      const hasRegistered = registrations.length > 0;
 
-                {/* Srishti Entry Pass */}
-                <div
-                  className="tear-ticket-card-wrapper"
-                  style={{
-                    flex: '2 1 480px',
-                    minWidth: 0,
-                    maxWidth: '100%',
-                    padding: '2.5rem 1.5rem',
-                    backgroundColor: '#0a0a0a',
-                    borderRadius: '24px',
-                    border: '1px solid #222',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    position: 'relative',
-                    overflow: 'visible'
-                  }}
-                >
-                  <h3 style={{ fontSize: '1.2rem', color: '#888', marginBottom: '1.5rem', width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FiCalendar /> Digital Entry Pass
-                  </h3>
-                  {(() => {
-                    const passData = getPassData();
-                    const attendeeName = passData.attendeeName;
-                    const college = passData.college;
-                    const passCode = passData.passCode;
-                    const isVerified = passData.isVerified;
-                    const statusText = passData.statusText;
-                    const eventsList = passData.events;
+                      return (
+                        <div>
+                          {/* Header: Digital Entry Pass & Verified status dot */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#ffffff', fontSize: '1.15rem', fontWeight: '600' }}>
+                              <FiCreditCard size={18} />
+                              <span>Digital Entry Pass</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.88rem', fontWeight: '600', color: isVerified ? '#10b981' : '#f59e0b' }}>
+                              <span style={{
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                backgroundColor: isVerified ? '#10b981' : '#f59e0b',
+                                boxShadow: isVerified ? '0 0 8px #10b981' : '0 0 8px #f59e0b'
+                              }}></span>
+                              <span>{isVerified ? 'Verified' : 'Pending Approval'}</span>
+                            </div>
+                          </div>
 
-                    const hasRegistered = registrations.length > 0;
-
-                    return (
-                      <div style={{ width: '100%', maxWidth: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', overflow: 'visible' }}>
-                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', maxWidth: '100%', overflow: 'visible', padding: '0.5rem 0' }}>
-                          <div
-                            id="participant-ticket-card"
-                            style={{
-                            width: '100%',
-                            maxWidth: '660px',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            position: 'relative',
-                            overflow: 'visible',
-                            filter: !hasRegistered ? 'blur(4px) grayscale(0.85) opacity(0.35)' : 'none',
-                            pointerEvents: !hasRegistered ? 'none' : 'auto',
-                            userSelect: !hasRegistered ? 'none' : 'auto',
-                            transition: 'all 0.3s ease'
-                          }}>
-                          <TearTicket
-                            orientation="horizontal"
-                            scrim={false}
-                            torn={isTicketTorn}
-                            onTear={() => setIsTicketTorn(true)}
-                            width={660}
-                            height={320}
-                            stubSize={185}
-                            radius={16}
-                            holes={12}
-                            holeSize={7}
-                            notch={5}
-                            tearAngle={25}
-                            stretch={30}
-                            resistance={0.5}
-                            rotate={0}
-                            tilt={false}
-                            background="#070a13"
-                            stubBackground="#ffffff"
-                            color="#ffffff"
-                            border={false}
-                            borderColor="transparent"
-                            borderWidth={0}
-                            recenter={true}
-                            stub={
-                              <div style={{
+                          {/* Ticket Visual */}
+                          <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'visible' }}>
+                            <div
+                              id="participant-ticket-card"
+                              style={{
+                                width: '100%',
+                                maxWidth: '640px',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
                                 position: 'relative',
+                                overflow: 'visible',
+                                filter: !hasRegistered ? 'blur(4px) grayscale(0.85) opacity(0.35)' : 'none',
+                                pointerEvents: !hasRegistered ? 'none' : 'auto',
+                                userSelect: !hasRegistered ? 'none' : 'auto',
+                                transition: 'all 0.3s ease'
+                              }}
+                            >
+                              <TearTicket
+                                orientation="horizontal"
+                                scrim={false}
+                                torn={isTicketTorn}
+                                onTear={() => setIsTicketTorn(true)}
+                                width={630}
+                                height={305}
+                                stubSize={175}
+                                radius={16}
+                                holes={12}
+                                holeSize={7}
+                                notch={5}
+                                tearAngle={25}
+                                stretch={30}
+                                resistance={0.5}
+                                rotate={0}
+                                tilt={false}
+                                background="#070a13"
+                                stubBackground="#ffffff"
+                                color="#ffffff"
+                                border={false}
+                                borderColor="transparent"
+                                borderWidth={0}
+                                recenter={true}
+                                stub={
+                                  <div style={{
+                                    position: 'relative',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '100%',
+                                    padding: '1rem 0.75rem',
+                                    backgroundImage: "url('/assets/ticket-stub-light.jpg')",
+                                    backgroundPosition: 'center',
+                                    backgroundSize: 'cover',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundColor: '#ffffff',
+                                    overflow: 'hidden',
+                                    boxSizing: 'border-box'
+                                  }}>
+                                    <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                                      <h4 style={{ fontFamily: 'var(--font-akira)', color: '#050714', fontSize: '1.05rem', margin: '0 0 0.85rem 0', letterSpacing: '0.05em' }}>
+                                        SCAN ME
+                                      </h4>
+
+                                      <div style={{ position: 'relative', padding: '8px' }}>
+                                        <div style={{ position: 'absolute', top: 0, left: 0, width: '14px', height: '14px', borderTop: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '4px 0 0 0' }}></div>
+                                        <div style={{ position: 'absolute', top: 0, right: 0, width: '14px', height: '14px', borderTop: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 4px 0 0' }}></div>
+                                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '14px', height: '14px', borderBottom: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '0 0 0 4px' }}></div>
+                                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: '14px', height: '14px', borderBottom: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 0 4px 0' }}></div>
+
+                                        <QRCodeSVG
+                                          value={signedPassQr || passCode}
+                                          size={110}
+                                          bgColor="#ffffff"
+                                          fgColor="#000000"
+                                          level="H"
+                                          imageSettings={{
+                                            src: "/assets/logo.png",
+                                            height: 24,
+                                            width: 24,
+                                            excavate: true,
+                                          }}
+                                        />
+                                      </div>
+
+                                      <span style={{
+                                        fontSize: '0.85rem',
+                                        color: '#0f172a',
+                                        marginTop: '0.75rem',
+                                        fontFamily: 'var(--font-mono)',
+                                        fontWeight: 'bold',
+                                        letterSpacing: '0.05em',
+                                        background: 'rgba(255,255,255,0.7)',
+                                        padding: '2px 8px',
+                                        borderRadius: '6px'
+                                      }}>
+                                        {passCode}
+                                      </span>
+                                    </div>
+                                  </div>
+                                }
+                              >
+                                <div style={{
+                                  position: 'relative',
+                                  width: '100%',
+                                  height: '100%',
+                                  padding: '1.75rem 2rem',
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                  boxSizing: 'border-box',
+                                  backgroundImage: "url('/assets/ticket-bg-dark.png')",
+                                  backgroundPosition: 'right center',
+                                  backgroundSize: 'cover',
+                                  backgroundRepeat: 'no-repeat',
+                                  backgroundColor: '#070a13'
+                                }}>
+                                  <div style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    zIndex: 0,
+                                    background: 'linear-gradient(90deg, rgba(3, 5, 12, 0.94) 0%, rgba(3, 5, 12, 0.72) 55%, rgba(3, 5, 12, 0.25) 100%)',
+                                    pointerEvents: 'none'
+                                  }} />
+
+                                  <div style={{ position: 'relative', zIndex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.65rem' }}>
+                                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: '#e2e8f0', letterSpacing: '0.2em', lineHeight: 1.4 }}>
+                                        SRISHTI 2.7<br/><span style={{ color: '#38bdf8' }}>DELEGATE PASS</span>
+                                      </div>
+                                      <div style={{ height: '2px', width: '50px', background: 'linear-gradient(90deg, #38bdf8, transparent)' }}></div>
+                                    </div>
+
+                                    <h3 style={{
+                                      fontFamily: 'var(--font-akira)',
+                                      fontSize: attendeeName.length > 20 ? '1.4rem' : attendeeName.length > 14 ? '1.75rem' : '2.1rem',
+                                      margin: '0 0 0.45rem 0',
+                                      lineHeight: 1.05,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '-0.02em',
+                                      background: 'linear-gradient(180deg, #ffffff 40%, #38bdf8 100%)',
+                                      WebkitBackgroundClip: 'text',
+                                      WebkitTextFillColor: 'transparent',
+                                      filter: 'drop-shadow(0 0 20px rgba(56,189,248,0.5))'
+                                    }}>
+                                      {attendeeName}
+                                    </h3>
+
+                                    <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', marginBottom: '0.65rem' }}>
+                                      <div style={{ width: '4px', height: '20px', background: '#38bdf8', borderRadius: '2px', boxShadow: '0 0 10px #38bdf8' }}></div>
+                                      <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>
+                                        {college}
+                                      </p>
+                                    </div>
+
+                                    {/* Registered Events Badges */}
+                                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', maxWidth: '360px' }}>
+                                      {eventsList.length > 0 ? (
+                                        eventsList.slice(0, 3).map((evt, idx) => (
+                                          <span key={idx} style={{
+                                            fontSize: '0.68rem',
+                                            fontWeight: '700',
+                                            padding: '0.2rem 0.55rem',
+                                            borderRadius: '6px',
+                                            background: 'rgba(56, 189, 248, 0.12)',
+                                            border: '1px solid rgba(56, 189, 248, 0.35)',
+                                            color: '#38bdf8',
+                                            letterSpacing: '0.04em',
+                                            textTransform: 'uppercase',
+                                            whiteSpace: 'nowrap'
+                                          }}>
+                                            {evt}
+                                          </span>
+                                        ))
+                                      ) : (
+                                        <span style={{
+                                          fontSize: '0.68rem',
+                                          fontWeight: '700',
+                                          padding: '0.2rem 0.55rem',
+                                          borderRadius: '6px',
+                                          background: 'rgba(56, 189, 248, 0.12)',
+                                          border: '1px solid rgba(56, 189, 248, 0.35)',
+                                          color: '#38bdf8',
+                                          letterSpacing: '0.04em',
+                                          textTransform: 'uppercase',
+                                          whiteSpace: 'nowrap'
+                                        }}>
+                                          CODING AND DEBUGGING
+                                        </span>
+                                      )}
+                                      {eventsList.length > 3 && (
+                                        <span style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem', borderRadius: '6px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontWeight: 'bold' }}>
+                                          +{eventsList.length - 3} more
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingTop: '0.35rem' }}>
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', padding: '0.5rem 1rem', borderRadius: '12px', border: '1px solid rgba(56,189,248,0.3)', display: 'inline-flex', flexDirection: 'column', gap: '0.2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+                                      <span style={{ fontSize: '0.62rem', color: '#94a3b8', letterSpacing: '0.1em' }}>STATUS</span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                        <div style={{ width: '16px', height: '16px', background: isVerified ? '#10b981' : '#f59e0b', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: isVerified ? '0 0 10px #10b981' : '0 0 10px #f59e0b' }}>
+                                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        </div>
+                                        <span style={{ color: isVerified ? '#10b981' : '#f59e0b', fontWeight: 'bold', fontSize: '0.98rem', letterSpacing: '0.05em' }}>
+                                          {statusText}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ textAlign: 'right' }}>
+                                      <span style={{ display: 'block', fontSize: '0.68rem', color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '0.15rem' }}>EVENTS ENROLLED</span>
+                                      <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem' }}>{eventsList.length || 1} Event(s)</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </TearTicket>
+                            </div>
+
+                            {!hasRegistered ? (
+                              <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                minHeight: '280px',
+                                background: 'rgba(5, 8, 16, 0.88)',
+                                backdropFilter: 'blur(10px)',
+                                WebkitBackdropFilter: 'blur(10px)',
+                                borderRadius: '16px',
+                                border: '1px dashed rgba(239, 68, 68, 0.45)',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                height: '100%',
-                                padding: '1rem',
-                                backgroundImage: "url('/assets/ticket-stub-light.jpg')",
-                                backgroundPosition: 'center',
-                                backgroundSize: 'cover',
-                                backgroundRepeat: 'no-repeat',
-                                backgroundColor: '#ffffff',
-                                overflow: 'hidden',
-                                boxSizing: 'border-box'
+                                padding: '1.5rem',
+                                textAlign: 'center',
+                                zIndex: 10,
+                                boxSizing: 'border-box',
+                                boxShadow: '0 0 35px rgba(239, 68, 68, 0.2)'
                               }}>
-
-                                <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                  <h4 style={{ fontFamily: 'var(--font-akira)', color: '#050714', fontSize: '1.05rem', margin: '0 0 0.85rem 0', letterSpacing: '0.05em' }}>SCAN ME</h4>
-
-                                  <div style={{ position: 'relative', padding: '10px' }}>
-                                    <div style={{ position: 'absolute', top: 0, left: 0, width: '16px', height: '16px', borderTop: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '4px 0 0 0' }}></div>
-                                    <div style={{ position: 'absolute', top: 0, right: 0, width: '16px', height: '16px', borderTop: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 4px 0 0' }}></div>
-                                    <div style={{ position: 'absolute', bottom: 0, left: 0, width: '16px', height: '16px', borderBottom: '4px solid #06b6d4', borderLeft: '4px solid #06b6d4', borderRadius: '0 0 0 4px' }}></div>
-                                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', borderBottom: '4px solid #06b6d4', borderRight: '4px solid #06b6d4', borderRadius: '0 0 4px 0' }}></div>
-
-                                    <QRCodeSVG
-                                      value={signedPassQr || passCode}
-                                      size={115}
-                                      bgColor="#ffffff"
-                                      fgColor="#000000"
-                                      level="H"
-                                      imageSettings={{
-                                        src: "/assets/logo.png",
-                                        height: 26,
-                                        width: 26,
-                                        excavate: true,
-                                      }}
-                                    />
-                                  </div>
-
-                                  <span style={{ fontSize: '0.85rem', color: '#0f172a', marginTop: '0.85rem', fontFamily: 'var(--font-mono)', fontWeight: 'bold', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.7)', padding: '2px 8px', borderRadius: '6px' }}>{passCode}</span>
+                                <div style={{
+                                  width: '48px',
+                                  height: '48px',
+                                  borderRadius: '50%',
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  border: '1px solid rgba(239, 68, 68, 0.5)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  marginBottom: '0.75rem'
+                                }}>
+                                  <FiLock size={22} color="#ef4444" />
                                 </div>
+
+                                <div style={{
+                                  fontFamily: 'var(--font-mono)',
+                                  fontSize: '0.75rem',
+                                  color: '#ef4444',
+                                  letterSpacing: '0.16em',
+                                  fontWeight: 'bold',
+                                  marginBottom: '0.35rem'
+                                }}>
+                                  ACCESS RESTRICTED // PASS LOCKED
+                                </div>
+
+                                <h4 style={{
+                                  fontFamily: 'var(--font-akira)',
+                                  fontSize: '1.1rem',
+                                  color: '#ffffff',
+                                  margin: '0 0 0.45rem 0'
+                                }}>
+                                  EVENT REGISTRATION REQUIRED
+                                </h4>
+
+                                <p style={{
+                                  color: '#94a3b8',
+                                  fontSize: '0.85rem',
+                                  maxWidth: '400px',
+                                  lineHeight: 1.4,
+                                  margin: '0 0 1rem 0'
+                                }}>
+                                  Register for an event to unlock your official Delegate Pass, QR entry badge, and card download.
+                                </p>
+
+                                <button
+                                  onClick={() => navigate('/register')}
+                                  style={{
+                                    padding: '0.65rem 1.4rem',
+                                    background: '#ffffff',
+                                    color: '#000000',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: 'bold',
+                                    fontSize: '0.86rem',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Browse Events & Register Now →
+                                </button>
                               </div>
-                            }
-                          >
-                            <div style={{
-                              position: 'relative',
-                              width: '100%',
-                              height: '100%',
-                              padding: '1.75rem 2.25rem',
-                              overflow: 'hidden',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'space-between',
-                              boxSizing: 'border-box',
-                              backgroundImage: "url('/assets/ticket-bg-dark.png')",
-                              backgroundPosition: 'right center',
-                              backgroundSize: 'cover',
-                              backgroundRepeat: 'no-repeat',
-                              backgroundColor: '#070a13'
-                            }}>
-                              {/* Sleek cyber vignette to ensure text contrast while displaying the 3D cyber emblem on the right */}
+                            ) : !isVerified ? (
                               <div style={{
                                 position: 'absolute',
                                 inset: 0,
-                                zIndex: 0,
-                                background: 'linear-gradient(90deg, rgba(3, 5, 12, 0.94) 0%, rgba(3, 5, 12, 0.72) 55%, rgba(3, 5, 12, 0.25) 100%)',
-                                pointerEvents: 'none'
-                              }} />
-
-                              <div style={{ position: 'relative', zIndex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.65rem' }}>
-                                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: '#e2e8f0', letterSpacing: '0.2em', lineHeight: 1.4 }}>
-                                    SRISHTI 2.7<br/><span style={{ color: '#38bdf8' }}>DELEGATE PASS</span>
-                                  </div>
-                                  <div style={{ height: '2px', width: '60px', background: 'linear-gradient(90deg, #38bdf8, transparent)' }}></div>
-                                </div>
-
-                                <h3 style={{
-                                  fontFamily: 'var(--font-akira)',
-                                  fontSize: attendeeName.length > 20 ? '1.5rem' : attendeeName.length > 14 ? '1.85rem' : '2.2rem',
-                                  margin: '0 0 0.45rem 0',
-                                  lineHeight: 1.05,
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '-0.02em',
-                                  background: 'linear-gradient(180deg, #ffffff 40%, #38bdf8 100%)',
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  filter: 'drop-shadow(0 0 20px rgba(56,189,248,0.5))'
-                                }}>
-                                  {attendeeName}
-                                </h3>
-
-                                <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', marginBottom: '0.65rem' }}>
-                                  <div style={{ width: '4px', height: '22px', background: '#38bdf8', borderRadius: '2px', boxShadow: '0 0 10px #38bdf8' }}></div>
-                                  <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>
-                                    {college}
-                                  </p>
-                                </div>
-
-                                {/* Registered Events Badges */}
-                                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', maxWidth: '380px' }}>
-                                  {eventsList.length > 0 ? (
-                                    eventsList.slice(0, 3).map((evt, idx) => (
-                                      <span key={idx} style={{
-                                        fontSize: '0.68rem',
-                                        fontWeight: '700',
-                                        padding: '0.2rem 0.55rem',
-                                        borderRadius: '6px',
-                                        background: 'rgba(56, 189, 248, 0.12)',
-                                        border: '1px solid rgba(56, 189, 248, 0.35)',
-                                        color: '#38bdf8',
-                                        letterSpacing: '0.04em',
-                                        textTransform: 'uppercase',
-                                        whiteSpace: 'nowrap'
-                                      }}>
-                                        {evt}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span style={{
-                                      fontSize: '0.7rem',
-                                      padding: '0.2rem 0.55rem',
-                                      borderRadius: '6px',
-                                      background: 'rgba(255, 255, 255, 0.05)',
-                                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                                      color: '#94a3b8'
-                                    }}>
-                                      FEST ALL-ACCESS DELEGATE
-                                    </span>
-                                  )}
-                                  {eventsList.length > 3 && (
-                                    <span style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem', borderRadius: '6px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontWeight: 'bold' }}>
-                                      +{eventsList.length - 3} more
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto', paddingTop: '0.4rem' }}>
-                                <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', padding: '0.55rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(56,189,248,0.3)', display: 'inline-flex', flexDirection: 'column', gap: '0.2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
-                                  <span style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.1em' }}>STATUS</span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <div style={{ width: '18px', height: '18px', background: isVerified ? '#10b981' : '#f59e0b', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: isVerified ? '0 0 10px #10b981' : '0 0 10px #f59e0b' }}>
-                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                    </div>
-                                    <span style={{ color: isVerified ? '#10b981' : '#f59e0b', fontWeight: 'bold', fontSize: '1.05rem', letterSpacing: '0.05em' }}>
-                                      {statusText}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div style={{ textAlign: 'right' }}>
-                                  <span style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>EVENTS ENROLLED</span>
-                                  <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.25rem' }}>{eventsList.length || 1} Event(s)</span>
-                                </div>
-                              </div>
-                            </div>
-                          </TearTicket>
-                          </div>
-
-                          {!hasRegistered ? (
-                            <div style={{
-                              position: 'absolute',
-                              inset: 0,
-                              width: '100%',
-                              height: '100%',
-                              minHeight: '280px',
-                              background: 'rgba(5, 8, 16, 0.88)',
-                              backdropFilter: 'blur(10px)',
-                              WebkitBackdropFilter: 'blur(10px)',
-                              borderRadius: '16px',
-                              border: '1px dashed rgba(239, 68, 68, 0.45)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '1.5rem',
-                              textAlign: 'center',
-                              zIndex: 10,
-                              boxSizing: 'border-box',
-                              boxShadow: '0 0 35px rgba(239, 68, 68, 0.2)'
-                            }}>
-                              <div style={{
-                                width: '52px',
-                                height: '52px',
-                                borderRadius: '50%',
-                                background: 'rgba(239, 68, 68, 0.15)',
-                                border: '1px solid rgba(239, 68, 68, 0.5)',
+                                width: '100%',
+                                height: '100%',
+                                minHeight: '280px',
+                                background: 'rgba(5, 8, 16, 0.88)',
+                                backdropFilter: 'blur(10px)',
+                                WebkitBackdropFilter: 'blur(10px)',
+                                borderRadius: '16px',
+                                border: '1px dashed rgba(245, 158, 11, 0.45)',
                                 display: 'flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                marginBottom: '0.85rem',
-                                boxShadow: '0 0 20px rgba(239, 68, 68, 0.3)'
+                                padding: '1.5rem',
+                                textAlign: 'center',
+                                zIndex: 10,
+                                boxSizing: 'border-box'
                               }}>
-                                <FiLock size={26} color="#ef4444" />
-                              </div>
-
-                              <div style={{
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: '0.78rem',
-                                color: '#ef4444',
-                                letterSpacing: '0.18em',
-                                fontWeight: 'bold',
-                                marginBottom: '0.35rem'
-                              }}>
-                                ACCESS RESTRICTED // PASS LOCKED
-                              </div>
-
-                              <h4 style={{
-                                fontFamily: 'var(--font-akira)',
-                                fontSize: '1.15rem',
-                                color: '#ffffff',
-                                margin: '0 0 0.45rem 0',
-                                letterSpacing: '0.04em'
-                              }}>
-                                EVENT REGISTRATION REQUIRED
-                              </h4>
-
-                              <p style={{
-                                color: '#94a3b8',
-                                fontSize: '0.86rem',
-                                maxWidth: '420px',
-                                lineHeight: 1.45,
-                                margin: '0 0 1.15rem 0'
-                              }}>
-                                You haven't registered for any events yet. Register for an event to unlock your official Delegate Pass, QR entry badge, and card download.
-                              </p>
-
-                              <button
-                                onClick={() => navigate('/register')}
-                                style={{
-                                  padding: '0.7rem 1.6rem',
-                                  background: '#ffffff',
-                                  color: '#000000',
-                                  border: 'none',
-                                  borderRadius: '10px',
-                                  fontWeight: 'bold',
-                                  fontSize: '0.88rem',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.5rem',
-                                  boxShadow: '0 4px 14px rgba(255, 255, 255, 0.2)'
-                                }}
-                              >
-                                Browse Events & Register Now →
-                              </button>
-                            </div>
-                          ) : !isVerified ? (
-                            <div style={{
-                              position: 'absolute',
-                              inset: 0,
-                              width: '100%',
-                              height: '100%',
-                              minHeight: '280px',
-                              background: 'rgba(5, 8, 16, 0.88)',
-                              backdropFilter: 'blur(10px)',
-                              WebkitBackdropFilter: 'blur(10px)',
-                              borderRadius: '16px',
-                              border: '1px dashed rgba(245, 158, 11, 0.45)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '1.5rem',
-                              textAlign: 'center',
-                              zIndex: 10,
-                              boxSizing: 'border-box',
-                              boxShadow: '0 0 35px rgba(245, 158, 11, 0.2)'
-                            }}>
-                              <div style={{
-                                width: '52px',
-                                height: '52px',
-                                borderRadius: '50%',
-                                background: 'rgba(245, 158, 11, 0.15)',
-                                border: '1px solid rgba(245, 158, 11, 0.5)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: '0.85rem',
-                                boxShadow: '0 0 20px rgba(245, 158, 11, 0.3)'
-                              }}>
-                                <FiLock size={26} color="#f59e0b" />
-                              </div>
-
-                              <div style={{
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: '0.78rem',
-                                color: '#f59e0b',
-                                letterSpacing: '0.18em',
-                                fontWeight: 'bold',
-                                marginBottom: '0.35rem'
-                              }}>
-                                PAYMENT VERIFICATION PENDING // PASS LOCKED
-                              </div>
-
-                              <h4 style={{
-                                fontFamily: 'var(--font-akira)',
-                                fontSize: '1.15rem',
-                                color: '#ffffff',
-                                margin: '0 0 0.45rem 0',
-                                letterSpacing: '0.04em'
-                              }}>
-                                PAYMENT PENDING APPROVAL
-                              </h4>
-
-                              <p style={{
-                                color: '#94a3b8',
-                                fontSize: '0.86rem',
-                                maxWidth: '440px',
-                                lineHeight: 1.45,
-                                margin: '0 0 1.15rem 0'
-                              }}>
-                                Your registration details have been submitted and are awaiting coordinator verification. Once your payment reference is verified, your official entry pass and download will unlock automatically.
-                              </p>
-                            </div>
-                          ) : null}
-                        </div>
-
-                        {/* Send Pass & Download Actions */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1.25rem', gap: '0.75rem' }}>
-                          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                            {isTicketTorn && (
-                              <button
-                                onClick={() => setIsTicketTorn(false)}
-                                title="Re-attach Pass Stub"
-                                style={{
-                                  padding: '0.7rem 1.4rem',
-                                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                                  color: '#38bdf8',
-                                  border: '1px solid rgba(56, 189, 248, 0.45)',
-                                  borderRadius: '12px',
-                                  fontWeight: '600',
-                                  fontSize: '0.88rem',
-                                  cursor: 'pointer',
+                                <div style={{
+                                  width: '48px',
+                                  height: '48px',
+                                  borderRadius: '50%',
+                                  background: 'rgba(245, 158, 11, 0.15)',
+                                  border: '1px solid rgba(245, 158, 11, 0.5)',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '0.5rem',
-                                  transition: 'all 0.2s',
-                                  boxShadow: '0 0 16px rgba(56, 189, 248, 0.25)'
-                                }}
-                              >
-                                <FiRotateCcw /> Re-attach Stub
-                              </button>
-                            )}
+                                  justifyContent: 'center',
+                                  marginBottom: '0.75rem'
+                                }}>
+                                  <FiLock size={22} color="#f59e0b" />
+                                </div>
+
+                                <div style={{
+                                  fontFamily: 'var(--font-mono)',
+                                  fontSize: '0.75rem',
+                                  color: '#f59e0b',
+                                  letterSpacing: '0.16em',
+                                  fontWeight: 'bold',
+                                  marginBottom: '0.35rem'
+                                }}>
+                                  PAYMENT VERIFICATION PENDING
+                                </div>
+
+                                <h4 style={{
+                                  fontFamily: 'var(--font-akira)',
+                                  fontSize: '1.1rem',
+                                  color: '#ffffff',
+                                  margin: '0 0 0.45rem 0'
+                                }}>
+                                  PAYMENT PENDING APPROVAL
+                                </h4>
+
+                                <p style={{
+                                  color: '#94a3b8',
+                                  fontSize: '0.85rem',
+                                  maxWidth: '420px',
+                                  lineHeight: 1.45,
+                                  margin: 0
+                                }}>
+                                  Your registration is awaiting coordinator approval. Once verified, your entry pass unlocks automatically.
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {/* Action Buttons Below Pass: Download Pass (PNG), Send to Email, Send to WhatsApp */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1.5rem',
+                            marginTop: '1.5rem',
+                            flexWrap: 'wrap'
+                          }}>
+                            <button
+                              onClick={handleDownloadPassPng}
+                              disabled={!hasRegistered || downloadingPass}
+                              style={{
+                                padding: '0.65rem 1.35rem',
+                                backgroundColor: '#ffffff',
+                                color: '#000000',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontWeight: '600',
+                                fontSize: '0.88rem',
+                                cursor: (!hasRegistered || downloadingPass) ? 'not-allowed' : 'pointer',
+                                opacity: (!hasRegistered || downloadingPass) ? 0.6 : 1,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.55rem',
+                                boxShadow: '0 2px 10px rgba(255, 255, 255, 0.15)',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <FiDownload size={16} />
+                              <span>{downloadingPass ? 'Exporting PNG...' : 'Download Pass (PNG)'}</span>
+                            </button>
 
                             <button
                               onClick={handleEmailPassToUser}
                               disabled={!hasRegistered || emailingPass}
-                              title={!hasRegistered ? 'Pass is locked. Register for an event first.' : 'Send Entry Pass to My Email'}
                               style={{
-                                padding: '0.7rem 1.4rem',
-                                backgroundColor: !hasRegistered ? 'rgba(56, 189, 248, 0.04)' : 'rgba(56, 189, 248, 0.1)',
-                                color: !hasRegistered ? '#64748b' : '#38bdf8',
-                                border: !hasRegistered ? '1px solid #334155' : '1px solid rgba(56, 189, 248, 0.35)',
-                                borderRadius: '12px',
-                                fontWeight: '600',
+                                background: 'none',
+                                border: 'none',
+                                color: '#cbd5e1',
                                 fontSize: '0.88rem',
-                                opacity: !hasRegistered ? 0.45 : 1,
-                                cursor: !hasRegistered ? 'not-allowed' : emailingPass ? 'wait' : 'pointer',
-                                display: 'flex',
+                                fontWeight: '500',
+                                cursor: (!hasRegistered || emailingPass) ? 'not-allowed' : 'pointer',
+                                opacity: (!hasRegistered || emailingPass) ? 0.5 : 1,
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '0.5rem',
-                                transition: 'all 0.2s',
-                                backdropFilter: 'blur(8px)'
+                                gap: '0.55rem',
+                                padding: '0.5rem 0',
+                                transition: 'color 0.2s ease'
                               }}
+                              onMouseOver={e => e.currentTarget.style.color = '#ffffff'}
+                              onMouseOut={e => e.currentTarget.style.color = '#cbd5e1'}
                             >
-                              <FiMail /> {emailingPass ? 'Generating & Sending...' : 'Send Entry Pass to My Email'}
+                              <FiMail size={16} color="#38bdf8" />
+                              <span>{emailingPass ? 'Sending...' : 'Send to Email'}</span>
                             </button>
 
                             <button
                               onClick={handleSendWhatsAppToUser}
                               disabled={!hasRegistered || sendingWhatsApp}
-                              title={!hasRegistered ? 'Pass is locked. Register for an event first.' : 'Send Official Pass & QR directly to my WhatsApp'}
                               style={{
-                                padding: '0.7rem 1.4rem',
-                                backgroundColor: !hasRegistered ? 'rgba(37, 211, 102, 0.04)' : 'rgba(37, 211, 102, 0.12)',
-                                color: !hasRegistered ? '#64748b' : '#4ade80',
-                                border: !hasRegistered ? '1px solid #334155' : '1px solid rgba(37, 211, 102, 0.35)',
-                                borderRadius: '12px',
-                                fontWeight: '600',
+                                background: 'none',
+                                border: 'none',
+                                color: '#cbd5e1',
                                 fontSize: '0.88rem',
-                                opacity: !hasRegistered ? 0.45 : 1,
-                                cursor: !hasRegistered ? 'not-allowed' : sendingWhatsApp ? 'wait' : 'pointer',
-                                display: 'flex',
+                                fontWeight: '500',
+                                cursor: (!hasRegistered || sendingWhatsApp) ? 'not-allowed' : 'pointer',
+                                opacity: (!hasRegistered || sendingWhatsApp) ? 0.5 : 1,
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '0.5rem',
-                                transition: 'all 0.2s',
-                                backdropFilter: 'blur(8px)'
+                                gap: '0.55rem',
+                                padding: '0.5rem 0',
+                                transition: 'color 0.2s ease'
                               }}
+                              onMouseOver={e => e.currentTarget.style.color = '#ffffff'}
+                              onMouseOut={e => e.currentTarget.style.color = '#cbd5e1'}
                             >
-                              <FiPhone /> {sendingWhatsApp ? 'Dispatching to WhatsApp...' : (hasSentWhatsApp ? 'Send Again to WhatsApp' : 'Send Pass to WhatsApp')}
+                              <FaWhatsapp size={17} color="#25D366" />
+                              <span>{sendingWhatsApp ? 'Sending...' : (hasSentWhatsApp ? 'Send Again to WhatsApp' : 'Send to WhatsApp')}</span>
                             </button>
 
-                            <button
-                              onClick={handleDownloadPassPng}
-                              disabled={!hasRegistered || downloadingPass}
-                              title={!hasRegistered ? 'Pass is locked. Register for an event first.' : 'Download Pass (PNG)'}
-                              style={{
-                                padding: '0.7rem 1.4rem',
-                                backgroundColor: !hasRegistered ? '#334155' : '#fff',
-                                color: !hasRegistered ? '#94a3b8' : '#000',
-                                border: 'none',
-                                borderRadius: '12px',
-                                fontWeight: '700',
-                                fontSize: '0.88rem',
-                                opacity: !hasRegistered ? 0.45 : 1,
-                                cursor: !hasRegistered ? 'not-allowed' : downloadingPass ? 'wait' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                transition: 'all 0.2s',
-                                boxShadow: !hasRegistered ? 'none' : '0 4px 14px rgba(255,255,255,0.2)'
-                              }}
-                            >
-                              <FiDownload /> {downloadingPass ? 'Exporting PNG...' : 'Download Pass (PNG)'}
-                            </button>
+                            {isTicketTorn && (
+                              <button
+                                onClick={() => setIsTicketTorn(false)}
+                                style={{
+                                  background: 'none',
+                                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                                  color: '#38bdf8',
+                                  fontSize: '0.85rem',
+                                  fontWeight: '500',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.45rem',
+                                  padding: '0.45rem 0.9rem',
+                                  borderRadius: '8px'
+                                }}
+                              >
+                                <FiRotateCcw size={14} /> Re-attach Stub
+                              </button>
+                            )}
                           </div>
 
-                          {!hasRegistered && (
-                            <span style={{ fontSize: '0.82rem', color: '#f87171', display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
-                              <FiLock size={13} /> Pass locked — Register for an event to unlock email &amp; PNG download.
-                            </span>
-                          )}
-
+                          {/* Message indicators */}
                           {emailPassMsg && (
-                            <span style={{
+                            <div style={{
+                              marginTop: '0.75rem',
                               fontSize: '0.85rem',
                               color: emailPassMsg.type === 'success' ? '#10b981' : '#ef4444',
-                              fontWeight: '600'
+                              fontWeight: '500'
                             }}>
                               {emailPassMsg.text}
-                            </span>
+                            </div>
                           )}
 
                           {whatsAppPassMsg && (
                             <div style={{
+                              marginTop: '0.75rem',
                               fontSize: '0.85rem',
                               color: whatsAppPassMsg.type === 'success' ? '#4ade80' : '#ef4444',
-                              fontWeight: '600',
+                              fontWeight: '500',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.45rem',
-                              flexWrap: 'wrap'
+                              gap: '0.45rem'
                             }}>
                               {whatsAppPassMsg.type === 'success' ? <FiCheckCircle size={14} /> : <FiAlertCircle size={14} />}
                               <span>{whatsAppPassMsg.text}</span>
@@ -1701,160 +1876,237 @@ See you at *SRISHTI 2.7*! 🚀`;
                             </div>
                           )}
                         </div>
-                      </div>
-                    );
-                  })()}
+                      );
+                    })()}
+                  </div>
                 </div>
 
-                {/* Events List */}
-                <div style={{ flex: '1 1 100%', marginTop: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                      <FiCalendar style={{ color: '#38bdf8' }} size={18} />
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>
-                        Registered Competitions
-                      </h3>
-                      {registrations.length > 0 && (
-                        <span style={{
-                          fontFamily: 'var(--font-mono, monospace)',
-                          fontSize: '0.72rem',
-                          color: '#38bdf8',
-                          background: 'rgba(56, 189, 248, 0.08)',
-                          padding: '0.15rem 0.55rem',
-                          borderRadius: '6px',
-                          border: '1px solid rgba(56, 189, 248, 0.25)',
-                          letterSpacing: '0.06em'
-                        }}>
-                          {registrations.length} ENROLLED
-                        </span>
-                      )}
+                {/* Bottom Section: Registered Competitions */}
+                <div style={{ marginTop: '4.5rem' }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '1.25rem',
+                    flexWrap: 'wrap',
+                    gap: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#ffffff', fontSize: '1.15rem', fontWeight: '600' }}>
+                      <FiCalendar size={18} />
+                      <span>Registered Competitions</span>
                     </div>
-                    <button
-                      onClick={async () => {
-                        const em = session?.user?.email || localStorage.getItem('srishti_session');
-                        if (em) {
-                          setLoading(true);
-                          setError(null);
-                          try {
-                            await fetchUserData(em);
-                            setMessage('Profile and tickets refreshed from the database.');
-                          } catch (err) {
-                            setError(err.message || 'Could not refresh your profile.');
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                      <span style={{
+                        fontFamily: 'var(--font-mono, monospace)',
+                        fontSize: '0.8rem',
+                        color: '#71717a',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase'
+                      }}>
+                        {registrations.length} REGISTERED
+                      </span>
+
+                      <button
+                        onClick={async () => {
+                          const em = session?.user?.email || localStorage.getItem('srishti_session');
+                          if (em) {
+                            setLoading(true);
+                            setError(null);
+                            try {
+                              await fetchUserData(em);
+                              setMessage('Refreshed registrations.');
+                            } catch (err) {
+                              setError(err.message || 'Could not refresh registrations.');
+                            }
+                            setLoading(false);
                           }
-                          setLoading(false);
-                        }
-                      }}
-                      title="Refresh profile and tickets from the database"
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: '8px',
-                        color: '#cbd5e1',
-                        fontSize: '0.82rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}
-                    >
-                      <FiRotateCcw size={14} /> Refresh Tickets
-                    </button>
+                        }}
+                        title="Refresh registrations"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#38bdf8',
+                          fontSize: '0.88rem',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          padding: 0
+                        }}
+                      >
+                        <FiRefreshCw size={14} />
+                        <span>Refresh</span>
+                      </button>
+                    </div>
                   </div>
 
                   {registrations.length === 0 ? (
-                    <div style={{ padding: '4rem 2rem', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', textAlign: 'center' }}>
-                      <FiCalendar size={48} color="#444" style={{ marginBottom: '1.5rem' }} />
-                      <h2 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>No Tickets Yet</h2>
-                      <p style={{ color: '#888', fontSize: '1.05rem', marginBottom: '2rem' }}>You haven't registered for any events yet or your registration is syncing.</p>
-                      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => navigate('/register')}
-                          style={{ padding: '0.9rem 1.8rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
-                        >
-                          Explore Events
-                        </button>
-                        <button
-                          onClick={async () => {
-                            const em = session?.user?.email || localStorage.getItem('srishti_session');
-                            if (em) {
-                              setLoading(true);
-                              await fetchUserData(em);
-                              setLoading(false);
-                            }
-                          }}
-                          style={{ padding: '0.9rem 1.8rem', backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid #333', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                        >
-                          <FiRotateCcw size={16} /> Reload Saved Tickets
-                        </button>
-                      </div>
+                    <div style={{
+                      padding: '3.5rem 2rem',
+                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      textAlign: 'center'
+                    }}>
+                      <FiCalendar size={42} color="#52525b" style={{ marginBottom: '1rem' }} />
+                      <h3 style={{ fontSize: '1.35rem', marginBottom: '0.4rem', fontWeight: '700', color: '#fff' }}>No Registered Competitions Yet</h3>
+                      <p style={{ color: '#71717a', fontSize: '0.95rem', marginBottom: '1.75rem', maxWidth: '440px', margin: '0 auto 1.75rem' }}>
+                        You haven't enrolled in any competitions yet. Explore our events and register to unlock your pass.
+                      </p>
+                      <button
+                        onClick={() => navigate('/register')}
+                        style={{
+                          padding: '0.75rem 1.6rem',
+                          backgroundColor: '#ffffff',
+                          color: '#000000',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          boxShadow: '0 4px 14px rgba(255, 255, 255, 0.15)'
+                        }}
+                      >
+                        Browse Events & Register
+                      </button>
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       {registrations.map(reg => {
                         const isVerified = reg.payment_status === 'verified' || reg.status === 'verified';
-                        const isGateChecked = Boolean(arrivalCheckin);
-                        const isRoomChecked = Boolean(eventAttendance[reg.event_id]);
-                        const codeVal = participantData?.participant_code || reg.participant_code || reg.registration_code || reg.id?.substring(0, 8) || 'PASS';
-                        const eventName = reg.events?.name || reg.event_name || reg.event_id;
-                        const eventCategory = reg.events?.category || 'COMPETITION';
-                        const venueName = reg.events?.venue || 'Campus Venue';
-                        const eventDate = reg.events?.date || 'Dec 2026';
-                        const eventTime = reg.events?.start_time ? reg.events.start_time.substring(0, 5) : '10:00';
+                        const eventName = reg.events?.name || reg.event_name || reg.event_id || 'Coding and Debugging';
+                        const venueName = reg.events?.venue || 'Computer Lab';
 
-                        // Curated category badge pills matching the Ethan Harrison design
-                        const badges = [
-                          eventCategory.toUpperCase(),
-                          reg.team_size > 1 ? `TEAM (${reg.team_size} PAX)` : 'SOLO',
-                          isVerified ? 'VERIFIED' : 'PENDING'
-                        ];
+                        // Format date (e.g. 12 Dec 2026)
+                        let eventDate = reg.events?.date || '12 Dec 2026';
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
+                          try {
+                            const d = new Date(eventDate + 'T00:00:00');
+                            eventDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                          } catch (_) {}
+                        }
 
-                        // 3-Column Telemetry stats (Rating / Earned / Rate equivalent)
-                        const stats = [
-                          {
-                            value: isVerified ? '✓ PASS' : '⏳ PENDING',
-                            label: 'Status'
-                          },
-                          {
-                            value: isGateChecked ? 'IN' : 'WAIT',
-                            label: 'Gate'
-                          },
-                          {
-                            value: isRoomChecked ? 'HERE' : 'CALL',
-                            label: 'Venue'
+                        // Format time (e.g. 10:00 AM)
+                        let eventTime = '10:00 AM';
+                        if (reg.events?.start_time) {
+                          const t = reg.events.start_time.substring(0, 5);
+                          const [hh, mm] = t.split(':');
+                          const hNum = parseInt(hh, 10);
+                          if (!isNaN(hNum)) {
+                            const ampm = hNum >= 12 ? 'PM' : 'AM';
+                            const h12 = hNum % 12 || 12;
+                            eventTime = `${h12}:${mm} ${ampm}`;
+                          } else {
+                            eventTime = t;
                           }
-                        ];
+                        }
 
-                        const avatarImg = reg.events?.image || 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=600&auto=format&fit=crop';
+                        const avatarImg = reg.events?.image || 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop';
 
                         return (
-                          <ProfileCard
-                            key={reg.id}
-                            name={eventName}
-                            title={`${venueName} · ${eventDate} @ ${eventTime}`}
-                            avatarUrl={avatarImg}
-                            badges={badges}
-                            stats={stats}
-                            actionText={`Pass: ${codeVal}`}
-                            onActionClick={() => {
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                          <div
+                            key={reg.id || eventName}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '1.25rem 1.6rem',
+                              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                              border: '1px solid rgba(255, 255, 255, 0.06)',
+                              borderRadius: '14px',
+                              transition: 'all 0.2s ease',
+                              gap: '1rem'
                             }}
-                            onShareClick={() => {
-                              if (navigator.share) {
-                                navigator.share({
-                                  title: `Srishti 2.7 - ${eventName}`,
-                                  text: `I'm registered for ${eventName} at Srishti 2.7! Code: ${codeVal}`,
-                                  url: window.location.href
-                                }).catch(() => {});
-                              } else {
-                                navigator.clipboard?.writeText?.(codeVal);
-                                alert(`Copied Participant Code: ${codeVal}`);
-                              }
+                            onMouseOver={e => {
+                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.035)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
                             }}
-                            behindGlowColor={isVerified ? 'rgba(56, 189, 248, 0.4)' : 'rgba(234, 179, 8, 0.4)'}
-                            behindGlowSize="40%"
-                            innerGradient="linear-gradient(155deg, rgba(24, 25, 32, 0.95) 0%, rgba(13, 14, 18, 0.98) 100%)"
-                          />
+                            onMouseOut={e => {
+                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)';
+                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                            }}
+                          >
+                            {/* Left Info with Round Image */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: 0 }}>
+                              <img
+                                src={avatarImg}
+                                alt={eventName}
+                                style={{
+                                  width: '54px',
+                                  height: '54px',
+                                  borderRadius: '50%',
+                                  objectFit: 'cover',
+                                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                                  flexShrink: 0
+                                }}
+                                onError={e => {
+                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=900&auto=format&fit=crop';
+                                }}
+                              />
+                              <div style={{ minWidth: 0 }}>
+                                <h4 style={{
+                                  color: '#ffffff',
+                                  fontSize: '1.15rem',
+                                  fontWeight: '700',
+                                  margin: '0 0 0.35rem 0',
+                                  letterSpacing: '-0.01em',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}>
+                                  {eventName}
+                                </h4>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', color: '#71717a', fontSize: '0.85rem' }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <FiCalendar size={13} /> {eventDate}
+                                  </span>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <FiClock size={13} /> {eventTime}
+                                  </span>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <FiMapPin size={13} /> {venueName}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right Status Pill & Chevron */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexShrink: 0 }}>
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.45rem',
+                                padding: '0.45rem 1.15rem',
+                                borderRadius: '9999px',
+                                background: isVerified ? 'rgba(6, 182, 212, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                                border: isVerified ? '1px solid rgba(6, 182, 212, 0.35)' : '1px solid rgba(245, 158, 11, 0.35)',
+                                color: isVerified ? '#38bdf8' : '#f59e0b',
+                                fontSize: '0.85rem',
+                                fontWeight: '600'
+                              }}>
+                                <span style={{
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '50%',
+                                  background: isVerified ? '#06b6d4' : '#f59e0b',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#000',
+                                  flexShrink: 0
+                                }}>
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                  </svg>
+                                </span>
+                                <span>{isVerified ? 'Registered' : 'Pending'}</span>
+                              </div>
+
+                              <FiChevronRight size={18} color="#71717a" />
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
