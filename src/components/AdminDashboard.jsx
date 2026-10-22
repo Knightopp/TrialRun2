@@ -6,7 +6,8 @@ import {
   FiCalendar, FiCheckCircle, FiClock, FiSearch, FiEdit2, FiPlus, 
   FiTrash2, FiDownload, FiEye, FiRefreshCw, FiShield, 
   FiCheck, FiX, FiActivity, FiPhone, FiMail, FiBookOpen, 
-  FiAlertCircle, FiLayers, FiUserCheck, FiAward, FiMapPin, FiLock
+  FiAlertCircle, FiLayers, FiUserCheck, FiAward, FiMapPin, FiLock,
+  FiStar, FiUploadCloud, FiExternalLink
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { generateCardImagePng } from '../utils/cardImageGenerator';
@@ -15,6 +16,7 @@ import SafeVisual from './SafeVisual';
 import AdminAnalytics from './AdminAnalytics';
 import { getAuditLogs, clearAuditLogs, exportLogsAsCsv, exportLogsAsJson, logActivity, parseLocationTelemetryPayload } from '../utils/auditLogger';
 import { getEventCoordinators, saveEventCoordinators } from '../utils/eventCoordinators';
+import { fetchSponsors, addSponsorToStore, deleteSponsorFromStore } from '../utils/sponsorsConfig';
 import './AdminDashboard.css';
 
 // Official SRISHTI 2.7 Database Events Catalog
@@ -65,6 +67,16 @@ export default function AdminDashboard() {
   const [arrivalCheckins, setArrivalCheckins] = useState([]);
   const [eventAttendance, setEventAttendance] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(false);
+
+  // Sponsors Management State
+  const [sponsorsList, setSponsorsList] = useState([]);
+  const [isSponsorModalOpen, setIsSponsorModalOpen] = useState(false);
+  const [sponsorName, setSponsorName] = useState('');
+  const [sponsorTier, setSponsorTier] = useState('Platinum Sponsor');
+  const [sponsorLogo, setSponsorLogo] = useState('');
+  const [sponsorWebsite, setSponsorWebsite] = useState('');
+  const [sponsorUploadError, setSponsorUploadError] = useState('');
+  const [isSponsorSubmitting, setIsSponsorSubmitting] = useState(false);
 
   // Search & filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -410,6 +422,12 @@ See you at *SRISHTI 2.7*! 🚀`;
       try {
         const logs = await getAuditLogs();
         if (logs) setAuditLogs(logs);
+      } catch (_) {}
+
+      // 9. Fetch Sponsors
+      try {
+        const spData = await fetchSponsors();
+        if (spData) setSponsorsList(spData);
       } catch (_) {}
 
     } catch (err) {
@@ -1484,6 +1502,63 @@ See you at *SRISHTI 2.7*! 🚀`;
     }
   };
 
+  // Sponsor management actions
+  const handleLogoFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      setSponsorUploadError('Image size exceeds 3MB. Please choose a smaller image.');
+      return;
+    }
+    setSponsorUploadError('');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSponsorLogo(event.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCreateSponsor = async (e) => {
+    e.preventDefault();
+    if (!sponsorName.trim() || !sponsorLogo.trim()) {
+      showToast('Please provide both sponsor name and logo.', 'error');
+      return;
+    }
+    setIsSponsorSubmitting(true);
+    try {
+      await addSponsorToStore({
+        name: sponsorName.trim(),
+        tier: sponsorTier,
+        logo: sponsorLogo,
+        website: sponsorWebsite.trim() || '#'
+      });
+      const refreshed = await fetchSponsors();
+      setSponsorsList(refreshed);
+      setIsSponsorModalOpen(false);
+      setSponsorName('');
+      setSponsorLogo('');
+      setSponsorWebsite('');
+      setSponsorTier('Platinum Sponsor');
+      showToast(`Sponsor "${sponsorName}" added successfully!`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to add sponsor', 'error');
+    } finally {
+      setIsSponsorSubmitting(false);
+    }
+  };
+
+  const handleDeleteSponsor = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to remove sponsor "${name}"?`)) return;
+    try {
+      await deleteSponsorFromStore(id);
+      const refreshed = await fetchSponsors();
+      setSponsorsList(refreshed);
+      showToast(`Sponsor "${name}" removed.`, 'info');
+    } catch (err) {
+      showToast(err.message || 'Failed to remove sponsor', 'error');
+    }
+  };
+
   // Filtered participants
   const filteredParticipants = useMemo(() => {
     return participants.filter(p => {
@@ -1887,6 +1962,18 @@ See you at *SRISHTI 2.7*! 🚀`;
                 <FiMapPin />
                 <span>Audit & Location Logs</span>
                 <span className="admin-tab-counter">{auditLogs.length}</span>
+              </button>
+            )}
+
+            {/* Sponsors Manager (Admin only) */}
+            {adminRole === 'admin' && (
+              <button
+                onClick={() => { setActiveTab('sponsors'); setSearchQuery(''); }}
+                className={`admin-tab-item ${activeTab === 'sponsors' ? 'active' : ''}`}
+              >
+                <FiStar />
+                <span>Sponsors</span>
+                <span className="admin-tab-counter">{sponsorsList.length}</span>
               </button>
             )}
           </nav>
@@ -4243,6 +4330,200 @@ See you at *SRISHTI 2.7*! 🚀`;
             })()}
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* TAB: SPONSORS MANAGEMENT */}
+        {/* ========================================================================= */}
+        {activeTab === 'sponsors' && (
+          <div className="admin-tab-pane">
+            <div className="admin-action-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <FiStar style={{ color: '#00f2fe' }} /> Festival Sponsors & Partners
+                </h2>
+                <p style={{ margin: '0.35rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
+                  Manage logos displayed in the moving marquee on top of the gallery section.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const sp = await fetchSponsors();
+                    setSponsorsList(sp);
+                    showToast('Sponsors re-synced', 'info');
+                  }}
+                  className="admin-btn admin-btn-secondary"
+                  title="Reload sponsors list"
+                >
+                  <FiRefreshCw /> Refresh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSponsorName('');
+                    setSponsorLogo('');
+                    setSponsorWebsite('');
+                    setSponsorTier('Platinum Sponsor');
+                    setSponsorUploadError('');
+                    setIsSponsorModalOpen(true);
+                  }}
+                  className="admin-btn admin-btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <FiPlus /> Add Sponsor
+                </button>
+              </div>
+            </div>
+
+            {/* Sponsors Grid */}
+            {sponsorsList.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '4rem 1.5rem',
+                background: '#121217',
+                borderRadius: '16px',
+                border: '1px dashed rgba(255, 255, 255, 0.15)'
+              }}>
+                <FiStar size={44} style={{ color: '#38bdf8', marginBottom: '1rem', opacity: 0.7 }} />
+                <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '0.5rem' }}>No Sponsors Added Yet</h3>
+                <p style={{ color: '#94a3b8', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto 1.5rem' }}>
+                  Upload partner and sponsor logos to display them across the moving sponsor marquee above the gallery.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsSponsorModalOpen(true)}
+                  className="admin-btn admin-btn-primary"
+                >
+                  <FiPlus /> Add First Sponsor
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '1.25rem'
+              }}>
+                {sponsorsList.map((sponsor) => (
+                  <div
+                    key={sponsor.id}
+                    style={{
+                      background: 'linear-gradient(145deg, rgba(18, 18, 24, 0.95), rgba(12, 12, 16, 0.95))',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '16px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      position: 'relative',
+                      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                    }}
+                  >
+                    <div>
+                      {/* Logo Preview Box */}
+                      <div style={{
+                        height: '90px',
+                        width: '100%',
+                        background: '#0a0a0d',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.75rem',
+                        marginBottom: '1rem',
+                        overflow: 'hidden'
+                      }}>
+                        <img
+                          src={sponsor.logo}
+                          alt={sponsor.name}
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain'
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+
+                      {/* Tier Badge */}
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          color: '#00f2fe',
+                          background: 'rgba(0, 242, 254, 0.1)',
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(0, 242, 254, 0.25)'
+                        }}>
+                          {sponsor.tier || 'Sponsor'}
+                        </span>
+                      </div>
+
+                      {/* Sponsor Name */}
+                      <h4 style={{
+                        fontSize: '1.05rem',
+                        fontWeight: 700,
+                        color: '#fff',
+                        margin: '0 0 0.4rem 0'
+                      }}>
+                        {sponsor.name}
+                      </h4>
+
+                      {/* Website link */}
+                      {sponsor.website && sponsor.website !== '#' ? (
+                        <a
+                          href={sponsor.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            color: '#38bdf8',
+                            fontSize: '0.8rem',
+                            textDecoration: 'none',
+                            marginBottom: '1rem'
+                          }}
+                        >
+                          Visit Website <FiExternalLink size={12} />
+                        </a>
+                      ) : (
+                        <span style={{ display: 'block', color: '#64748b', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                          No link attached
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Card Actions */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                      paddingTop: '0.75rem'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSponsor(sponsor.id, sponsor.name)}
+                        className="admin-btn admin-btn-sm admin-btn-danger"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                      >
+                        <FiTrash2 size={13} /> Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* ========================================================================= */}
@@ -5550,6 +5831,187 @@ See you at *SRISHTI 2.7*! 🚀`;
                   }}
                 >
                   {isResetting ? 'Zeroing Out Data...' : 'RESET ALL DATA TO ZERO'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add Festival Sponsor */}
+      {isSponsorModalOpen && (
+        <div className="admin-modal-backdrop" onClick={() => setIsSponsorModalOpen(false)}>
+          <div className="admin-modal-card" style={{ maxWidth: '540px' }} onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <FiStar style={{ color: '#00f2fe' }} />
+                <h3>Add Festival Sponsor</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSponsorModalOpen(false)}
+                className="admin-modal-close"
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSponsor} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', marginTop: '1.25rem' }}>
+              <div>
+                <label className="admin-form-label" style={{ display: 'block', marginBottom: '0.4rem', color: '#cbd5e1', fontSize: '0.85rem' }}>
+                  Sponsor / Partner Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Red Bull, Google Developer Groups, TechCorp"
+                  value={sponsorName}
+                  onChange={e => setSponsorName(e.target.value)}
+                  className="admin-form-input"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div>
+                <label className="admin-form-label" style={{ display: 'block', marginBottom: '0.4rem', color: '#cbd5e1', fontSize: '0.85rem' }}>
+                  Partnership Tier
+                </label>
+                <select
+                  value={sponsorTier}
+                  onChange={e => setSponsorTier(e.target.value)}
+                  className="admin-form-select"
+                  style={{ width: '100%' }}
+                >
+                  <option value="Title Sponsor">Title Sponsor</option>
+                  <option value="Powered By">Powered By</option>
+                  <option value="Platinum Sponsor">Platinum Sponsor</option>
+                  <option value="Gold Sponsor">Gold Sponsor</option>
+                  <option value="Silver Sponsor">Silver Sponsor</option>
+                  <option value="Associate Partner">Associate Partner</option>
+                  <option value="Media Partner">Media Partner</option>
+                  <option value="Community Partner">Community Partner</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="admin-form-label" style={{ display: 'block', marginBottom: '0.4rem', color: '#cbd5e1', fontSize: '0.85rem' }}>
+                  Upload Sponsor Logo Image *
+                </label>
+                
+                {/* File Upload Box */}
+                <div style={{
+                  border: '2px dashed rgba(255, 255, 255, 0.15)',
+                  borderRadius: '10px',
+                  padding: '1.25rem',
+                  textAlign: 'center',
+                  background: '#0d0d12',
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}>
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/svg+xml, image/webp"
+                    onChange={handleLogoFileUpload}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      opacity: 0,
+                      cursor: 'pointer',
+                      width: '100%',
+                      height: '100%'
+                    }}
+                  />
+                  <FiUploadCloud size={30} style={{ color: '#38bdf8', marginBottom: '0.5rem' }} />
+                  <p style={{ margin: 0, color: '#e2e8f0', fontSize: '0.9rem', fontWeight: 600 }}>
+                    Click or Drag & Drop logo image here
+                  </p>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>PNG, SVG, WEBP, or JPG (max 3MB)</span>
+                </div>
+
+                {sponsorUploadError && (
+                  <div style={{ color: '#f87171', fontSize: '0.8rem', marginTop: '0.4rem' }}>
+                    {sponsorUploadError}
+                  </div>
+                )}
+
+                {/* Or enter Image URL */}
+                <div style={{ marginTop: '0.75rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '0.3rem' }}>
+                    OR paste an image URL directly:
+                  </span>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/logo.png"
+                    value={sponsorLogo.startsWith('data:') ? '' : sponsorLogo}
+                    onChange={e => setSponsorLogo(e.target.value)}
+                    className="admin-form-input"
+                    style={{ width: '100%', fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                {/* Instant Logo Preview */}
+                {sponsorLogo && (
+                  <div style={{
+                    marginTop: '0.85rem',
+                    background: '#050508',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(0, 242, 254, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}>
+                    <div style={{
+                      width: '60px',
+                      height: '40px',
+                      background: '#1a1a24',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden'
+                    }}>
+                      <img src={sponsorLogo} alt="Preview" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                    </div>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <span style={{ color: '#4ade80', fontSize: '0.8rem', fontWeight: 600 }}>✓ Logo ready</span>
+                      <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.7rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        {sponsorLogo.startsWith('data:') ? 'Local file loaded (Base64)' : sponsorLogo}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="admin-form-label" style={{ display: 'block', marginBottom: '0.4rem', color: '#cbd5e1', fontSize: '0.85rem' }}>
+                  Sponsor Website Link (optional)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://sponsor.com"
+                  value={sponsorWebsite}
+                  onChange={e => setSponsorWebsite(e.target.value)}
+                  className="admin-form-input"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsSponsorModalOpen(false)}
+                  className="admin-btn admin-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSponsorSubmitting || !sponsorName || !sponsorLogo}
+                  className="admin-btn admin-btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  {isSponsorSubmitting ? 'Saving...' : 'Add Sponsor'}
                 </button>
               </div>
             </form>

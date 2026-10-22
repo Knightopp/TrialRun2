@@ -1,0 +1,169 @@
+.sponsors-marquee-section {
+  position: relative;
+  width: 100%;
+  padding: 4.5rem 0 3.5rem;
+  background: linear-gradient(180deg, rgba(5, 7, 12, 0.98) 0%, rgba(3, 4, 8, 1) 100%);
+  overflow: hidden;
+  z-index: 10;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sponsors-head-container {
+  max-width: 1200px;
+  margin: 0 auto 2.5rem;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.sponsors-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.76rem;
+  color: #38bdf8;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+.sponsors-line {
+  width: 32px;
+  height: 1px;
+  background: rgba(56, 189, 248, 0.5);
+}
+
+.sponsors-heading {
+  font-family: var(--font-akira, sans-serif);
+  font-size: 1.6rem;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  margin: 0;
+  text-transform: uppercase;
+  text-shadow: 0 2px 20px rgba(56, 189, 248, 0.2);
+}
+
+.marquee-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+  padding: 0.5rem 0;
+}
+
+.marquee-track {
+  display: flex;
+  gap: 1.5rem;
+  width: max-content;
+  animation: marqueeScroll 32s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.sponsor-card {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 0.85rem 1.4rem;
+  text-decoration: none;
+  min-width: 250px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.sponsor-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(56, 189, 248, 0.45);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+.sponsor-logo-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sponsor-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sponsor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sponsor-tier {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
+  color: #38bdf8;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.sponsor-name {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.sponsor-link-icon {
+  margin-left: auto;
+  color: #71717a;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.sponsor-card:hover .sponsor-link-icon {
+  color: #38bdf8;
+  transform: translate(2px, -2px);
+}
+
+@media (max-width: 640px) {
+  .sponsors-marquee-section {
+    padding: 3.5rem 0 2.5rem;
+  }
+  .sponsors-heading {
+    font-size: 1.25rem;
+  }
+  .sponsor-card {
+    min-width: 210px;
+    padding: 0.75rem 1.1rem;
+    gap: 0.85rem;
+  }
+  .sponsor-logo-box {
+    width: 38px;
+    height: 38px;
+  }
+  .sponsor-name {
+    font-size: 0.88rem;
+  }
+}

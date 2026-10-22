@@ -32,9 +32,12 @@ import CopperDashboard from './components/CopperDashboard';
 import CopperPrankEngine from './components/CopperPrankEngine';
 import { generateEntryPassEmailHtml } from './utils/entryPassEmail';
 import { generateCardImagePng } from './utils/cardImageGenerator';
-import { supabase } from './supabaseClient';
 import SpotlightTour from './components/SpotlightTour';
 import { getEventCoordinators } from './utils/eventCoordinators';
+import SponsorMarquee from './components/SponsorMarquee';
+import FAQSection from './components/FAQSection';
+import SrishtiFooter from './components/SrishtiFooter';
+import LegalModal from './components/LegalModal';
 import './App.css';
 
 // Official SRISHTI 2.7 Database Events Catalog
@@ -207,6 +210,14 @@ export default function App() {
   const isProfilePage = location.pathname.startsWith('/profile');
   const isAdminPage = location.pathname.startsWith('/admin');
   const isCopperPage = location.pathname.startsWith('/copper');
+
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalType, setLegalModalType] = useState('privacy'); // 'privacy' | 'terms' | 'conduct'
+
+  const handleOpenLegal = (type = 'privacy') => {
+    setLegalModalType(type);
+    setLegalModalOpen(true);
+  };
 
   // Dynamic event loading directly from Supabase events table
   const [liveEvents, setLiveEvents] = useState(FEST_EVENTS);
@@ -1334,6 +1345,9 @@ See you at *SRISHTI 2.7*! 🚀`;
         </section>
       )}
 
+      {/* SPONSORS MOVING MARQUEE — On top of Gallery */}
+      <SponsorMarquee />
+
       {/* 3. GALLERY SECTION — Moments of Srishti with PatternWaves Background */}
       <section 
         id="gallery" 
@@ -1414,26 +1428,14 @@ See you at *SRISHTI 2.7*! 🚀`;
         </div>
       </section>
 
-      {/* Supreme Srishti Footer with Logo & Credentials */}
-      <footer className="srishti-footer">
-        <div className="footer-brand-side">
-          <div className="footer-logo-lockup" onClick={() => navigateTo('main', 'home')}>
-            <img src="/assets/logo.png" alt="Srishti Logo" className="footer-logo-img" />
-            <div className="footer-brand-text">
-              <span className="footer-title">SRISHTI 2.7</span>
-              <span className="footer-subtitle">NATIONAL TECH-CULTURAL FESTIVAL</span>
-            </div>
-          </div>
-          <p className="footer-host">
-            ST. THOMAS COLLEGE (AUTONOMOUS), THRISSUR<br />
-            DEPARTMENT OF COMPUTER SCIENCE
-          </p>
-        </div>
-        <div className="footer-meta-side">
-          <span className="footer-edition">EDITION 2.7 • DEC 6 & 7</span>
-          <span className="footer-copy">© 2027 SRISHTI. ALL RIGHTS RESERVED.</span>
-        </div>
-      </footer>
+      {/* FAQ SECTION — Below Gallery */}
+      <FAQSection onRegisterClick={() => navigateTo('register', 'register')} />
+
+      {/* Redesigned Srishti Footer */}
+      <SrishtiFooter 
+        onNavigate={navigateTo}
+        onOpenLegal={handleOpenLegal}
+      />
 
     </div>
   );
@@ -2966,6 +2968,13 @@ See you at *SRISHTI 2.7*! 🚀`;
         onNavigateToExperience={() => { setActiveTourStep(null); navigateTo('main', 'gallery'); }}
         onNavigateToEvents={() => { setActiveTourStep(null); navigate('/register/'); }}
         onNavigateToProfile={() => { setActiveTourStep(null); navigate('/profile'); }}
+      />
+
+      {/* Legal & Policy Modal */}
+      <LegalModal 
+        isOpen={legalModalOpen} 
+        onClose={() => setLegalModalOpen(false)} 
+        type={legalModalType} 
       />
     </>
   );
