@@ -38,6 +38,7 @@ import SponsorMarquee from './components/SponsorMarquee';
 import FAQSection from './components/FAQSection';
 import SrishtiFooter from './components/SrishtiFooter';
 import LegalModal from './components/LegalModal';
+import SrishtiNoticeModal from './components/SrishtiNoticeModal';
 import './App.css';
 
 // Official SRISHTI 2.7 Database Events Catalog
@@ -218,6 +219,71 @@ export default function App() {
     setLegalModalType(type);
     setLegalModalOpen(true);
   };
+
+  // Modern In-App Srishti Notice/Alert Dialog System (Replaces native browser alerts)
+  const [appNotice, setAppNotice] = useState(null);
+
+  const showNotice = useCallback(({ title, message, type = 'info', actionText, onAction, dismissText = 'Got It' }) => {
+    setAppNotice({
+      title,
+      message,
+      type,
+      actionText,
+      onAction,
+      dismissText
+    });
+  }, []);
+
+  const closeNotice = useCallback(() => {
+    setAppNotice(null);
+  }, []);
+
+  // Globally intercept window.alert so even legacy or external handlers trigger the custom website dialog
+  useEffect(() => {
+    const originalAlert = window.alert;
+    window.alert = (msg) => {
+      const s = String(msg ?? '');
+      const sLower = s.toLowerCase();
+      let title = 'Festival Notice';
+      let type = 'info';
+      let actionText = null;
+      let onAction = null;
+
+      if (sLower.includes('already registered')) {
+        title = 'Already Registered';
+        type = 'info';
+        actionText = 'View My Pass';
+        onAction = () => navigate('/profile');
+      } else if (sLower.includes('closed')) {
+        title = 'Registrations Closed';
+        type = 'warning';
+        actionText = 'Check Profile';
+        onAction = () => navigate('/profile');
+      } else if (sLower.includes('error') || sLower.includes('failed') || sLower.includes('invalid')) {
+        title = 'Attention Required';
+        type = 'error';
+      } else if (sLower.includes('verify') || sLower.includes('required') || sLower.includes('pending')) {
+        title = 'Action Required';
+        type = 'warning';
+      } else if (sLower.includes('success') || sLower.includes('confirmed') || sLower.includes('approved')) {
+        title = 'Success';
+        type = 'success';
+      }
+
+      showNotice({
+        title,
+        message: s,
+        type,
+        actionText,
+        onAction,
+        dismissText: actionText ? 'Dismiss' : 'Got It'
+      });
+    };
+
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, [navigate, showNotice]);
 
   // Dynamic event loading directly from Supabase events table
   const [liveEvents, setLiveEvents] = useState(FEST_EVENTS);
@@ -849,18 +915,33 @@ export default function App() {
     if (activeEventData && isEventAlreadyRegistered(activeEventData)) {
       setIsRegistering(false);
       setFormStatus('idle');
-      alert(`You are already registered for ${activeEventData.label}! Duplicate registrations for the same event are not permitted.`);
+      showNotice({
+        title: 'Already Registered',
+        message: `You are already registered for ${activeEventData.label}! Duplicate registrations for the same event are not permitted.`,
+        type: 'info',
+        actionText: 'View My Pass',
+        onAction: () => navigate('/profile'),
+        dismissText: 'Close'
+      });
       return;
     }
 
     if (requiresPayment && (!utrNumber.trim() || utrNumber.trim().length < 6)) {
-      alert('Please enter a valid UTR / Transaction Reference ID before submitting.');
+      showNotice({
+        title: 'Payment Verification Required',
+        message: 'Please enter a valid UTR / Transaction Reference ID before submitting.',
+        type: 'warning'
+      });
       setFormStatus('idle');
       return;
     }
 
     if (!otpVerified) {
-      alert('Please verify your email with the 4-digit OTP before submitting registration.');
+      showNotice({
+        title: 'Email OTP Required',
+        message: 'Please verify your email with the 4-digit OTP before submitting registration.',
+        type: 'warning'
+      });
       setFormStatus('idle');
       return;
     }
@@ -896,7 +977,14 @@ export default function App() {
       if (edgeError || !edgeData?.success || !edgeData?.data?.participant) {
         const message = edgeData?.error || edgeError?.message || 'Registration could not be completed.';
         if (edgeData?.code === 'DUPLICATE_REGISTRATION') {
-          alert(`You are already registered for ${activeEventData.label}! Duplicate registrations are not permitted.`);
+          showNotice({
+            title: 'Already Registered',
+            message: `You are already registered for ${activeEventData.label}! Duplicate registrations are not permitted.`,
+            type: 'info',
+            actionText: 'View My Pass',
+            onAction: () => navigate('/profile'),
+            dismissText: 'Close'
+          });
           setIsRegistering(false);
           setFormStatus('idle');
           return;
@@ -1627,11 +1715,25 @@ See you at *SRISHTI 2.7*! 🚀`;
                       return;
                     }
                     if (isAlreadyEnrolled) {
-                      alert(`Already Registered: You are already registered for ${ev.label}! You cannot register for the same event again.`);
+                      showNotice({
+                        title: 'Already Registered',
+                        message: `You are already registered for ${ev.label}! You cannot register for the same event again.`,
+                        type: 'info',
+                        actionText: 'View My Pass',
+                        onAction: () => navigate('/profile'),
+                        dismissText: 'Close'
+                      });
                       return;
                     }
                     if (isPortalClosed) {
-                      alert(`Registrations for ${ev.label} are currently closed by festival administration. Registered participants can access their Delegate Pass in Profile.`);
+                      showNotice({
+                        title: 'Registrations Closed',
+                        message: `Registrations for ${ev.label} are currently closed by festival administration. Registered participants can access their Delegate Pass in Profile.`,
+                        type: 'warning',
+                        actionText: 'Go to Profile',
+                        onAction: () => navigate('/profile'),
+                        dismissText: 'Understood'
+                      });
                       return;
                     }
                     setSelectedEventTrack(ev.label);
@@ -2886,12 +2988,25 @@ See you at *SRISHTI 2.7*! 🚀`;
                 return;
               }
               if (isEventAlreadyRegistered(selectedEventDetails)) {
-                setSelectedEventDetails(null);
-                navigate('/profile');
+                showNotice({
+                  title: 'Already Registered',
+                  message: `You are already registered for ${selectedEventDetails.label}! Check your Delegate Pass in your Profile.`,
+                  type: 'info',
+                  actionText: 'View My Pass',
+                  onAction: () => {
+                    setSelectedEventDetails(null);
+                    navigate('/profile');
+                  },
+                  dismissText: 'Close'
+                });
                 return;
               }
               if (isPortalClosed) {
-                alert(`Registrations for ${selectedEventDetails.label} are officially closed.`);
+                showNotice({
+                  title: 'Registrations Closed',
+                  message: `Registrations for ${selectedEventDetails.label} are officially closed.`,
+                  type: 'warning'
+                });
                 return;
               }
               const eventId = selectedEventDetails.id;
@@ -2975,6 +3090,18 @@ See you at *SRISHTI 2.7*! 🚀`;
         isOpen={legalModalOpen} 
         onClose={() => setLegalModalOpen(false)} 
         type={legalModalType} 
+      />
+
+      {/* Modern In-App Srishti Notice & Alert Dialog */}
+      <SrishtiNoticeModal
+        isOpen={Boolean(appNotice)}
+        onClose={closeNotice}
+        title={appNotice?.title}
+        message={appNotice?.message}
+        type={appNotice?.type}
+        actionText={appNotice?.actionText}
+        onAction={appNotice?.onAction}
+        dismissText={appNotice?.dismissText}
       />
     </>
   );

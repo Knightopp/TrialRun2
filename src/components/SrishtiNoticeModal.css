@@ -1,0 +1,188 @@
+.srishti-notice-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999999;
+  padding: 1.25rem;
+  animation: srishtiNoticeFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.srishti-notice-card {
+  position: relative;
+  background: linear-gradient(145deg, rgba(16, 17, 24, 0.98), rgba(9, 10, 14, 0.99));
+  border-radius: 20px;
+  width: 100%;
+  max-width: 460px;
+  padding: 2rem 1.75rem 1.75rem;
+  text-align: center;
+  box-shadow: 
+    0 24px 60px rgba(0, 0, 0, 0.8),
+    0 0 1px 1px rgba(255, 255, 255, 0.08),
+    0 0 40px rgba(56, 189, 248, 0.12);
+  animation: srishtiNoticeScaleUp 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  overflow: hidden;
+}
+
+/* Glow accent line across the top */
+.srishti-notice-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38bdf8, #00f2fe, transparent);
+  box-shadow: 0 0 16px rgba(0, 242, 254, 0.8);
+}
+
+.srishti-notice-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.srishti-notice-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+/* Icon Badge */
+.srishti-notice-icon-box {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.srishti-notice-icon-box.info {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.22) 0%, rgba(56, 189, 248, 0.05) 70%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.25);
+}
+
+.srishti-notice-icon-box.warning {
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.22) 0%, rgba(251, 191, 36, 0.05) 70%);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.25);
+}
+
+.srishti-notice-icon-box.error {
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.22) 0%, rgba(244, 63, 94, 0.05) 70%);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #f43f5e;
+  box-shadow: 0 0 25px rgba(244, 63, 94, 0.25);
+}
+
+.srishti-notice-icon-box.success {
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.22) 0%, rgba(52, 211, 153, 0.05) 70%);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #34d399;
+  box-shadow: 0 0 25px rgba(52, 211, 153, 0.25);
+}
+
+.srishti-notice-title {
+  font-family: var(--font-heading, inherit);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.6rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.srishti-notice-message {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #cbd5e1;
+  margin: 0 0 1.75rem;
+  padding: 0 0.5rem;
+}
+
+/* Button Container */
+.srishti-notice-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.srishti-notice-btn {
+  padding: 0.75rem 1.4rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  outline: none;
+}
+
+.srishti-notice-btn-primary {
+  background: linear-gradient(135deg, #0284c7, #00f2fe);
+  color: #030712;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 242, 254, 0.3);
+  flex: 1 1 140px;
+}
+
+.srishti-notice-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0, 242, 254, 0.5);
+}
+
+.srishti-notice-btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+  flex: 1 1 110px;
+}
+
+.srishti-notice-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+@keyframes srishtiNoticeFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes srishtiNoticeScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
