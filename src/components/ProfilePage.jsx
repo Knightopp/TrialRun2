@@ -808,204 +808,133 @@ See you at *SRISHTI 2.7*! 🚀`;
         backgroundColor: '#000000',
         color: '#ffffff',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        padding: '2rem 1.5rem',
+        boxSizing: 'border-box'
       }}>
-        {/* React Bits Volumetric SideRays Ambient Background - Black & White Monochrome */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-          <SafeVisual>
-            <SideRays
-              speed={2.0}
-              rayColor1="#ffffff"
-              rayColor2="#52525b"
-              intensity={1.6}
-              spread={2}
-              origin="top-right"
-              tilt={0}
-              saturation={0}
-              blend={0.5}
-              falloff={1.6}
-              opacity={0.65}
-            />
-          </SafeVisual>
-        </div>
-
-        {/* Futuristic Cyber Holographic HUD Container - Monochrome Edition */}
         <div style={{
-          position: 'relative',
-          zIndex: 1,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: '3rem 2.25rem',
-          maxWidth: '440px',
-          width: '90%',
-          background: 'rgba(12, 12, 12, 0.88)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderRadius: '28px',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(255, 255, 255, 0.04)',
-          textAlign: 'center'
+          justifyContent: 'center',
+          textAlign: 'center',
+          maxWidth: '480px',
+          width: '100%',
+          position: 'relative',
+          zIndex: 1
         }}>
-          {/* Top CAD Cyber Accent line - Monochrome */}
+          {/* Top subtle edition header */}
           <div style={{
-            position: 'absolute',
-            top: 0,
-            left: '20%',
-            right: '20%',
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent)',
-            boxShadow: '0 0 12px rgba(255, 255, 255, 0.6)'
-          }} />
-
-          {/* Srishti Portal Badge - Monochrome */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-            padding: '0.35rem 0.85rem',
-            borderRadius: '50px',
-            background: 'rgba(255, 255, 255, 0.06)',
-            border: '1px solid rgba(255, 255, 255, 0.18)',
-            color: '#ffffff',
-            fontSize: '0.72rem',
-            fontFamily: 'var(--font-mono, monospace)',
-            fontWeight: '700',
-            letterSpacing: '0.14em',
+            fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+            fontSize: '0.85rem',
+            letterSpacing: '0.45em',
             textTransform: 'uppercase',
-            marginBottom: '2rem'
+            color: '#8e8e93',
+            fontWeight: 500,
+            marginBottom: '3rem'
           }}>
-            <span style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              backgroundColor: '#ffffff',
-              boxShadow: '0 0 8px rgba(255, 255, 255, 0.9)',
-              animation: 'srishtiPulse 1.5s infinite'
-            }} />
-            SRISHTI 2.7 • PORTAL SYSTEM
+            SRISHTI 2.7
           </div>
 
-          {/* Central Animated Cyber Core with Logo - Monochrome */}
+          {/* Central Metallic Chrome Srishti Logo */}
           <div style={{
-            position: 'relative',
-            width: '100px',
-            height: '100px',
+            width: '68px',
+            height: '68px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '1.75rem'
+            marginBottom: '2.5rem',
+            position: 'relative'
           }}>
-            {/* Outer Rotating Cyber Tech Ring */}
-            <div style={{
-              position: 'absolute',
-              inset: '-8px',
-              borderRadius: '50%',
-              border: '2px dashed rgba(255, 255, 255, 0.25)',
-              animation: 'srishtiSpin 12s linear infinite'
-            }} />
-
-            {/* Inner Glowing Spinner */}
-            <div style={{
-              position: 'absolute',
-              inset: '0px',
-              borderRadius: '50%',
-              border: '2px solid rgba(255, 255, 255, 0.08)',
-              borderTopColor: '#ffffff',
-              boxShadow: '0 0 20px rgba(255, 255, 255, 0.4)',
-              animation: 'srishtiSpin 1.1s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite'
-            }} />
-
-            {/* Center Logo Icon */}
-            <div style={{
-              width: '68px',
-              height: '68px',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(5, 5, 5, 0.95) 70%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              boxShadow: 'inset 0 0 15px rgba(255, 255, 255, 0.08)'
-            }}>
-              <img
-                src="/assets/logo.png"
-                alt="Srishti Logo"
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  objectFit: 'contain',
-                  filter: 'grayscale(100%) brightness(1.2) drop-shadow(0 0 8px rgba(255, 255, 255, 0.4))'
-                }}
-              />
-            </div>
+            <img
+              src="/assets/logo.png"
+              alt="Srishti Logo"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                filter: 'grayscale(100%) brightness(1.22) contrast(1.15) drop-shadow(0 4px 16px rgba(255, 255, 255, 0.12))',
+                animation: 'srishtiLogoSheen 2.8s ease-in-out infinite alternate'
+              }}
+            />
           </div>
 
-          {/* Loading Headings */}
-          <h2 style={{
-            fontSize: '1.35rem',
-            fontWeight: '800',
-            letterSpacing: '-0.02em',
+          {/* Primary Heading: Almost there */}
+          <h1 style={{
+            fontFamily: '"Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontSize: 'clamp(2.15rem, 5vw, 2.75rem)',
+            fontWeight: 700,
             color: '#ffffff',
-            margin: '0 0 0.5rem 0'
+            letterSpacing: '-0.025em',
+            lineHeight: 1.15,
+            margin: '0 0 0.85rem 0'
           }}>
-            Authenticating Session
-          </h2>
+            Almost there
+          </h1>
 
+          {/* Subtitle: Finalizing your entry... */}
           <p style={{
-            color: '#a1a1aa',
-            fontSize: '0.85rem',
-            margin: '0 0 1.75rem 0',
-            lineHeight: 1.5
+            fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+            fontSize: 'clamp(0.92rem, 2.5vw, 1.05rem)',
+            fontWeight: 400,
+            color: '#8e8e93',
+            letterSpacing: '0.015em',
+            margin: '0 0 2.75rem 0',
+            lineHeight: 1.4
           }}>
-            Synchronizing delegate profile & entry pass...
+            Finalizing your entry...
           </p>
 
-          {/* Animated Cyber Progress Bar - Monochrome */}
+          {/* Sleek Horizontal Progress Bar with rounded tip */}
           <div style={{
             width: '100%',
-            maxWidth: '260px',
-            height: '4px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            position: 'relative'
+            maxWidth: '350px',
+            height: '3.5px',
+            backgroundColor: 'rgba(255, 255, 255, 0.16)',
+            borderRadius: '9999px',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
             <div style={{
               position: 'absolute',
               top: 0,
               bottom: 0,
               left: 0,
-              width: '45%',
-              background: 'linear-gradient(90deg, transparent, #ffffff, #a1a1aa, transparent)',
-              borderRadius: '4px',
-              boxShadow: '0 0 12px rgba(255, 255, 255, 0.75)',
-              animation: 'srishtiScan 1.6s ease-in-out infinite'
+              backgroundColor: '#ffffff',
+              borderRadius: '9999px',
+              boxShadow: '0 0 8px rgba(255, 255, 255, 0.5), 0 0 2px #ffffff',
+              animation: 'srishtiBarProgress 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite'
             }} />
-          </div>
-
-          {/* High-tech Telemetry Line */}
-          <div style={{
-            marginTop: '1.25rem',
-            fontFamily: 'var(--font-mono, monospace)',
-            fontSize: '0.68rem',
-            color: '#71717a',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase'
-          }}>
-            SECURE LINK • 256-BIT ENCRYPTION
           </div>
         </div>
 
         <style>{`
-          @keyframes srishtiSpin { to { transform: rotate(360deg); } }
-          @keyframes srishtiScan {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(350%); }
+          @keyframes srishtiBarProgress {
+            0% {
+              width: 15%;
+            }
+            40% {
+              width: 58%;
+            }
+            70% {
+              width: 68%;
+            }
+            90% {
+              width: 82%;
+            }
+            100% {
+              width: 92%;
+            }
           }
-          @keyframes srishtiPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+          @keyframes srishtiLogoSheen {
+            0% {
+              opacity: 0.9;
+              transform: translateY(0px) scale(1);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(-2px) scale(1.02);
+            }
           }
         `}</style>
       </div>
