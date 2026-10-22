@@ -106,7 +106,7 @@ export default function SpotlightTour({
               </div>
               <div className="summary-pill">
                 <span className="pill-num">02</span>
-                <span className="pill-txt">Experience</span>
+                <span className="pill-txt">Gallery</span>
               </div>
               <div className="summary-pill">
                 <span className="pill-num">03</span>
@@ -155,7 +155,7 @@ export default function SpotlightTour({
                 className="spotlight-btn-primary" 
                 onClick={handleNext}
               >
-                <span>NEXT: EXPERIENCE</span>
+                <span>NEXT: GALLERY</span>
                 <FiArrowRight size={14} />
               </button>
               <button 
@@ -173,11 +173,11 @@ export default function SpotlightTour({
           <div className="spotlight-step-content">
             <div className="spotlight-step-meta">
               <span className="step-count">STEP 02 OF 04</span>
-              <span className="step-badge-tag">IMMERSIVE</span>
+              <span className="step-badge-tag">MOMENTS</span>
             </div>
-            <h4 className="spotlight-step-title">EXPERIENCE</h4>
+            <h4 className="spotlight-step-title">GALLERY</h4>
             <p className="spotlight-desc">
-              Dive into 3D interactive visuals, campus arena highlights, and multimedia storytelling crafted for this edition.
+              Explore captured Moments of Srishti, interactive visuals, and festival photo showcases.
             </p>
 
             <div className="spotlight-actions">

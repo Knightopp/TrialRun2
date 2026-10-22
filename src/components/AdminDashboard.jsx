@@ -14,6 +14,7 @@ import SideRays from './SideRays';
 import SafeVisual from './SafeVisual';
 import AdminAnalytics from './AdminAnalytics';
 import { getAuditLogs, clearAuditLogs, exportLogsAsCsv, exportLogsAsJson, logActivity, parseLocationTelemetryPayload } from '../utils/auditLogger';
+import { getEventCoordinators, saveEventCoordinators } from '../utils/eventCoordinators';
 import './AdminDashboard.css';
 
 // Official SRISHTI 2.7 Database Events Catalog
@@ -105,6 +106,10 @@ export default function AdminDashboard() {
     payment_method: 'cash'
   });
   const [eventFormData, setEventFormData] = useState({});
+  const [coordinatorsDraft, setCoordinatorsDraft] = useState([
+    { name: '', phone: '' },
+    { name: '', phone: '' }
+  ]);
   const [volunteerFormData, setVolunteerFormData] = useState({
     username: '',
     name: '',
@@ -1204,20 +1209,40 @@ See you at *SRISHTI 2.7*! 🚀`;
         is_spot_registration_enabled: eventFormData.is_spot_registration_enabled !== undefined ? Boolean(eventFormData.is_spot_registration_enabled) : true,
       };
 
+      // Save coordinators locally and broadcast live update
+      const targetCode = eventCode || activeItem?.event_code || activeItem?.id;
+      if (targetCode && eventFormData.coordinators) {
+        saveEventCoordinators(targetCode, eventFormData.coordinators);
+      }
+
       if (modalType === 'addEvent' || !activeItem) {
         const { error } = await supabase
           .from('events')
-          .insert([payload]);
+          .insert([{ ...payload, coordinators: eventFormData.coordinators || [] }]);
 
-        if (error) throw error;
+        if (error) {
+          if (error.code === '42703' || String(error.message).toLowerCase().includes('coordinators')) {
+            const retry = await supabase.from('events').insert([payload]);
+            if (retry.error) throw retry.error;
+          } else {
+            throw error;
+          }
+        }
         showToast(`Event "${payload.name}" created successfully!`, 'success');
       } else {
         const { error } = await supabase
           .from('events')
-          .update(payload)
+          .update({ ...payload, coordinators: eventFormData.coordinators || [] })
           .eq('id', activeItem.id);
 
-        if (error) throw error;
+        if (error) {
+          if (error.code === '42703' || String(error.message).toLowerCase().includes('coordinators')) {
+            const retry = await supabase.from('events').update(payload).eq('id', activeItem.id);
+            if (retry.error) throw retry.error;
+          } else {
+            throw error;
+          }
+        }
         showToast(`Event "${payload.name}" updated successfully!`, 'success');
       }
 
@@ -1225,6 +1250,48 @@ See you at *SRISHTI 2.7*! 🚀`;
       fetchAllData(adminRole, currentStaff?.id);
     } catch (err) {
       showToast(err.message || 'Failed to save event', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenEditCoordinators = (ev) => {
+    setActiveItem(ev);
+    const coords = getEventCoordinators(ev);
+    setCoordinatorsDraft(coords && coords.length > 0 ? coords : [{ name: '', phone: '' }, { name: '', phone: '' }]);
+    setModalType('editCoordinators');
+  };
+
+  const handleSaveCoordinatorsQuick = async (e) => {
+    e.preventDefault();
+    if (!activeItem) return;
+    setIsSubmitting(true);
+    try {
+      const targetCode = activeItem.event_code || activeItem.id;
+      const cleanCoords = saveEventCoordinators(targetCode, coordinatorsDraft);
+
+      // Attempt to update Supabase if db record exists
+      if (activeItem.id) {
+        try {
+          await supabase
+            .from('events')
+            .update({ coordinators: cleanCoords })
+            .eq('id', activeItem.id);
+        } catch (_) {}
+      }
+
+      showToast(`Coordinators updated for "${activeItem.name || activeItem.label}"!`, 'success');
+      logActivity(
+        'UPDATE_COORDINATORS',
+        'EVENTS',
+        `Admin updated coordinators for ${activeItem.name || activeItem.label}: ${cleanCoords.map(c => `${c.name} (${c.phone})`).join(', ')}`,
+        currentStaff?.username || currentStaff?.email || 'admin',
+        'SUCCESS'
+      );
+      setModalType(null);
+      fetchAllData(adminRole, currentStaff?.id);
+    } catch (err) {
+      showToast(err.message || 'Failed to update coordinators', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -2962,7 +3029,8 @@ See you at *SRISHTI 2.7*! 🚀`;
                       registration_fee: 0,
                       registration_type: 'individual',
                       max_team_size: 1,
-                      is_spot_registration_enabled: true
+                      is_spot_registration_enabled: true,
+                      coordinators: [{ name: '', phone: '' }, { name: '', phone: '' }]
                     });
                     setModalType('addEvent');
                   }} 
@@ -2980,6 +3048,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                 const regCount = registrations.filter(r => r.event_id === ev.id || r.events?.event_code === ev.event_code).length;
                 const attCount = eventAttendance.filter(a => a.event_id === ev.id).length;
                 const isTeamEvent = ev.registration_type === 'team';
+                const eventCoordinatorsList = getEventCoordinators(ev);
 
                 return (
                   <div key={ev.id} className="admin-event-card">
@@ -3031,6 +3100,56 @@ See you at *SRISHTI 2.7*! 🚀`;
                       </div>
                     </div>
 
+                    {/* Event Coordinators Preview */}
+                    <div style={{
+                      marginTop: '0.85rem',
+                      padding: '0.65rem 0.75rem',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '0.7rem',
+                        color: '#a1a1aa',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        marginBottom: '0.35rem'
+                      }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#38bdf8' }}>
+                          <FiPhone size={12} /> Coordinators ({eventCoordinatorsList.length})
+                        </span>
+                        {adminRole === 'admin' && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditCoordinators(ev)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#38bdf8',
+                              cursor: 'pointer',
+                              fontSize: '0.7rem',
+                              padding: 0,
+                              fontWeight: '600'
+                            }}
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {eventCoordinatorsList.map((coord, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.76rem', color: '#e4e4e7' }}>
+                            <span style={{ fontWeight: '500' }}>{coord.name}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>{coord.phone}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <div style={{ 
                       marginTop: '1rem', 
                       paddingTop: '0.75rem', 
@@ -3049,7 +3168,18 @@ See you at *SRISHTI 2.7*! 🚀`;
                       {adminRole === 'admin' && (
                         <div style={{ display: 'flex', gap: '0.35rem' }}>
                           <button
+                            type="button"
+                            onClick={() => handleOpenEditCoordinators(ev)}
+                            className="admin-btn admin-btn-secondary"
+                            style={{ padding: '0.3rem 0.55rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                            title="Edit Coordinators"
+                          >
+                            <FiPhone size={11} />
+                            <span>Coordinators</span>
+                          </button>
+                          <button
                             onClick={() => {
+                              const coords = getEventCoordinators(ev);
                               setActiveItem(ev);
                               setEventFormData({
                                 event_code: ev.event_code || '',
@@ -3064,12 +3194,13 @@ See you at *SRISHTI 2.7*! 🚀`;
                                 registration_fee: ev.registration_fee ?? 0,
                                 registration_type: ev.registration_type || 'individual',
                                 max_team_size: ev.max_team_size || 1,
-                                is_spot_registration_enabled: ev.is_spot_registration_enabled !== false
+                                is_spot_registration_enabled: ev.is_spot_registration_enabled !== false,
+                                coordinators: coords && coords.length > 0 ? coords : [{ name: '', phone: '' }, { name: '', phone: '' }]
                               });
                               setModalType('editEvent');
                             }}
                             className="admin-btn admin-btn-secondary"
-                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                            style={{ padding: '0.3rem 0.55rem', fontSize: '0.72rem' }}
                             title="Edit Event"
                           >
                             <FiEdit2 />
@@ -3077,7 +3208,7 @@ See you at *SRISHTI 2.7*! 🚀`;
                           <button
                             onClick={() => handleDeleteEvent(ev.id, ev.name || ev.label)}
                             className="admin-btn admin-btn-danger"
-                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                            style={{ padding: '0.3rem 0.55rem', fontSize: '0.72rem' }}
                             title="Delete Event"
                           >
                             <FiTrash2 />
@@ -4499,11 +4630,182 @@ See you at *SRISHTI 2.7*! 🚀`;
                 )}
               </div>
 
+              {/* Event Coordinators Section */}
+              <div style={{
+                marginTop: '1.25rem',
+                padding: '1rem',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <label style={{ margin: 0, fontWeight: '700', fontSize: '0.88rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <FiPhone size={14} color="#38bdf8" /> Event Coordinators (Public Contact)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEventFormData(prev => ({
+                        ...prev,
+                        coordinators: [...(prev.coordinators || []), { name: '', phone: '' }]
+                      }));
+                    }}
+                    className="admin-btn admin-btn-sm admin-btn-secondary"
+                    style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem' }}
+                  >
+                    <FiPlus size={12} /> Add Coordinator
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: '#a1a1aa', margin: '0 0 0.85rem 0' }}>
+                  These coordinators and phone numbers appear directly on the website for participant enquiries and questions.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {(eventFormData.coordinators || [{ name: '', phone: '' }]).map((coord, cIdx) => (
+                    <div key={cIdx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder={`Coordinator ${cIdx + 1} Name`}
+                        value={coord.name}
+                        onChange={e => {
+                          const next = [...(eventFormData.coordinators || [])];
+                          next[cIdx] = { ...next[cIdx], name: e.target.value };
+                          setEventFormData({ ...eventFormData, coordinators: next });
+                        }}
+                        className="admin-form-control"
+                      />
+                      <input
+                        type="text"
+                        placeholder="+91 98765 43210"
+                        value={coord.phone}
+                        onChange={e => {
+                          const next = [...(eventFormData.coordinators || [])];
+                          next[cIdx] = { ...next[cIdx], phone: e.target.value };
+                          setEventFormData({ ...eventFormData, coordinators: next });
+                        }}
+                        className="admin-form-control"
+                      />
+                      {(eventFormData.coordinators || []).length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = (eventFormData.coordinators || []).filter((_, idx) => idx !== cIdx);
+                            setEventFormData({ ...eventFormData, coordinators: next });
+                          }}
+                          className="admin-btn admin-btn-danger admin-btn-sm"
+                          style={{ padding: '0.5rem', minWidth: '32px' }}
+                          title="Remove Coordinator"
+                        >
+                          <FiTrash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                 <button type="button" onClick={() => setModalType(null)} className="admin-btn admin-btn-secondary">Cancel</button>
                 <button type="submit" disabled={isSubmitting} className="admin-btn admin-btn-primary">
                   {isSubmitting ? 'Saving...' : modalType === 'addEvent' ? 'Create Event' : 'Save Changes'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Quick Dedicated Edit Coordinators */}
+      {modalType === 'editCoordinators' && activeItem && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal-card" style={{ maxWidth: '580px' }}>
+            <div className="admin-modal-header">
+              <div>
+                <h3 style={{ margin: 0 }}>Edit Event Coordinators</h3>
+                <div style={{ color: '#38bdf8', fontSize: '0.85rem', fontWeight: '600', marginTop: '0.2rem' }}>
+                  {activeItem.name || activeItem.label} ({activeItem.event_code || activeItem.id})
+                </div>
+              </div>
+              <button onClick={() => setModalType(null)} className="admin-modal-close"><FiX /></button>
+            </div>
+            <form onSubmit={handleSaveCoordinatorsQuick}>
+              <p style={{ color: '#a1a1aa', fontSize: '0.82rem', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                Update student/faculty coordinators for this competition. Phone numbers will be immediately clickable via tel: and displayed in the event details drawer on the website.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.25rem' }}>
+                {coordinatorsDraft.map((coord, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', color: '#a1a1aa', display: 'block', marginBottom: '0.25rem' }}>
+                        Coordinator {idx + 1} Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Alex Johnson"
+                        value={coord.name}
+                        onChange={e => {
+                          const next = [...coordinatorsDraft];
+                          next[idx] = { ...next[idx], name: e.target.value };
+                          setCoordinatorsDraft(next);
+                        }}
+                        className="admin-form-control"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', color: '#a1a1aa', display: 'block', marginBottom: '0.25rem' }}>
+                        Phone / WhatsApp
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="+91 98765 43210"
+                        value={coord.phone}
+                        onChange={e => {
+                          const next = [...coordinatorsDraft];
+                          next[idx] = { ...next[idx], phone: e.target.value };
+                          setCoordinatorsDraft(next);
+                        }}
+                        className="admin-form-control"
+                      />
+                    </div>
+                    {coordinatorsDraft.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoordinatorsDraft(coordinatorsDraft.filter((_, i) => i !== idx));
+                        }}
+                        className="admin-btn admin-btn-danger admin-btn-sm"
+                        style={{ padding: '0.6rem', marginTop: '1.15rem' }}
+                        title="Remove Coordinator"
+                      >
+                        <FiTrash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCoordinatorsDraft([...coordinatorsDraft, { name: '', phone: '' }]);
+                  }}
+                  className="admin-btn admin-btn-secondary admin-btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <FiPlus size={14} /> Add Another
+                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button type="button" onClick={() => setModalType(null)} className="admin-btn admin-btn-secondary">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={isSubmitting} className="admin-btn admin-btn-primary">
+                    {isSubmitting ? 'Saving...' : 'Save Coordinators'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

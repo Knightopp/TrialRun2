@@ -136,6 +136,7 @@ export default function Dock({
               aria-label={item.label}
             >
               <div className="dock-icon">{item.icon}</div>
+              <span className="dock-item-mobile-label">{item.label}</span>
             </button>
           ))}
         </div>

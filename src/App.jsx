@@ -22,7 +22,7 @@ import SplitText from './components/SplitText';
 import Silk from './components/Silk';
 import PatternWaves from './components/PatternWaves';
 import SafeVisual from './components/SafeVisual';
-import { FiHome, FiCalendar, FiActivity, FiUserPlus, FiBookmark, FiCheckCircle, FiAlertCircle, FiLock } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiActivity, FiUserPlus, FiBookmark, FiCheckCircle, FiAlertCircle, FiLock, FiImage } from 'react-icons/fi';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import ColorBends from './components/ColorBends';
 import GlareHover from './components/GlareHover';
@@ -34,6 +34,7 @@ import { generateEntryPassEmailHtml } from './utils/entryPassEmail';
 import { generateCardImagePng } from './utils/cardImageGenerator';
 import { supabase } from './supabaseClient';
 import SpotlightTour from './components/SpotlightTour';
+import { getEventCoordinators } from './utils/eventCoordinators';
 import './App.css';
 
 // Official SRISHTI 2.7 Database Events Catalog
@@ -241,7 +242,8 @@ export default function App() {
               time: ev.start_time ? (ev.end_time ? `${ev.start_time.substring(0, 5)} - ${ev.end_time.substring(0, 5)}` : ev.start_time.substring(0, 5)) : (fallback?.time || '10:00 AM'),
               fee: ev.registration_fee || 0,
               type: isTeam ? 'team' : 'individual',
-              maxTeamSize: ev.max_team_size || (isTeam ? (fallback?.maxTeamSize || 4) : 1)
+              maxTeamSize: ev.max_team_size || (isTeam ? (fallback?.maxTeamSize || 4) : 1),
+              coordinators: ev.coordinators || fallback?.coordinators || null
             };
           });
           setLiveEvents(merged);
@@ -251,6 +253,27 @@ export default function App() {
       }
     };
     fetchLiveEvents();
+
+    const handleCoordinatorsUpdate = (e) => {
+      const updatedCode = e.detail?.eventCode;
+      if (updatedCode) {
+        setLiveEvents(prev => prev.map(ev => {
+          const match = (ev.event_code || ev.id || '').toUpperCase() === updatedCode;
+          if (match) {
+            return { ...ev, coordinators: e.detail.coordinators };
+          }
+          return ev;
+        }));
+        setSelectedEventDetails(prev => {
+          if (prev && (prev.event_code || prev.id || '').toUpperCase() === updatedCode) {
+            return { ...prev, coordinators: e.detail.coordinators };
+          }
+          return prev;
+        });
+      }
+    };
+    window.addEventListener('srishti_coordinators_updated', handleCoordinatorsUpdate);
+    return () => window.removeEventListener('srishti_coordinators_updated', handleCoordinatorsUpdate);
   }, []);
 
   const matchEventRoute = location.pathname.match(/^\/register\/([a-zA-Z0-9-_]+)$/);
@@ -2893,8 +2916,10 @@ See you at *SRISHTI 2.7*! 🚀`;
               </div>
             ), link: '#' },
           { label: <span style={{ display: 'block', marginTop: '1.5rem', color: '#888', fontSize: '0.9rem', textTransform: 'uppercase' }}>Coordinators</span>, link: '#' },
-          { label: 'Alex Johnson: +91 98765 43210', link: 'tel:+919876543210' },
-          { label: 'Sarah Williams: +91 98765 43211', link: 'tel:+919876543211' }
+          ...(getEventCoordinators(selectedEventDetails) || []).map(c => ({
+            label: `${c.name}: ${c.phone}`,
+            link: c.phone ? `tel:${String(c.phone).replace(/[^0-9+]/g, '')}` : '#'
+          }))
         ] : []}
         colors={['#1e1e22', '#38bdf8']}
         menuButtonColor="#fff"
@@ -2923,7 +2948,7 @@ See you at *SRISHTI 2.7*! 🚀`;
           <Dock 
             items={[
               { icon: <FiHome size={20} />, label: 'Home', onClick: () => { setActiveTourStep(null); navigateTo('main', 'home'); } },
-              { icon: <FiActivity size={20} />, label: 'Experience', onClick: () => { setActiveTourStep(null); navigateTo('main', 'experience'); } },
+              { icon: <FiImage size={20} />, label: 'Gallery', onClick: () => { setActiveTourStep(null); navigateTo('main', 'gallery'); } },
               { icon: <FiCalendar size={20} />, label: 'Events', onClick: () => { setActiveTourStep(null); navigate('/register/'); } },
               { icon: <FiUserPlus size={20} />, label: 'Profile', onClick: () => { setActiveTourStep(null); navigate('/profile'); } },
             ]}
@@ -2938,7 +2963,7 @@ See you at *SRISHTI 2.7*! 🚀`;
       <SpotlightTour 
         onStepChange={setActiveTourStep}
         onNavigateToHome={() => { setActiveTourStep(null); navigateTo('main', 'home'); }}
-        onNavigateToExperience={() => { setActiveTourStep(null); navigateTo('main', 'experience'); }}
+        onNavigateToExperience={() => { setActiveTourStep(null); navigateTo('main', 'gallery'); }}
         onNavigateToEvents={() => { setActiveTourStep(null); navigate('/register/'); }}
         onNavigateToProfile={() => { setActiveTourStep(null); navigate('/profile'); }}
       />

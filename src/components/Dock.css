@@ -77,13 +77,15 @@
   pointer-events: none;
 }
 
-/* Static Mobile Dock - zero animations, fixed clean touch bar */
+/* Static Mobile Dock - zero animations, fixed clean touch bar with clear text labels */
 .dock-mobile-static {
   height: auto !important;
   margin: 0 auto !important;
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
+  width: 100% !important;
+  max-width: 360px !important;
 }
 
 .dock-panel-static {
@@ -92,36 +94,72 @@
   left: auto !important;
   transform: none !important;
   height: auto !important;
-  padding: 6px 10px !important;
-  gap: 0.65rem !important;
+  padding: 5px 8px !important;
+  gap: 0.35rem !important;
   border-radius: 9999px !important;
-  background-color: rgba(20, 20, 24, 0.92) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.8) !important;
+  background-color: rgba(18, 18, 22, 0.94) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.85) !important;
   align-items: center !important;
   justify-content: center !important;
+  display: flex !important;
 }
 
 .dock-item-static {
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 12px !important;
+  flex: 1 1 0 !important;
+  min-width: 54px !important;
+  max-width: 72px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
   background-color: #232328 !important;
   border: 1px solid rgba(255, 255, 255, 0.09) !important;
   color: #e2e8f0 !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
   transform: none !important;
-  transition: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
   animation: none !important;
-  padding: 0 !important;
+  padding: 4px 6px !important;
   margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  cursor: pointer;
+}
+
+.dock-item-static .dock-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.dock-item-static .dock-icon svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+.dock-item-mobile-label {
+  font-size: 0.62rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  color: #cbd5e1 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
 }
 
 .dock-item-static:active {
-  background-color: #303038 !important;
-  color: #ffffff !important;
+  background-color: #38bdf8 !important;
+  border-color: #38bdf8 !important;
+  color: #0b0f19 !important;
+}
+
+.dock-item-static:active .dock-item-mobile-label {
+  color: #0b0f19 !important;
+  font-weight: 700 !important;
 }
 
 @media (max-width: 768px) {
